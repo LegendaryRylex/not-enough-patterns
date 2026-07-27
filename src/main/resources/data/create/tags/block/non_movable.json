@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "nep:sequenced_assembly_controller",
+      "required": false
+    },
+    {
+      "id": "nep:sequenced_assembly_matrix",
+      "required": false
+    }
+  ]
+}

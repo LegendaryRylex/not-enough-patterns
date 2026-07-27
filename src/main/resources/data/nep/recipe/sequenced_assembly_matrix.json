@@ -1,0 +1,91 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "nep:sequenced_assembly_controller"
+  },
+  "loops": 4,
+  "results": [
+    {
+      "id": "nep:sequenced_assembly_matrix"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_matrix_circuitry"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_matrix_circuitry"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_matrix_circuitry"
+        },
+        {
+          "item": "nep:matrix_circuitry"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_matrix_circuitry"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_matrix_circuitry"
+        },
+        {
+          "item": "ae2:spatial_cell_component_128"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_matrix_circuitry"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_matrix_circuitry"
+        },
+        {
+          "item": "nep:hardened_obsidian_plate"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_matrix_circuitry"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_matrix_circuitry"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_matrix_circuitry"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "nep:incomplete_matrix_circuitry"
+  }
+}

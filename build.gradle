@@ -1,0 +1,191 @@
+plugins {
+    id 'idea'
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.142'
+    id 'com.diffplug.spotless' version '8.8.0'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+tasks.named('jar', Jar).configure {
+    from 'LICENSE'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// Game tests need the real game, so they cannot live in `src/test`, but they must not ship
+// either: this source set is wired into the dev runs below and never into `jar`.
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.createmod.net' }
+    maven { url = 'https://maven.ithundxr.dev/snapshots' }
+    maven { url = 'https://maven.blamejared.com/' }
+    maven {
+        url = 'https://www.cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+}
+
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+
+    runs {
+        client {
+            client()
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:MaxDirectMemorySize=2G'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            // GuideMe live preview: hot-reload our pages of the AE2 guide straight from source.
+            systemProperty 'guideme.ae2.guide.sources', file('src/main/resources/assets/nep/ae2guide').absolutePath
+            systemProperty 'guideme.ae2.guide.sourcesNamespace', project.mod_id
+        }
+
+        server {
+            server()
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:MaxDirectMemorySize=2G'
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:MaxDirectMemorySize=2G'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            data()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+            // Dev runs only. Deliberately absent from `jar` so no test scaffolding ships.
+            sourceSet(sourceSets.gametest)
+        }
+    }
+
+    addModdingDependenciesTo(sourceSets.gametest)
+
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+    gametestImplementation.extendsFrom implementation
+    gametestRuntimeOnly.extendsFrom runtimeOnly
+}
+
+dependencies {
+    implementation "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    compileOnly "org.appliedenergistics:guideme:${guideme_version}"
+
+    implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
+    implementation "net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}"
+    compileOnly "dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}"
+    runtimeOnly "dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}"
+    implementation "com.tterrag.registrate:Registrate:${registrate_version}"
+
+    compileOnly "curse.maven:ae2wtlib-459929:8450398"
+
+    localRuntime "curse.maven:ae2-jei-integration-1074338:7727898"
+    localRuntime "curse.maven:architectury-api-419699:8492726"
+    localRuntime "curse.maven:tool-kit-324888:8216546"
+
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+
+    compileOnly "curse.maven:jade-324717:7545219"
+    localRuntime "curse.maven:jade-324717:7545219"
+
+    testImplementation platform('org.junit:junit-bom:5.14.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    // The modded unit test runtime relocates the working directory, so hand the
+    // source-scanning tests an absolute anchor instead of relying on it.
+    systemProperty 'nep.projectDir', projectDir.absolutePath
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        palantirJavaFormat()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            ae2_version_range      : ae2_version_range,
+            create_version_range   : create_version_range,
+            jei_version_range      : jei_version_range,
+            ae2wtlib_version_range : ae2wtlib_version_range,
+            jade_version_range     : jade_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

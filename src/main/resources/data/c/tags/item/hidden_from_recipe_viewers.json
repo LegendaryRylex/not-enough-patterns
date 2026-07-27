@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "nep:incomplete_hardened_obsidian_plate",
+      "required": false
+    },
+    {
+      "id": "nep:incomplete_matrix_circuitry",
+      "required": false
+    }
+  ]
+}

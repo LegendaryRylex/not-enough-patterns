@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "dev.rylex.nep.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AEBaseMenuMixin",
+    "PatternEncodingLogicMixin",
+    "PatternEncodingTermMenuMixin",
+    "PatternProviderLogicMixin",
+    "PatternProviderMenuMixin"
+  ],
+  "client": [
+    "PatternProviderScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

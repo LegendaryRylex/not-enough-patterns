@@ -1,0 +1,225 @@
+package dev.rylex.nep.compat.create;
+
+import com.simibubi.create.AllBlocks;
+import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
+import dev.rylex.nep.Nep;
+import dev.rylex.nep.machine.RedstoneMode;
+import java.util.List;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.neoforged.neoforge.items.IItemHandler;
+
+@GameTestHolder(Nep.MOD_ID)
+@PrefixGameTestTemplate(false)
+public final class SequencedAssemblyControllerGameTest {
+
+    private static final String TEMPLATE = "empty_5x5x5";
+    private static final String BATCH = "nep_controller";
+    private static final BlockPos CONTROLLER = new BlockPos(2, 1, 2);
+    private static final BlockPos DEPLOYER = new BlockPos(1, 1, 1);
+    private static final BlockPos PRESS = new BlockPos(3, 1, 3);
+
+    private SequencedAssemblyControllerGameTest() {}
+
+    private static SequencedAssemblyControllerBlockEntity place(GameTestHelper helper) {
+        helper.setBlock(CONTROLLER, NepCreateContent.CONTROLLER.get().defaultBlockState());
+        BlockEntity be = helper.getBlockEntity(CONTROLLER);
+        helper.assertTrue(
+                be instanceof SequencedAssemblyControllerBlockEntity, "the controller did not create its block entity");
+        return (SequencedAssemblyControllerBlockEntity) be;
+    }
+
+    private static int comparator(GameTestHelper helper) {
+        BlockPos absolute = helper.absolutePos(CONTROLLER);
+        return helper.getLevel().getBlockState(absolute).getAnalogOutputSignal(helper.getLevel(), absolute);
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void anUnlinkedControllerTakesNoPatterns(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+
+        helper.assertTrue(!controller.readyForPatterns(), "a controller with no input or output accepted patterns");
+        helper.assertTrue(!controller.isHalted(), "a controller with nothing to do reported itself halted");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void hoppersAndPipesCanFeedTheStagingBuffer(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        IItemHandler handler =
+                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(CONTROLLER), null);
+        helper.assertTrue(handler != null, "the controller exposed no item handler");
+
+        ItemStack leftover = handler.insertItem(0, new ItemStack(Items.COBBLESTONE, 6), false);
+
+        helper.assertTrue(leftover.isEmpty(), "the controller refused a machine insert into its staging buffer");
+        helper.assertTrue(
+                controller.getBuffer().getStackInSlot(0).getCount() == 6, "the insert did not land in the buffer");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void finishedResultsStayOutOfReachOfNeighbours(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        controller.getBuffer().insertItem(0, new ItemStack(Items.COBBLESTONE, 6), false);
+        controller.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 8), false);
+
+        IItemHandler handler =
+                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(CONTROLLER), null);
+        helper.assertTrue(handler != null, "the controller exposed no item handler");
+
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            helper.assertTrue(
+                    handler.extractItem(slot, 64, true).isEmpty(),
+                    "slot " + slot + " gave items up to a neighbour; finished results owe themselves to the "
+                            + "pattern provider and used to leak into adjacent inventories this way");
+        }
+        helper.assertTrue(
+                controller.getOutputBuffer().getStackInSlot(0).getCount() == 8, "the staged result went missing");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void comparatorReadsTheOutputBufferByDefault(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+
+        helper.assertTrue(
+                controller.redstoneMode() == RedstoneMode.OUTPUT, "a fresh controller did not default to Output");
+        helper.assertTrue(comparator(helper) == 0, "an empty controller emitted a signal");
+
+        controller.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 64), false);
+        helper.assertTrue(comparator(helper) > 0, "a stocked output buffer emitted no signal");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void inputModeReadsTheStagedBufferInstead(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        controller.getBuffer().insertItem(0, new ItemStack(Items.COBBLESTONE, 64), false);
+
+        helper.assertTrue(comparator(helper) == 0, "Output mode reported the staged input");
+
+        controller.cycleRedstoneMode();
+        controller.cycleRedstoneMode();
+        helper.assertTrue(controller.redstoneMode() == RedstoneMode.INPUT, "cycling twice did not reach Input mode");
+        helper.assertTrue(comparator(helper) > 0, "Input mode ignored the staged input");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void statusModeIsSilentWhileNothingIsPending(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        controller.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 64), false);
+
+        controller.cycleRedstoneMode();
+        helper.assertTrue(controller.redstoneMode() == RedstoneMode.STATUS, "cycling once did not reach Status mode");
+        helper.assertTrue(comparator(helper) == 0, "an idle controller reported a status signal");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void cyclingTheModeReturnsToWhereItStarted(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        RedstoneMode start = controller.redstoneMode();
+
+        controller.cycleRedstoneMode();
+        controller.cycleRedstoneMode();
+        controller.cycleRedstoneMode();
+
+        helper.assertTrue(controller.redstoneMode() == start, "cycling through every mode did not return to the start");
+        helper.succeed();
+    }
+
+    private static SequencedAssemblyControllerBlockEntity linkedLine(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        helper.setBlock(
+                DEPLOYER,
+                AllBlocks.DEPLOYER.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.DOWN));
+        helper.setBlock(PRESS, AllBlocks.MECHANICAL_PRESS.getDefaultState());
+        controller.applyPlan(
+                helper.absolutePos(new BlockPos(0, 1, 2)),
+                helper.absolutePos(new BlockPos(4, 1, 2)),
+                List.of(helper.absolutePos(DEPLOYER), helper.absolutePos(PRESS)));
+        return controller;
+    }
+
+    private static SequencedAssemblyState.Station station(
+            GameTestHelper helper, SequencedAssemblyState state, int slot) {
+        helper.assertTrue(
+                state.stations().size() == 2,
+                "the controller reported " + state.stations().size() + " stations for a two station line");
+        return state.stations().get(slot);
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aBrokenStationNamesWhatStoodThere(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = linkedLine(helper);
+
+        helper.setBlock(PRESS, Blocks.AIR);
+        SequencedAssemblyState state = controller.buildState();
+
+        SequencedAssemblyState.Station broken = station(helper, state, 1);
+        helper.assertTrue(
+                broken.issue() == SequencedAssemblyState.Issue.UNRECOGNIZED, "the emptied slot was not flagged");
+        helper.assertTrue(
+                broken.expected() == StationKind.PRESS,
+                "the slot asked for " + broken.expected() + " where a Mechanical Press had stood");
+        helper.assertTrue(
+                station(helper, state, 0).expected() == StationKind.UNKNOWN,
+                "an intact station was told to replace itself");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void everyBrokenStationAnswersForItsOwnSlot(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = linkedLine(helper);
+
+        helper.setBlock(DEPLOYER, Blocks.AIR);
+        helper.setBlock(PRESS, Blocks.AIR);
+        SequencedAssemblyState state = controller.buildState();
+
+        helper.assertTrue(
+                station(helper, state, 0).expected() == StationKind.DEPLOYER,
+                "the first slot lost track of its Deployer once a second station broke too");
+        helper.assertTrue(
+                station(helper, state, 1).expected() == StationKind.PRESS,
+                "the second slot lost track of its Mechanical Press");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void relinkingForgetsTheOldLine(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = linkedLine(helper);
+        helper.setBlock(PRESS, Blocks.AIR);
+
+        controller.clearLinks();
+        controller.applyPlan(null, null, List.of(helper.absolutePos(PRESS)));
+
+        SequencedAssemblyState.Station only = controller.buildState().stations().get(0);
+        helper.assertTrue(
+                only.expected() == StationKind.UNKNOWN, "a slot from a cleared plan still claimed a Mechanical Press");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void breakingTheControllerDropsItsStagedItems(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        controller.getBuffer().insertItem(0, new ItemStack(Items.COBBLESTONE, 5), false);
+        controller.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 2), false);
+
+        helper.destroyBlock(CONTROLLER);
+
+        helper.assertItemEntityPresent(Items.COBBLESTONE, CONTROLLER, 2.0);
+        helper.assertItemEntityPresent(Items.DIAMOND, CONTROLLER, 2.0);
+        helper.succeed();
+    }
+}

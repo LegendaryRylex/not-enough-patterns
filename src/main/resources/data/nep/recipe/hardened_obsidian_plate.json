@@ -1,0 +1,91 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "tag": "c:dusts/obsidian"
+  },
+  "results": [
+    {
+      "id": "nep:hardened_obsidian_plate"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_hardened_obsidian_plate"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_hardened_obsidian_plate"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_hardened_obsidian_plate"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 500,
+          "fluid": "minecraft:water"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_hardened_obsidian_plate"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_hardened_obsidian_plate"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_hardened_obsidian_plate"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_hardened_obsidian_plate"
+        },
+        {
+          "type": "neoforge:single",
+          "amount": 500,
+          "fluid": "minecraft:lava"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_hardened_obsidian_plate"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_hardened_obsidian_plate"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_hardened_obsidian_plate"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "nep:incomplete_hardened_obsidian_plate"
+  }
+}

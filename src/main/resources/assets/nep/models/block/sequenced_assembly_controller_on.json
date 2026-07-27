@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "nep:block/sequenced_assembly_controller_on"
+  }
+}

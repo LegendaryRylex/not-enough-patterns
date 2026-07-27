@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GLG",
+    "PMP",
+    "GCG"
+  ],
+  "key": {
+    "G": { "item": "create:brass_casing" },
+    "L": { "item": "ae2:logic_processor" },
+    "P": { "item": "create:precision_mechanism" },
+    "M": { "item": "ae2:molecular_assembler" },
+    "C": { "item": "ae2:crafting_unit" }
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:sequenced_assembly_controller"
+  }
+}

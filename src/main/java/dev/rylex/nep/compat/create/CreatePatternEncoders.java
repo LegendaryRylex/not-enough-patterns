@@ -1,0 +1,234 @@
+package dev.rylex.nep.compat.create;
+
+import appeng.api.crafting.IPatternDetails;
+import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.GenericStack;
+import com.simibubi.create.AllRecipeTypes;
+import com.simibubi.create.content.fluids.transfer.FillingRecipe;
+import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
+import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
+import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.pattern.AndesiteCraftingPattern;
+import dev.rylex.nep.pattern.GridPlan;
+import dev.rylex.nep.pattern.MechanicalCraftingPattern;
+import dev.rylex.nep.pattern.SequencedAssemblyPattern;
+import dev.rylex.nep.pattern.encoding.EncodedIngredients;
+import dev.rylex.nep.pattern.encoding.PatternConverters;
+import dev.rylex.nep.pattern.encoding.PatternFallback;
+import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
+
+final class CreatePatternEncoders {
+    private CreatePatternEncoders() {}
+
+    static void register() {
+        PatternConverters.register(SequencedAssemblyRecipe.class, CreatePatternEncoders::sequencedAssembly);
+        PatternConverters.register(ItemApplicationRecipe.class, CreatePatternEncoders::itemApplication);
+        PatternConverters.register(FillingRecipe.class, CreatePatternEncoders::filling);
+        PatternConverters.register(CraftingRecipe.class, CreatePatternEncoders::mechanicalCrafting);
+        PatternConverters.registerFallback(CreatePatternEncoders::mechanicalCraftingByResult);
+        PatternConverters.registerFallback(CreatePatternEncoders::andesiteCraftingByResult);
+        PatternConverters.registerFallback(CreatePatternEncoders::sequencedAssemblyByResult);
+    }
+
+    @Nullable
+    private static ItemStack mechanicalCrafting(
+            IPatternDetails encoded, RecipeHolder<CraftingRecipe> holder, Level level) {
+        if (!NepConfig.createMechanicalCrafting()) {
+            return null;
+        }
+        GridPlan plan = MechanicalRecipeResolver.resolveRecipe(encoded, holder.id(), level);
+        return plan == null ? null : encodeGrid(plan, encoded);
+    }
+
+    @Nullable
+    private static ItemStack sequencedAssembly(
+            IPatternDetails encoded, RecipeHolder<SequencedAssemblyRecipe> holder, Level level) {
+        if (!NepConfig.createSequencedAssembly() && !NepConfig.createSequencedAssemblyMatrix()) {
+            return null;
+        }
+        List<GenericStack> inputs = condensedInputs(encoded);
+        GenericStack result = singleResult(encoded);
+        if (inputs == null || result == null || !(result.what() instanceof AEItemKey outputKey)) {
+            return null;
+        }
+        if (!SequencedAssemblyResolver.produces(holder.value(), outputKey.toStack())) {
+            return null;
+        }
+        EncodedIngredients expected = CreateRecipeIngredients.sequencedAssembly(holder, level);
+        if (expected == null
+                || expected.outputs().size() != 1
+                || !expected.outputs().get(0).equals(result)
+                || !CreateRecipeIngredients.satisfies(expected, inputs)) {
+            return null;
+        }
+        return SequencedAssemblyPattern.encode(holder.id(), inputs, result);
+    }
+
+    @Nullable
+    private static ItemStack itemApplication(
+            IPatternDetails encoded, RecipeHolder<ItemApplicationRecipe> holder, Level level) {
+        if (!NepConfig.createDeploying()) {
+            return null;
+        }
+        return andesiteCrafting(encoded, holder, CreateRecipeIngredients.itemApplication(holder, level));
+    }
+
+    @Nullable
+    private static ItemStack filling(IPatternDetails encoded, RecipeHolder<FillingRecipe> holder, Level level) {
+        if (!NepConfig.createFilling()) {
+            return null;
+        }
+        return andesiteCrafting(encoded, holder, CreateRecipeIngredients.spoutFilling(holder, level));
+    }
+
+    @Nullable
+    private static ItemStack andesiteCrafting(
+            IPatternDetails encoded, RecipeHolder<?> holder, @Nullable EncodedIngredients expected) {
+        List<GenericStack> inputs = condensedInputs(encoded);
+        GenericStack result = singleResult(encoded);
+        if (inputs == null || result == null) {
+            return null;
+        }
+        return matchesAndesite(expected, holder, inputs, result)
+                ? AndesiteCraftingPattern.encode(holder.id(), inputs, result)
+                : null;
+    }
+
+    private static boolean matchesAndesite(
+            @Nullable EncodedIngredients expected,
+            RecipeHolder<?> holder,
+            List<GenericStack> inputs,
+            GenericStack result) {
+        if (expected == null || !AllRecipeTypes.CAN_BE_AUTOMATED.test(holder)) {
+            return false;
+        }
+        if (expected.outputs().size() != 1 || !expected.outputs().get(0).equals(result)) {
+            return false;
+        }
+        return CreateRecipeIngredients.satisfies(expected, inputs);
+    }
+
+    @Nullable
+    private static PatternFallback.Result andesiteCraftingByResult(IPatternDetails encoded, Level level) {
+        List<GenericStack> inputs = condensedInputs(encoded);
+        GenericStack result = singleResult(encoded);
+        if (inputs == null || result == null) {
+            return null;
+        }
+
+        RecipeHolder<?> only = null;
+
+        if (NepConfig.createDeploying()) {
+            for (RecipeHolder<? extends ItemApplicationRecipe> holder : ApplicationRecipeResolver.candidates(level)) {
+                if (matchesAndesite(CreateRecipeIngredients.itemApplication(holder, level), holder, inputs, result)) {
+                    if (only != null) {
+                        return null;
+                    }
+                    only = holder;
+                }
+            }
+        }
+
+        if (NepConfig.createFilling()) {
+            for (RecipeHolder<FillingRecipe> holder : FillingRecipeResolver.candidates(level)) {
+                if (matchesAndesite(CreateRecipeIngredients.spoutFilling(holder, level), holder, inputs, result)) {
+                    if (only != null) {
+                        return null;
+                    }
+                    only = holder;
+                }
+            }
+        }
+
+        return only == null
+                ? null
+                : PatternFallback.Result.of(AndesiteCraftingPattern.encode(only.id(), inputs, result));
+    }
+
+    @Nullable
+    private static PatternFallback.Result mechanicalCraftingByResult(IPatternDetails encoded, Level level) {
+        if (!NepConfig.createMechanicalCrafting()) {
+            return null;
+        }
+        GridPlan plan = MechanicalRecipeResolver.resolve(encoded, level);
+        return plan == null ? null : PatternFallback.Result.of(encodeGrid(plan, encoded));
+    }
+
+    @Nullable
+    private static PatternFallback.Result sequencedAssemblyByResult(IPatternDetails encoded, Level level) {
+        if (!NepConfig.createSequencedAssembly() && !NepConfig.createSequencedAssemblyMatrix()) {
+            return null;
+        }
+        GenericStack result = singleResult(encoded);
+        if (result == null || !(result.what() instanceof AEItemKey outputKey)) {
+            return null;
+        }
+        List<RecipeHolder<SequencedAssemblyRecipe>> candidates =
+                SequencedAssemblyResolver.candidatesFor(level, outputKey.toStack());
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        List<GenericStack> inputs = condensedInputs(encoded);
+        if (inputs != null) {
+            RecipeHolder<SequencedAssemblyRecipe> only = null;
+            for (RecipeHolder<SequencedAssemblyRecipe> candidate : candidates) {
+                EncodedIngredients expected = CreateRecipeIngredients.sequencedAssembly(candidate, level);
+                if (expected != null
+                        && expected.outputs().size() == 1
+                        && expected.outputs().get(0).equals(result)
+                        && CreateRecipeIngredients.satisfies(expected, inputs)) {
+                    if (only != null) {
+                        only = null;
+                        break;
+                    }
+                    only = candidate;
+                }
+            }
+            if (only != null) {
+                return PatternFallback.Result.of(SequencedAssemblyPattern.encode(only.id(), inputs, result));
+            }
+        }
+
+        return PatternFallback.Result.feedback(Component.translatable("nep.encoding.assembly_unresolved"));
+    }
+
+    private static ItemStack encodeGrid(GridPlan plan, IPatternDetails encoded) {
+        List<GenericStack> cells = new ArrayList<>(plan.cells().size());
+        for (AEItemKey key : plan.cells()) {
+            cells.add(key == null ? null : new GenericStack(key, 1));
+        }
+        return MechanicalCraftingPattern.encode(
+                plan.width(), plan.height(), cells, encoded.getOutputs().get(0));
+    }
+
+    @Nullable
+    private static GenericStack singleResult(IPatternDetails encoded) {
+        List<GenericStack> outputs = encoded.getOutputs();
+        return outputs.size() == 1 && outputs.get(0).amount() > 0 ? outputs.get(0) : null;
+    }
+
+    @Nullable
+    private static List<GenericStack> condensedInputs(IPatternDetails encoded) {
+        List<GenericStack> inputs = new ArrayList<>();
+        for (IPatternDetails.IInput input : encoded.getInputs()) {
+            GenericStack[] possible = input.getPossibleInputs();
+            if (possible.length == 0) {
+                return null;
+            }
+            long amount = possible[0].amount() * input.getMultiplier();
+            if (amount <= 0) {
+                return null;
+            }
+            inputs.add(new GenericStack(possible[0].what(), amount));
+        }
+        return inputs.isEmpty() ? null : inputs;
+    }
+}

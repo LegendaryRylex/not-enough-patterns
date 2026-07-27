@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "nep:item/incomplete_hardened_obsidian_plate"
+  }
+}

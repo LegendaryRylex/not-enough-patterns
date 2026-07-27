@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "  E",
+    " B ",
+    "S  "
+  ],
+  "key": {
+    "E": { "item": "ae2:engineering_processor" },
+    "B": { "item": "create:brass_ingot" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:sequenced_assembly_linker"
+  }
+}
