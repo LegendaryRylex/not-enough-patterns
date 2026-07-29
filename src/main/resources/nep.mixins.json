@@ -11,7 +11,8 @@
     "PatternProviderMenuMixin"
   ],
   "client": [
-    "PatternProviderScreenMixin"
+    "PatternProviderScreenMixin",
+    "ScreenStyleAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

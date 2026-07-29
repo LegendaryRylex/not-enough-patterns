@@ -28,6 +28,7 @@ public final class Nep {
     }
 
     public Nep(IEventBus modBus, ModContainer container, Dist dist) {
+        NepSlotSemantics.init();
         container.registerConfig(ModConfig.Type.SERVER, NepConfig.SPEC);
         modBus.addListener(ModConfigEvent.Loading.class, NepConfig::onConfigLoaded);
         modBus.addListener(ModConfigEvent.Reloading.class, NepConfig::onConfigLoaded);

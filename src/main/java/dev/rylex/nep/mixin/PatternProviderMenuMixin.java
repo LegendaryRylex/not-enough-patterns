@@ -1,9 +1,11 @@
 package dev.rylex.nep.mixin;
 
-import appeng.api.upgrades.IUpgradeableObject;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.menu.AEBaseMenu;
 import appeng.menu.implementations.PatternProviderMenu;
+import dev.rylex.nep.NepSlotSemantics;
+import dev.rylex.nep.provider.ImportCardSlot;
+import dev.rylex.nep.provider.ImportUpgradeHost;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,8 +27,15 @@ public abstract class PatternProviderMenuMixin extends AEBaseMenu {
             Inventory playerInventory,
             PatternProviderLogicHost host,
             CallbackInfo ci) {
-        if (host.getLogic() instanceof IUpgradeableObject upgradeable) {
-            setupUpgrades(upgradeable.getUpgrades());
+        if (!(host.getLogic() instanceof ImportUpgradeHost upgradeHost)) {
+            return;
+        }
+
+        var upgrades = upgradeHost.nepImportUpgrades();
+        for (int i = 0; i < upgrades.size(); i++) {
+            var slot = new ImportCardSlot(upgrades, i);
+            slot.setNotDraggable();
+            addSlot(slot, NepSlotSemantics.IMPORT_UPGRADE);
         }
     }
 }

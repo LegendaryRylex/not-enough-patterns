@@ -11,7 +11,6 @@ import appeng.api.stacks.AEKeyType;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.upgrades.IUpgradeInventory;
-import appeng.api.upgrades.IUpgradeableObject;
 import appeng.api.upgrades.UpgradeInventories;
 import appeng.core.definitions.AEBlocks;
 import appeng.helpers.patternprovider.PatternProviderLogic;
@@ -20,6 +19,7 @@ import appeng.parts.automation.StackWorldBehaviors;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.rylex.nep.NepItems;
+import dev.rylex.nep.provider.ImportUpgradeHost;
 import dev.rylex.nep.provider.OwedImportContext;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -43,7 +43,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(PatternProviderLogic.class)
-public abstract class PatternProviderLogicMixin implements IUpgradeableObject {
+public abstract class PatternProviderLogicMixin implements ImportUpgradeHost {
 
     @Shadow
     @Final
@@ -80,7 +80,7 @@ public abstract class PatternProviderLogicMixin implements IUpgradeableObject {
     }
 
     @Override
-    public IUpgradeInventory getUpgrades() {
+    public IUpgradeInventory nepImportUpgrades() {
         return nep$upgrades == null ? UpgradeInventories.empty() : nep$upgrades;
     }
 
