@@ -74,6 +74,7 @@ var skippableRuntimeMods = [
                   [group: 'curse.maven', module: 'ae2addonlib-1366135']],
         eae    : [[group: 'curse.maven', module: 'ex-pattern-provider-892005'],
                   [group: 'curse.maven', module: 'glodium-957920']],
+        appflux: [[group: 'curse.maven', module: 'applied-flux-965012']],
         mega   : [[group: 'curse.maven', module: 'mega-cells-622112']],
         ac     : [[group: 'curse.maven', module: 'applied-create-1474758'],
                   [group: 'curse.maven', module: 'kotlin-for-forge-351264']],
@@ -81,7 +82,7 @@ var skippableRuntimeMods = [
         wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
 ]
 
-var impliedSkips = [create: ['sable', 'ac', 'cna'], de: ['dfa'], wtlib: ['aae', 'eae']]
+var impliedSkips = [create: ['sable', 'ac', 'cna'], de: ['dfa'], wtlib: ['aae', 'eae', 'appflux'], eae: ['appflux']]
 
 var skipModsLocal = file('skip_mods.local')
 var fullClasspathRequested = gradle.startParameter.taskNames.any {
@@ -231,6 +232,7 @@ dependencies {
     localRuntime "curse.maven:ae2-draconic-fusion-autocrafter-1521464:${ae2_draconic_fusion_autocrafter_file}"
     localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
     localRuntime "curse.maven:glodium-957920:${glodium_file}"
+    localRuntime "curse.maven:applied-flux-965012:${appliedflux_file}"
     localRuntime "curse.maven:mega-cells-622112:${megacells_file}"
     localRuntime "curse.maven:applied-create-1474758:${appliedcreate_file}"
     localRuntime "curse.maven:kotlin-for-forge-351264:${kotlinforforge_file}"

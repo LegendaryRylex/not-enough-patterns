@@ -41,7 +41,7 @@ public final class AddonProviderImportCardGameTest {
 
         var leftover = upgrades.addItems(new ItemStack(NepItems.IMPORT_CARD.get()));
         helper.assertTrue(leftover.isEmpty(), id + " refused the import card");
-        helper.assertTrue(host.isUpgradedWith(NepItems.IMPORT_CARD.get()), id + " does not report the installed card");
+        helper.assertTrue(upgrades.isInstalled(NepItems.IMPORT_CARD.get()), id + " does not report the installed card");
         helper.setBlock(PROVIDER, Blocks.AIR.defaultBlockState());
     }
 

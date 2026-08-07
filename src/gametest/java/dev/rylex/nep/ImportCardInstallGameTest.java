@@ -63,7 +63,7 @@ public final class ImportCardInstallGameTest {
         Interaction interaction = shiftClickProvider(helper, new ItemStack(NepItems.IMPORT_CARD.get()));
 
         helper.assertTrue(
-                interaction.provider().isUpgradedWith(NepItems.IMPORT_CARD.get()),
+                interaction.provider().nepImportUpgrades().isInstalled(NepItems.IMPORT_CARD.get()),
                 "shift clicking the provider with an import card did not install it");
         helper.assertTrue(interaction.held().isEmpty(), "the import card was installed but not taken from the player");
         helper.succeed();
@@ -84,7 +84,8 @@ public final class ImportCardInstallGameTest {
     public static void aSecondImportCardIsRefused(GameTestHelper helper) {
         Interaction first = shiftClickProvider(helper, new ItemStack(NepItems.IMPORT_CARD.get()));
         helper.assertTrue(
-                first.provider().isUpgradedWith(NepItems.IMPORT_CARD.get()), "the first card did not install");
+                first.provider().nepImportUpgrades().isInstalled(NepItems.IMPORT_CARD.get()),
+                "the first card did not install");
 
         ItemStack second = new ItemStack(NepItems.IMPORT_CARD.get());
         first.player().setItemInHand(InteractionHand.MAIN_HAND, second);
@@ -93,7 +94,7 @@ public final class ImportCardInstallGameTest {
         second.onItemUseFirst(new UseOnContext(first.player(), InteractionHand.MAIN_HAND, hit));
 
         helper.assertTrue(
-                first.provider().getInstalledUpgrades(NepItems.IMPORT_CARD.get()) == 1,
+                first.provider().nepImportUpgrades().getInstalledUpgrades(NepItems.IMPORT_CARD.get()) == 1,
                 "a second import card was installed on a provider that already had one");
         helper.assertTrue(first.held().getCount() == 1, "a refused import card was still taken from the player");
         helper.succeed();
@@ -110,12 +111,13 @@ public final class ImportCardInstallGameTest {
 
         helper.assertTrue(leftover.isEmpty(), "the provider's upgrade slot refused an import card put in by hand");
         helper.assertTrue(
-                provider.isUpgradedWith(NepItems.IMPORT_CARD.get()),
+                provider.nepImportUpgrades().isInstalled(NepItems.IMPORT_CARD.get()),
                 "a card placed in the upgrade slot by hand did not register as installed, so the slot reads"
                         + " differently depending on how the card got there");
         helper.assertTrue(
-                provider.getInstalledUpgrades(NepItems.IMPORT_CARD.get()) == 1,
-                "a hand-placed card counted as " + provider.getInstalledUpgrades(NepItems.IMPORT_CARD.get())
+                provider.nepImportUpgrades().getInstalledUpgrades(NepItems.IMPORT_CARD.get()) == 1,
+                "a hand-placed card counted as "
+                        + provider.nepImportUpgrades().getInstalledUpgrades(NepItems.IMPORT_CARD.get())
                         + " installs");
         helper.succeed();
     }
@@ -137,7 +139,7 @@ public final class ImportCardInstallGameTest {
                 .onItemUseFirst(new UseOnContext(fake, InteractionHand.MAIN_HAND, hit));
 
         helper.assertTrue(
-                ((ImportUpgradeHost) be).getInstalledUpgrades(NepItems.IMPORT_CARD.get()) == 1,
+                ((ImportUpgradeHost) be).nepImportUpgrades().getInstalledUpgrades(NepItems.IMPORT_CARD.get()) == 1,
                 "a fake player could not install the card, though the install path is AE2's own upgrade card item and"
                         + " behaves the same on every other AE2 machine");
         helper.assertTrue(
