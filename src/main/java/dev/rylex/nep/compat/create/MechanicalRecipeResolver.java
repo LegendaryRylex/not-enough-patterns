@@ -11,6 +11,7 @@ import com.simibubi.create.infrastructure.config.AllConfigs;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.pattern.GridPlan;
 import dev.rylex.nep.util.CellAssigner;
+import dev.rylex.nep.util.RecipeCache;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,7 +37,8 @@ final class MechanicalRecipeResolver {
 
     private record CacheKey(AEItemKey definition, boolean regularCrafting) {}
 
-    private static final Map<CacheKey, Optional<GridPlan>> CACHE = Collections.synchronizedMap(new HashMap<>());
+    private static final RecipeCache<Map<CacheKey, Optional<GridPlan>>> CACHE =
+            RecipeCache.of(level -> Collections.synchronizedMap(new HashMap<>()));
 
     static void clearCache() {
         CACHE.clear();
@@ -47,7 +49,8 @@ final class MechanicalRecipeResolver {
     @Nullable
     static GridPlan resolve(IPatternDetails pattern, Level level) {
         CacheKey key = new CacheKey(pattern.getDefinition(), regularCraftingAllowed());
-        return CACHE.computeIfAbsent(key, k -> Optional.ofNullable(compute(pattern, level)))
+        return CACHE.get(level)
+                .computeIfAbsent(key, k -> Optional.ofNullable(compute(pattern, level)))
                 .orElse(null);
     }
 

@@ -3,6 +3,7 @@ package dev.rylex.nep.mixin;
 import appeng.menu.AEBaseMenu;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import dev.rylex.nep.NepItems;
+import dev.rylex.nep.NepSlotSemantics;
 import dev.rylex.nep.provider.ImportCardSlot;
 import java.util.List;
 import net.minecraft.world.inventory.Slot;
@@ -20,10 +21,13 @@ public abstract class AEBaseMenuMixin {
             return destinations;
         }
 
-        var importSlots = destinations.stream()
+        var menu = (AEBaseMenu) (Object) this;
+        if (menu.getSlots(NepSlotSemantics.IMPORT_UPGRADE).isEmpty()) {
+            return destinations;
+        }
+
+        return destinations.stream()
                 .filter(slot -> slot instanceof ImportCardSlot && !slot.hasItem())
                 .toList();
-
-        return importSlots.isEmpty() ? destinations : importSlots;
     }
 }

@@ -10,10 +10,12 @@ final class PatternInput implements IPatternDetails.IInput {
 
     private final GenericStack[] template;
     private final long multiplier;
+    private final boolean retained;
 
-    PatternInput(AEKey what, long amount) {
+    PatternInput(AEKey what, long amount, boolean retained) {
         this.template = new GenericStack[] {new GenericStack(what, 1)};
         this.multiplier = amount;
+        this.retained = retained;
     }
 
     @Override
@@ -34,6 +36,6 @@ final class PatternInput implements IPatternDetails.IInput {
     @Nullable
     @Override
     public AEKey getRemainingKey(AEKey template) {
-        return null;
+        return retained ? template : null;
     }
 }

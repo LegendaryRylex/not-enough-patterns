@@ -1,0 +1,14 @@
+{
+  "pack": {
+    "description": "Hides nep's Compact Crafting guide pages when that mod is absent",
+    "pack_format": 34
+  },
+  "filter": {
+    "block": [
+      {
+        "namespace": "nep",
+        "path": "^ae2guide/nep/compactcrafting/.*\\.md$"
+      }
+    ]
+  }
+}

@@ -5,9 +5,13 @@ import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ManualApplicationRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.compat.jei.JeiTransferSource;
+import java.util.List;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.Level;
 
 public final class CreateJeiCompat {
     private CreateJeiCompat() {}
@@ -32,10 +36,21 @@ public final class CreateJeiCompat {
                 collector.add(
                         RecipeType.<ManualApplicationRecipe>createRecipeHolderType(
                                 CreatePatternSources.ITEM_APPLICATION),
-                        CreateRecipeIngredients::itemApplication);
+                        CreateRecipeIngredients::displayedItemApplication);
                 collector.add(
                         RecipeType.<FillingRecipe>createRecipeHolderType(CreatePatternSources.SPOUT_FILLING),
                         CreateRecipeIngredients::spoutFilling);
+            }
+
+            @Override
+            public void addRecipes(IRecipeRegistration registration, Level level) {
+                List<RecipeHolder<DeployerApplicationRecipe>> stripping = LogStripping.deployerRecipes(level);
+                if (!stripping.isEmpty()) {
+                    registration.addRecipes(
+                            RecipeType.<DeployerApplicationRecipe>createRecipeHolderType(
+                                    CreatePatternSources.DEPLOYING),
+                            stripping);
+                }
             }
 
             @Override

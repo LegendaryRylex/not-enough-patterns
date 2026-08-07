@@ -3,9 +3,15 @@ package dev.rylex.nep;
 import appeng.api.upgrades.Upgrades;
 import appeng.core.definitions.AEBlocks;
 import dev.rylex.nep.client.NepClient;
+import dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsCompat;
+import dev.rylex.nep.compat.apothic.ApothicCompat;
+import dev.rylex.nep.compat.compactcrafting.CompactCraftingCompat;
 import dev.rylex.nep.compat.create.CreateCompat;
+import dev.rylex.nep.compat.draconic.DraconicCompat;
+import dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat;
 import dev.rylex.nep.guide.NepRecipes;
 import dev.rylex.nep.net.NepNetwork;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -42,6 +48,26 @@ public final class Nep {
             CreateCompat.init(modBus, dist);
             LOGGER.info("Create integration enabled");
         }
+        if (ModList.get().isLoaded("draconicevolution")) {
+            DraconicCompat.init(modBus, dist);
+            LOGGER.info("Draconic Evolution integration enabled");
+        }
+        if (ModList.get().isLoaded("compactcrafting")) {
+            CompactCraftingCompat.init(modBus, dist);
+            LOGGER.info("Compact Crafting integration enabled");
+        }
+        if (ModList.get().isLoaded("apothic_enchanting")) {
+            ApothicCompat.init(modBus);
+            LOGGER.info("Apothic Enchanting integration enabled");
+        }
+        if (ModList.get().isLoaded("actuallyadditions")) {
+            ActuallyAdditionsCompat.init(modBus, dist);
+            LOGGER.info("Actually Additions integration enabled");
+        }
+        if (ModList.get().isLoaded("mysticalagriculture")) {
+            MysticalAgricultureCompat.init(modBus, dist);
+            LOGGER.info("Mystical Agriculture integration enabled");
+        }
         if (dist.isClient()) {
             NepClient.init(container);
         }
@@ -49,6 +75,24 @@ public final class Nep {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> Upgrades.add(NepItems.IMPORT_CARD, AEBlocks.PATTERN_PROVIDER.block(), 1));
+        event.enqueueWork(() -> {
+            Upgrades.add(NepItems.IMPORT_CARD, AEBlocks.PATTERN_PROVIDER.block(), 1);
+            registerProviderUpgrade("advanced_ae", "adv_pattern_provider", "small_adv_pattern_provider");
+            registerProviderUpgrade("extendedae", "ex_pattern_provider");
+            registerProviderUpgrade("megacells", "mega_pattern_provider");
+            registerProviderUpgrade("appliedcreate", "andesite_pattern_provider", "brass_pattern_provider");
+            registerProviderUpgrade("ae2_draconic_fusion_autocrafter", "me_draconic_pattern_provider");
+        });
+    }
+
+    private static void registerProviderUpgrade(String modId, String... itemPaths) {
+        if (!ModList.get().isLoaded(modId)) {
+            return;
+        }
+        for (var path : itemPaths) {
+            BuiltInRegistries.ITEM
+                    .getOptional(ResourceLocation.fromNamespaceAndPath(modId, path))
+                    .ifPresent(item -> Upgrades.add(NepItems.IMPORT_CARD, item, 1));
+        }
     }
 }

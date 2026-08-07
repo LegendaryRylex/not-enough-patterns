@@ -4,10 +4,9 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.NepComponents;
 import dev.rylex.nep.NepItems;
+import dev.rylex.nep.pattern.encoding.PatternContents;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -40,7 +39,7 @@ public class MechanicalCraftingPattern implements NepPattern {
         }
 
         List<AEItemKey> cells = new ArrayList<>(encoded.cells().size());
-        Map<AEItemKey, Long> counts = new LinkedHashMap<>();
+        List<GenericStack> filled = new ArrayList<>(encoded.cells().size());
         for (GenericStack cell : encoded.cells()) {
             if (cell == null) {
                 cells.add(null);
@@ -53,14 +52,14 @@ public class MechanicalCraftingPattern implements NepPattern {
                 throw new IllegalArgumentException("Pattern cell amounts must be 1");
             }
             cells.add(itemKey);
-            counts.merge(itemKey, 1L, Long::sum);
+            filled.add(cell);
         }
-        if (counts.isEmpty()) {
+        if (filled.isEmpty()) {
             throw new IllegalArgumentException("Pattern has no ingredients");
         }
         this.plan = new GridPlan(encoded.width(), encoded.height(), cells);
-        this.inputs = counts.entrySet().stream()
-                .map(entry -> new PatternInput(entry.getKey(), entry.getValue()))
+        this.inputs = PatternContents.condense(filled).stream()
+                .map(stack -> new PatternInput(stack.what(), stack.amount(), false))
                 .toArray(PatternInput[]::new);
         this.outputs = List.of(encoded.result());
     }

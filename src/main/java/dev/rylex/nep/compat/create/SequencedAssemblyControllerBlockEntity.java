@@ -15,6 +15,7 @@ import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.create.SequencedAssemblyControllerBlock.ControllerStatus;
 import dev.rylex.nep.machine.MachineItemView;
+import dev.rylex.nep.machine.PushingCpus;
 import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.machine.ReturnDirections;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
@@ -42,6 +43,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Clearable;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -63,7 +65,7 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class SequencedAssemblyControllerBlockEntity extends BlockEntity implements MenuProvider {
+public class SequencedAssemblyControllerBlockEntity extends BlockEntity implements MenuProvider, Clearable {
 
     private static final String INPUT_KEY = "Input";
     private static final String OUTPUT_KEY = "Output";
@@ -83,6 +85,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private static final String INFLIGHT_KEY = "InFlight";
     private static final String QUEUE_KEY = "Queue";
     private static final String RECIRC_KEY = "Recirc";
+    private static final String RECLAIM_KEY = "Reclaim";
     private static final int POLL_INTERVAL = 10;
     private static final int BUFFER_SLOTS = 18;
     private static final int RESULT_SLOTS = 9;
@@ -131,6 +134,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private long lastProgressTick = Long.MIN_VALUE;
     private final Map<Item, Long> inFlight = new HashMap<>();
     private long lastResolveTick = Long.MIN_VALUE;
+    private long reclaimUntil = Long.MIN_VALUE;
     private boolean halted;
     private boolean outputBlocked;
     private boolean starved;
@@ -152,6 +156,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private StationSnapshot stationSnapshot;
 
     private final Map<Item, Template> templates = new HashMap<>();
+    private final PushingCpus pushingCpus = new PushingCpus();
     private final List<Item> queue = new ArrayList<>();
     private final List<ItemStack> recirc = new ArrayList<>();
 
@@ -393,15 +398,51 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         manageQueue(level, active, activeRecipe);
     }
 
+    private boolean anythingOnTheLine() {
+        return pending() > 0 || inFlightTotal() > 0 || !recirc.isEmpty();
+    }
+
+    private void startReclaim(Level level) {
+        int grace = NepConfig.createSequencedAssemblyReclaimGrace();
+        long until = grace <= 0 ? Long.MIN_VALUE : level.getGameTime() + grace;
+        if (until == reclaimUntil) {
+            return;
+        }
+        reclaimUntil = until;
+        setChanged();
+    }
+
+    private boolean reclaiming(Level level) {
+        if (reclaimUntil == Long.MIN_VALUE) {
+            return false;
+        }
+        if (level.getGameTime() >= reclaimUntil) {
+            reclaimUntil = Long.MIN_VALUE;
+            setChanged();
+            if (NepConfig.debugLogging()) {
+                Nep.LOGGER.info("SA controller {} closed its reclaim window", getBlockPos());
+            }
+            return false;
+        }
+        return true;
+    }
+
     void clearPending() {
         if (owed.isEmpty() && templates.isEmpty()) {
             return;
         }
+        boolean onTheLine = anythingOnTheLine();
+        int cancelled = pushingCpus.cancelJobsFor(requester.grid(), Set.copyOf(templates.keySet()));
         if (NepConfig.debugLogging()) {
-            Nep.LOGGER.info("SA controller {} cleared {} pending output(s) on request", getBlockPos(), owed.size());
+            Nep.LOGGER.info(
+                    "SA controller {} cleared {} pending output(s) and cancelled {} network job(s)",
+                    getBlockPos(),
+                    owed.size(),
+                    cancelled);
         }
         owed.clear();
         templates.clear();
+        pushingCpus.clear();
         inFlight.clear();
         queue.clear();
         for (ItemStack held : recirc) {
@@ -419,6 +460,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (level != null) {
             updateHalted(level, false);
             markProgress(level);
+            if (onTheLine) {
+                startReclaim(level);
+            }
         }
         refreshVisualState();
     }
@@ -721,6 +765,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         }
 
         boolean pending = pending() > 0 || inFlightTotal() > 0;
+        boolean reclaiming = !pending && reclaiming(level);
         Set<Item> transitionals = new HashSet<>();
         Set<Item> primaries = new HashSet<>();
         for (SequencedAssemblyRecipe recipe : recipes) {
@@ -737,6 +782,8 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             if (transitionals.contains(item)) {
                 if (pending) {
                     holdTransitional(out, slot, onDepot);
+                } else if (reclaiming) {
+                    reclaimFromDepot(level, out, slot, onDepot);
                 }
                 return false;
             }
@@ -749,6 +796,10 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                 decrementOwed(item, captured);
                 resolveAttempts(level, captured, item);
                 markProgress(level);
+            } else if (reclaiming) {
+                if (reclaimFromDepot(level, out, slot, onDepot) <= 0) {
+                    return true;
+                }
             } else if (pending) {
                 int captured = capture(out, slot, onDepot, byproductBuffer, onDepot.getCount());
                 if (captured <= 0) {
@@ -769,6 +820,22 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             recirc.add(taken);
             setChanged();
         }
+    }
+
+    private int reclaimFromDepot(Level level, IItemHandler out, int slot, ItemStack onDepot) {
+        int captured = capture(out, slot, onDepot, byproductBuffer, onDepot.getCount());
+        if (captured <= 0) {
+            return 0;
+        }
+        startReclaim(level);
+        if (NepConfig.debugLogging()) {
+            Nep.LOGGER.info(
+                    "SA controller {} reclaimed {} x{} left over on the line",
+                    getBlockPos(),
+                    onDepot.getItem(),
+                    captured);
+        }
+        return captured;
     }
 
     private void decrementOwed(Item item, long amount) {
@@ -898,6 +965,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             queue.remove(active);
             inFlight.remove(active);
             templates.remove(active);
+            if (templates.isEmpty()) {
+                pushingCpus.clear();
+            }
             updateHalted(level, false);
             markProgress(level);
             setChanged();
@@ -1110,6 +1180,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         long producedAmount = Math.max(1, outputs.get(0).amount());
         captureTemplate(producedItem, items, fluids);
         owed.merge(producedItem, producedAmount, Long::sum);
+        pushingCpus.record();
         toReturn.merge(producedItem, producedAmount, Long::sum);
         if (lastProgressTick == Long.MIN_VALUE) {
             markProgress(level);
@@ -1408,6 +1479,24 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                 fluids.takeFrom(tank, (int) dumped);
             }
         }
+        clearContent();
+    }
+
+    @Override
+    public void clearContent() {
+        clearHandler(buffer);
+        clearHandler(outputBuffer);
+        clearHandler(byproductBuffer);
+        fluids.clear();
+        recirc.clear();
+        owed.clear();
+        toReturn.clear();
+    }
+
+    private static void clearHandler(ItemStackHandler handler) {
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            handler.setStackInSlot(slot, ItemStack.EMPTY);
+        }
     }
 
     private static void dropHandler(Level level, BlockPos pos, ItemStackHandler handler) {
@@ -1632,6 +1721,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     }
 
     void clearBufferTo(Player player) {
+        boolean onTheLine = anythingOnTheLine();
         emptyHandlerTo(player, buffer);
         for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
             ItemStack taken = outputBuffer.extractItem(slot, Integer.MAX_VALUE, false);
@@ -1654,6 +1744,10 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             if (dumped > 0) {
                 fluids.takeFrom(tank, (int) dumped);
             }
+        }
+        Level level = getLevel();
+        if (onTheLine && level != null) {
+            startReclaim(level);
         }
         setChanged();
     }
@@ -1780,6 +1874,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (!returnDirections.isEmpty()) {
             tag.put(RETURN_DIRS_KEY, returnDirections.save());
         }
+        pushingCpus.save(tag);
         if (!templates.isEmpty()) {
             ListTag templateList = new ListTag();
             for (Map.Entry<Item, Template> entry : templates.entrySet()) {
@@ -1814,6 +1909,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                 recircList.add(held.save(registries));
             }
             tag.put(RECIRC_KEY, recircList);
+        }
+        if (reclaimUntil != Long.MIN_VALUE) {
+            tag.putLong(RECLAIM_KEY, reclaimUntil);
         }
         CompoundTag nodeTag = new CompoundTag();
         requester.save(nodeTag);
@@ -1902,6 +2000,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         ItemCounts.load(toReturn, tag, TO_RETURN_KEY);
         ItemCounts.load(inFlight, tag, INFLIGHT_KEY);
         returnDirections.load(tag, RETURN_DIRS_KEY, RETURN_DIR_KEY, toReturn.keySet());
+        pushingCpus.load(tag);
         templates.clear();
         if (tag.contains(TEMPLATE_KEY, Tag.TAG_LIST)) {
             ListTag templateList = tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND);
@@ -1944,6 +2043,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                 }
             }
         }
+        reclaimUntil = tag.contains(RECLAIM_KEY) ? tag.getLong(RECLAIM_KEY) : Long.MIN_VALUE;
         if (tag.contains(NODE_KEY)) {
             requester.load(tag.getCompound(NODE_KEY));
         }

@@ -2,6 +2,7 @@ package dev.rylex.nep.compat.create;
 
 import dev.rylex.nep.machine.MachineFluidInput;
 import dev.rylex.nep.menu.MachineMenu;
+import dev.rylex.nep.menu.MachineSlot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -9,7 +10,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
-import net.neoforged.neoforge.items.SlotItemHandler;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class SequencedAssemblyControllerMenu extends MachineMenu {
@@ -66,7 +66,7 @@ public class SequencedAssemblyControllerMenu extends MachineMenu {
     private void addInputGrid(IItemHandler handler, int cols, int rows, int x, int y) {
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
-                addSlot(new SlotItemHandler(handler, row * cols + col, x + col * 18, y + row * 18));
+                addSlot(new MachineSlot(handler, row * cols + col, x + col * 18, y + row * 18));
             }
         }
     }
@@ -74,7 +74,7 @@ public class SequencedAssemblyControllerMenu extends MachineMenu {
     private void addTakeOnlyGrid(IItemHandler handler, int cols, int rows, int x, int y) {
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
-                addSlot(new SlotItemHandler(handler, row * cols + col, x + col * 18, y + row * 18) {
+                addSlot(new MachineSlot(handler, row * cols + col, x + col * 18, y + row * 18) {
                     @Override
                     public boolean mayPlace(ItemStack stack) {
                         return false;
@@ -136,8 +136,6 @@ public class SequencedAssemblyControllerMenu extends MachineMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return controller != null
-                && !controller.isRemoved()
-                && player.distanceToSqr(controller.getBlockPos().getCenter()) <= 64.0;
+        return withinReach(player, controller);
     }
 }

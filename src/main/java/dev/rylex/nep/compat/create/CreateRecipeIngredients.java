@@ -2,18 +2,18 @@ package dev.rylex.nep.compat.create;
 
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import com.simibubi.create.content.fluids.transfer.FillingRecipe;
 import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
 import com.simibubi.create.content.processing.recipe.ProcessingOutput;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
+import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -108,21 +108,27 @@ final class CreateRecipeIngredients {
             return null;
         }
 
-        List<AEItemKey> processed = itemOptions(recipe.getProcessedItem());
-        if (processed.isEmpty()) {
+        if (recipe.getIngredients().size() < 2) {
             return null;
         }
+        List<AEItemKey> processed = itemOptions(recipe.getProcessedItem());
+        List<AEItemKey> held = itemOptions(recipe.getRequiredHeldItem());
+        if (processed.isEmpty() || held.isEmpty()) {
+            return null;
+        }
+
         List<List<GenericStack>> inputs = new ArrayList<>();
         inputs.add(options(processed, 1));
+        Set<Integer> retained = recipe.shouldKeepHeldItem() ? Set.of(inputs.size()) : Set.of();
+        inputs.add(options(held, 1));
+        return new EncodedIngredients(List.copyOf(inputs), List.of(result), retained);
+    }
 
-        if (!recipe.shouldKeepHeldItem()) {
-            List<AEItemKey> held = itemOptions(recipe.getRequiredHeldItem());
-            if (held.isEmpty()) {
-                return null;
-            }
-            inputs.add(options(held, 1));
-        }
-        return new EncodedIngredients(List.copyOf(inputs), List.of(result));
+    @Nullable
+    static EncodedIngredients displayedItemApplication(
+            RecipeHolder<? extends ItemApplicationRecipe> holder, Level level) {
+        RecipeHolder<? extends ItemApplicationRecipe> backing = LogStripping.substitute(holder, level);
+        return itemApplication(backing == null ? holder : backing, level);
     }
 
     @Nullable
@@ -160,71 +166,15 @@ final class CreateRecipeIngredients {
     }
 
     static boolean satisfies(EncodedIngredients expected, List<GenericStack> actualInputs) {
-        Map<AEKey, Long> remaining = new LinkedHashMap<>();
-        for (GenericStack stack : actualInputs) {
-            remaining.merge(stack.what(), stack.amount(), Long::sum);
-        }
-
-        List<List<GenericStack>> slots = new ArrayList<>(expected.inputs());
-        slots.sort(Comparator.comparingInt(slot -> matchingOptions(remaining, slot)));
-        return assign(remaining, slots, 0, new int[] {ASSIGN_BUDGET});
-    }
-
-    private static final int ASSIGN_BUDGET = 1 << 16;
-
-    private static boolean assign(Map<AEKey, Long> remaining, List<List<GenericStack>> slots, int index, int[] budget) {
-        if (index == slots.size()) {
-            return remaining.isEmpty();
-        }
-        if (--budget[0] < 0) {
-            return false;
-        }
-        for (GenericStack option : slots.get(index)) {
-            Long held = remaining.get(option.what());
-            if (held == null || held < option.amount()) {
-                continue;
-            }
-            long left = held - option.amount();
-            if (left == 0) {
-                remaining.remove(option.what());
-            } else {
-                remaining.put(option.what(), left);
-            }
-            if (assign(remaining, slots, index + 1, budget)) {
-                return true;
-            }
-            remaining.put(option.what(), held);
-        }
-        return false;
-    }
-
-    private static int matchingOptions(Map<AEKey, Long> remaining, List<GenericStack> options) {
-        int matches = 0;
-        for (GenericStack option : options) {
-            if (remaining.containsKey(option.what())) {
-                matches++;
-            }
-        }
-        return matches;
+        return IngredientMatching.satisfies(expected, actualInputs);
     }
 
     private static List<GenericStack> options(List<AEItemKey> keys, long amount) {
-        List<GenericStack> options = new ArrayList<>(keys.size());
-        for (AEItemKey key : keys) {
-            options.add(new GenericStack(key, amount));
-        }
-        return List.copyOf(options);
+        return IngredientMatching.options(keys, amount);
     }
 
     private static List<AEItemKey> itemOptions(Ingredient ingredient) {
-        List<AEItemKey> keys = new ArrayList<>();
-        for (ItemStack stack : ingredient.getItems()) {
-            AEItemKey key = AEItemKey.of(stack);
-            if (key != null) {
-                keys.add(key);
-            }
-        }
-        return List.copyOf(keys);
+        return IngredientMatching.itemOptions(ingredient);
     }
 
     static boolean matchesSingleResult(List<ProcessingOutput> results, ItemStack expected, long expectedCount) {
@@ -241,15 +191,7 @@ final class CreateRecipeIngredients {
 
     @Nullable
     static Map<AEItemKey, Long> flattenItemInputs(appeng.api.crafting.IPatternDetails pattern) {
-        Map<AEItemKey, Long> available = new LinkedHashMap<>();
-        for (appeng.api.crafting.IPatternDetails.IInput input : pattern.getInputs()) {
-            GenericStack primary = input.getPossibleInputs()[0];
-            if (!(primary.what() instanceof AEItemKey itemKey)) {
-                return null;
-            }
-            available.merge(itemKey, primary.amount() * input.getMultiplier(), Long::sum);
-        }
-        return available.isEmpty() ? null : available;
+        return IngredientMatching.flattenItemInputs(pattern);
     }
 
     @Nullable
@@ -262,10 +204,6 @@ final class CreateRecipeIngredients {
 
     @Nullable
     private static GenericStack resultOf(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return null;
-        }
-        AEItemKey key = AEItemKey.of(stack);
-        return key == null ? null : new GenericStack(key, Math.max(1, stack.getCount()));
+        return IngredientMatching.resultOf(stack);
     }
 }

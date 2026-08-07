@@ -1,7 +1,7 @@
 package dev.rylex.nep.compat.jei;
 
-import appeng.integration.modules.itemlists.EncodingHelper;
 import appeng.menu.me.items.PatternEncodingTermMenu;
+import dev.rylex.nep.client.ProcessingEncoding;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
 import java.util.Optional;
@@ -11,39 +11,52 @@ import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-public final class PatternTransferHandler<M extends PatternEncodingTermMenu, R extends Recipe<?>>
-        implements IRecipeTransferHandler<M, RecipeHolder<R>> {
+public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
+        implements IRecipeTransferHandler<M, T> {
 
     @FunctionalInterface
-    public interface Extractor<R extends Recipe<?>> {
+    public interface Extractor<T> {
         @Nullable
-        EncodedIngredients extract(RecipeHolder<R> holder, Level level);
+        EncodedIngredients extract(T recipe, Level level);
+    }
+
+    /**
+     * Recipe types JEI exposes without their {@link RecipeHolder} carry no id of their own, so nep looks one up
+     * to hand to the encoder.
+     */
+    @FunctionalInterface
+    public interface Identifier<T> {
+        @Nullable
+        ResourceLocation id(T recipe, Level level);
     }
 
     private final Class<M> menuClass;
     private final MenuType<M> menuType;
-    private final RecipeType<RecipeHolder<R>> recipeType;
+    private final RecipeType<T> recipeType;
     private final IRecipeTransferHandlerHelper helper;
-    private final Extractor<R> extractor;
+    private final Extractor<T> extractor;
+    private final Identifier<T> identifier;
 
     PatternTransferHandler(
             Class<M> menuClass,
             MenuType<M> menuType,
-            RecipeType<RecipeHolder<R>> recipeType,
+            RecipeType<T> recipeType,
             IRecipeTransferHandlerHelper helper,
-            Extractor<R> extractor) {
+            Extractor<T> extractor,
+            Identifier<T> identifier) {
         this.menuClass = menuClass;
         this.menuType = menuType;
         this.recipeType = recipeType;
         this.helper = helper;
         this.extractor = extractor;
+        this.identifier = identifier;
     }
 
     @Override
@@ -57,21 +70,16 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, R e
     }
 
     @Override
-    public RecipeType<RecipeHolder<R>> getRecipeType() {
+    public RecipeType<T> getRecipeType() {
         return recipeType;
     }
 
     @Override
     @Nullable
     public IRecipeTransferError transferRecipe(
-            M menu,
-            RecipeHolder<R> holder,
-            IRecipeSlotsView recipeSlots,
-            Player player,
-            boolean maxTransfer,
-            boolean doTransfer) {
+            M menu, T recipe, IRecipeSlotsView recipeSlots, Player player, boolean maxTransfer, boolean doTransfer) {
 
-        EncodedIngredients encoded = extractor.extract(holder, player.level());
+        EncodedIngredients encoded = extractor.extract(recipe, player.level());
         if (encoded == null || encoded.inputs().isEmpty() || encoded.outputs().isEmpty()) {
             return helper.createInternalError();
         }
@@ -86,8 +94,11 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, R e
             return null;
         }
 
-        EncodingHelper.encodeProcessingRecipe(menu, encoded.inputs(), encoded.outputs());
-        ((PatternRecipeHolder) menu).nep$setRecipeId(holder.id());
+        ProcessingEncoding.encode(menu, encoded);
+        ResourceLocation id = identifier.id(recipe, player.level());
+        if (id != null) {
+            ((PatternRecipeHolder) menu).nep$setRecipeId(id);
+        }
         return null;
     }
 }

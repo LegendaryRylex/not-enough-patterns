@@ -1,0 +1,135 @@
+package dev.rylex.nep.client;
+
+import dev.rylex.nep.machine.RedstoneMode;
+import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import org.jetbrains.annotations.Nullable;
+
+public abstract class MatrixScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
+
+    protected static final int READOUT_WARN = 0xFF7A4A;
+
+    protected static final int READOUT_X = 12;
+    protected static final int READOUT_RIGHT = 164;
+    protected static final int LINE_ONE_Y = 22;
+    protected static final int LINE_TWO_Y = 32;
+    protected static final int LINE_THREE_Y = 42;
+    protected static final int BAR_X = 12;
+    protected static final int BAR_Y = 52;
+    protected static final int BAR_WIDTH = READOUT_RIGHT - READOUT_X;
+    protected static final int BAR_HEIGHT = 4;
+
+    private final List<ReadoutButton> buttons = new ArrayList<>();
+
+    @Nullable
+    protected ReadoutButton redstoneModeButton;
+
+    @Nullable
+    private RedstoneMode shownMode;
+
+    protected MatrixScreen(T menu, Inventory playerInv, Component title) {
+        super(menu, playerInv, title);
+    }
+
+    protected abstract ResourceLocation texture();
+
+    protected abstract void renderReadoutTooltips(GuiGraphics graphics, int mouseX, int mouseY);
+
+    protected void resetButtons() {
+        buttons.clear();
+        shownMode = null;
+    }
+
+    protected void tickButtons() {
+        for (ReadoutButton button : buttons) {
+            button.tick();
+        }
+    }
+
+    protected ReadoutButton addRightButton(int index, String glyph, String nameKey, String hintKey, Runnable action) {
+        ReadoutButton button = addRenderableWidget(new ReadoutButton(
+                leftPos + imageWidth - index * ReadoutButton.SIZE - 4 - 4 * index,
+                topPos + 4,
+                glyph,
+                Component.translatable(nameKey),
+                Component.translatable(hintKey),
+                action));
+        buttons.add(button);
+        return button;
+    }
+
+    protected void sendButton(int id) {
+        if (minecraft != null && minecraft.gameMode != null) {
+            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
+        }
+    }
+
+    protected void updateRedstoneButton(RedstoneMode mode) {
+        if (redstoneModeButton == null || mode == shownMode) {
+            return;
+        }
+        shownMode = mode;
+        redstoneModeButton.setGlyph(mode.glyph());
+        redstoneModeButton.setTooltip(Tooltip.create(Component.empty()
+                .append(Component.translatable("gui.nep.redstone_mode"))
+                .append("\n")
+                .append(Component.translatable(mode.key()).withStyle(ChatFormatting.YELLOW))
+                .append("\n")
+                .append(Component.translatable("gui.nep.redstone_mode.hint").withStyle(ChatFormatting.GRAY))));
+    }
+
+    protected static float clamp01(float value) {
+        return Math.min(1.0F, Math.max(0.0F, value));
+    }
+
+    protected void drawTrailing(GuiGraphics graphics, Component text, int y, int occupiedUntil, int colour) {
+        int x = READOUT_RIGHT - font.width(text);
+        if (x < occupiedUntil + 6) {
+            return;
+        }
+        graphics.drawString(font, text, x, y, colour, false);
+    }
+
+    protected String trim(Component text, int width) {
+        String plain = text.getString();
+        if (font.width(plain) <= width) {
+            return plain;
+        }
+        return font.plainSubstrByWidth(plain, Math.max(0, width - font.width("…"))) + "…";
+    }
+
+    protected void drawProgressBar(GuiGraphics graphics, float progress, int track, int fill) {
+        graphics.fill(BAR_X, BAR_Y, BAR_X + BAR_WIDTH, BAR_Y + BAR_HEIGHT, 0xFF000000 | track);
+        int filled = Math.round(BAR_WIDTH * clamp01(progress));
+        if (filled > 0) {
+            graphics.fill(BAR_X, BAR_Y, BAR_X + filled, BAR_Y + BAR_HEIGHT, 0xFF000000 | fill);
+        }
+    }
+
+    protected boolean within(int mouseX, int mouseY, int x, int y, int width, int height) {
+        int localX = mouseX - leftPos;
+        int localY = mouseY - topPos;
+        return localX >= x && localX < x + width && localY >= y && localY < y + height;
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(texture(), leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        renderTooltip(graphics, mouseX, mouseY);
+        renderReadoutTooltips(graphics, mouseX, mouseY);
+    }
+}

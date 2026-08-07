@@ -1,4 +1,5 @@
 build/
+dist/
 .gradle/
 run/
 runs/
@@ -21,3 +22,6 @@ repo/
 .vscode/launch.json
 
 .editorconfig
+skip_mods.local
+/src/main/resources/data/nep/recipe/dev_test
+/art

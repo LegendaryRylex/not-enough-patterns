@@ -1,0 +1,17 @@
+{
+  "type": "draconicevolution:fusion_crafting",
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "draconicevolution" }
+  ],
+  "catalyst": { "item": "minecraft:iron_ingot" },
+  "ingredients": [
+    { "consume": true, "ingredient": { "item": "minecraft:copper_ingot" } },
+    { "consume": false, "ingredient": { "item": "minecraft:diamond" } }
+  ],
+  "result": {
+    "count": 2,
+    "id": "minecraft:gold_ingot"
+  },
+  "techLevel": "draconium",
+  "totalEnergy": 20000
+}

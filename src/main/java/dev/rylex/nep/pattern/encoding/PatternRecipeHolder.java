@@ -9,4 +9,8 @@ public interface PatternRecipeHolder {
     ResourceLocation nep$recipeId();
 
     void nep$setRecipeId(@Nullable ResourceLocation recipe);
+
+    default int nep$encodingVersion() {
+        return 0;
+    }
 }

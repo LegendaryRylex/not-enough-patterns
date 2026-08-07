@@ -8,6 +8,7 @@ import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.fluids.transfer.FillingRecipe;
 import com.simibubi.create.content.fluids.transfer.GenericItemFilling;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
+import dev.rylex.nep.util.RecipeCache;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,7 @@ final class FillingRecipeResolver {
 
     record Plan(AEItemKey depotItem, AEFluidKey fluid, long fluidAmount, Map<AEItemKey, Long> expectedItems) {}
 
-    private static final Map<AEItemKey, Optional<Plan>> CACHE = new HashMap<>();
+    private static final RecipeCache<Map<AEItemKey, Optional<Plan>>> CACHE = RecipeCache.of(level -> new HashMap<>());
 
     static void clearCache() {
         CACHE.clear();
@@ -33,7 +34,8 @@ final class FillingRecipeResolver {
 
     @Nullable
     static Plan resolve(IPatternDetails pattern, Level level) {
-        return CACHE.computeIfAbsent(pattern.getDefinition(), def -> Optional.ofNullable(compute(pattern, level)))
+        return CACHE.get(level)
+                .computeIfAbsent(pattern.getDefinition(), def -> Optional.ofNullable(compute(pattern, level)))
                 .orElse(null);
     }
 

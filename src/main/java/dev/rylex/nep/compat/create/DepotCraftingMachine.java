@@ -32,6 +32,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 public class DepotCraftingMachine implements ICraftingMachine {
 
@@ -91,7 +92,7 @@ public class DepotCraftingMachine implements ICraftingMachine {
             return false;
         }
 
-        PushOutcome outcome = attempt(level, above, patternDetails, inputs);
+        PushOutcome outcome = attempt(level, above, patternDetails, inputs, ejectionDirection);
         if (outcome.unsatisfiable() && UNSATISFIABLE.size() < MAX_MEMOIZED_REJECTS) {
             UNSATISFIABLE.add(key);
         }
@@ -99,13 +100,18 @@ public class DepotCraftingMachine implements ICraftingMachine {
         return outcome.accepted();
     }
 
-    private PushOutcome attempt(Level level, BlockEntity above, IPatternDetails patternDetails, KeyCounter[] inputs) {
+    private PushOutcome attempt(
+            Level level,
+            BlockEntity above,
+            IPatternDetails patternDetails,
+            KeyCounter[] inputs,
+            Direction ejectionDirection) {
         if (!(patternDetails instanceof AndesiteCraftingPattern)
                 && patternDetails.getDefinition().getItem() != AEItems.PROCESSING_PATTERN.asItem()) {
             return PushOutcome.unsatisfiable("not an andesite crafting or processing pattern");
         }
         if (above instanceof DeployerBlockEntity deployer && NepConfig.createDeploying()) {
-            return pushDeploying(level, deployer, patternDetails, inputs);
+            return pushDeploying(level, deployer, patternDetails, inputs, ejectionDirection);
         }
         if (above instanceof SpoutBlockEntity spout && NepConfig.createFilling()) {
             return pushFilling(level, spout, patternDetails, inputs);
@@ -114,7 +120,11 @@ public class DepotCraftingMachine implements ICraftingMachine {
     }
 
     private PushOutcome pushDeploying(
-            Level level, DeployerBlockEntity deployer, IPatternDetails patternDetails, KeyCounter[] inputs) {
+            Level level,
+            DeployerBlockEntity deployer,
+            IPatternDetails patternDetails,
+            KeyCounter[] inputs,
+            Direction ejectionDirection) {
         ApplicationRecipeResolver.Plan plan = ApplicationRecipeResolver.resolve(patternDetails, level);
         if (plan == null) {
             return PushOutcome.unsatisfiable("no deploying/item_application recipe matched the pattern");
@@ -148,31 +158,59 @@ public class DepotCraftingMachine implements ICraftingMachine {
         }
 
         int heldSlot = deployerHandler.getSlots() - 1;
+        ItemStack held = deployerHandler.getStackInSlot(heldSlot);
+        ItemStack suppliedTool = plan.suppliedTool() == null
+                ? ItemStack.EMPTY
+                : plan.suppliedTool().toStack();
+        boolean loadTool = false;
+
         if (plan.keptTool() != null) {
-            ItemStack held = deployerHandler.getStackInSlot(heldSlot);
-            if (held.isEmpty() || !plan.keptTool().test(held)) {
-                return PushOutcome.retry("deployer must hold the non-consumed tool for this recipe");
+            if (suppliedTool.isEmpty()) {
+                if (held.isEmpty() || !plan.keptTool().test(held)) {
+                    return PushOutcome.retry("deployer must hold the non-consumed tool for this recipe");
+                }
+            } else if (held.isEmpty()) {
+                loadTool = true;
+            } else if (!plan.keptTool().test(held)) {
+                return PushOutcome.retry("deployer is holding " + held + ", which this recipe does not use");
             }
         }
 
+        BlockPos providerPos = depot.getBlockPos().relative(ejectionDirection);
+        Direction providerFace = ejectionDirection.getOpposite();
+        IItemHandler provider = DeployerReclaimer.providerHandler(level, providerPos, providerFace);
+        boolean returnTool = !suppliedTool.isEmpty() && !loadTool;
+        if (returnTool
+                && (provider == null
+                        || !ItemHandlerHelper.insertItem(provider, suppliedTool, true)
+                                .isEmpty())) {
+            return PushOutcome.retry("nowhere to hand the spare " + suppliedTool + " back to");
+        }
+
         ItemStack depotStack = plan.depotItem().toStack();
-        ItemStack toolStack = plan.consumedTool() == null
+        ItemStack consumedTool = plan.consumedTool() == null
                 ? ItemStack.EMPTY
                 : plan.consumedTool().toStack();
+        ItemStack deployed = loadTool ? suppliedTool : consumedTool;
 
         if (!depotHandler.insertItem(0, depotStack, true).isEmpty()) {
             return PushOutcome.retry("depot rejected the base item");
         }
-        if (!toolStack.isEmpty()
-                && !deployerHandler.insertItem(heldSlot, toolStack, true).isEmpty()) {
-            return PushOutcome.retry("deployer rejected the deployed item " + toolStack);
+        if (!deployed.isEmpty()
+                && !deployerHandler.insertItem(heldSlot, deployed, true).isEmpty()) {
+            return PushOutcome.retry("deployer rejected the deployed item " + deployed);
         }
 
         depotHandler.insertItem(0, depotStack, false);
-        if (!toolStack.isEmpty()) {
-            deployerHandler.insertItem(heldSlot, toolStack, false);
+        if (!deployed.isEmpty()) {
+            deployerHandler.insertItem(heldSlot, deployed, false);
         }
-        return PushOutcome.accepted("deploying " + depotStack + " with " + toolStack);
+        if (loadTool) {
+            DeployerReclaimer.expect(deployer, plan.suppliedTool(), providerPos, providerFace);
+        } else if (returnTool) {
+            ItemHandlerHelper.insertItem(provider, suppliedTool, false);
+        }
+        return PushOutcome.accepted("deploying " + depotStack + " with " + (deployed.isEmpty() ? held : deployed));
     }
 
     private PushOutcome pushFilling(

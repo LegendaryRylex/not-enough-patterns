@@ -43,7 +43,17 @@ public final class PatternConverters {
 
     @Nullable
     public static ItemStack convert(@Nullable ResourceLocation recipe, ItemStack encoded, Player player) {
-        Level level = player.level();
+        return convert(recipe, encoded, player.level(), player);
+    }
+
+    @Nullable
+    public static ItemStack convertQuietly(@Nullable ResourceLocation recipe, ItemStack encoded, Level level) {
+        return convert(recipe, encoded, level, null);
+    }
+
+    @Nullable
+    private static ItemStack convert(
+            @Nullable ResourceLocation recipe, ItemStack encoded, Level level, @Nullable Player feedbackTo) {
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, level);
         if (details == null) {
             return null;
@@ -60,7 +70,7 @@ public final class PatternConverters {
                 }
             }
             if (converterClaims.size() > 1) {
-                ambiguous(player);
+                ambiguous(feedbackTo);
                 return null;
             }
             if (converterClaims.size() == 1) {
@@ -83,20 +93,22 @@ public final class PatternConverters {
             }
         }
         if (fallbackClaims.size() > 1) {
-            ambiguous(player);
+            ambiguous(feedbackTo);
             return null;
         }
         if (fallbackClaims.size() == 1) {
             return fallbackClaims.get(0);
         }
-        if (feedback != null) {
-            player.displayClientMessage(feedback, true);
+        if (feedback != null && feedbackTo != null) {
+            feedbackTo.displayClientMessage(feedback, true);
         }
         return null;
     }
 
-    private static void ambiguous(Player player) {
-        player.displayClientMessage(Component.translatable("nep.encoding.ambiguous"), true);
+    private static void ambiguous(@Nullable Player player) {
+        if (player != null) {
+            player.displayClientMessage(Component.translatable("nep.encoding.ambiguous"), true);
+        }
     }
 
     @Nullable

@@ -52,6 +52,9 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
     @Nullable
     private ResourceLocation nep$recipe;
 
+    @Unique
+    private int nep$version;
+
     @Override
     @Nullable
     public ResourceLocation nep$recipeId() {
@@ -61,17 +64,25 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
     @Override
     public void nep$setRecipeId(@Nullable ResourceLocation recipe) {
         this.nep$recipe = recipe;
+        this.nep$version++;
         saveChanges();
+    }
+
+    @Override
+    public int nep$encodingVersion() {
+        return nep$version;
     }
 
     @Inject(method = "onEncodedInputChanged", at = @At("HEAD"))
     private void nep$forgetRecipeOnInputChange(CallbackInfo ci) {
         this.nep$recipe = null;
+        this.nep$version++;
     }
 
     @Inject(method = "onEncodedOutputChanged", at = @At("HEAD"))
     private void nep$forgetRecipeOnOutputChange(CallbackInfo ci) {
         this.nep$recipe = null;
+        this.nep$version++;
     }
 
     @Inject(method = "loadEncodedPattern", at = @At("HEAD"))
@@ -91,6 +102,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
         nep$fill(getEncodedInputInv(), PatternContents.condenseInputs(details));
         nep$fill(getEncodedOutputInv(), details.getOutputs());
         this.nep$recipe = nepPattern.nepRecipeId();
+        this.nep$version++;
     }
 
     @Inject(method = "writeToNBT", at = @At("RETURN"))
@@ -105,6 +117,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
         this.nep$recipe = data.contains(NEP_RECIPE_TAG, Tag.TAG_STRING)
                 ? ResourceLocation.tryParse(data.getString(NEP_RECIPE_TAG))
                 : null;
+        this.nep$version++;
     }
 
     @Unique

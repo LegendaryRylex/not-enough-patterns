@@ -1,0 +1,7 @@
+{
+  "parent": "nep:block/fusion_matrix_idle",
+  "textures": {
+    "main": "nep:block/matrix/main_stalled",
+    "middle": "nep:block/matrix/fusion/middle_stalled"
+  }
+}

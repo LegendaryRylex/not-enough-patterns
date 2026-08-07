@@ -2,6 +2,8 @@ package dev.rylex.nep.compat.create;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.rylex.nep.util.SubLevels;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -19,6 +21,9 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
+import org.joml.Quaterniondc;
+import org.joml.Quaternionf;
+import org.joml.Vector3dc;
 
 final class AssemblyLinkVisualizer {
     private AssemblyLinkVisualizer() {}
@@ -60,18 +65,57 @@ final class AssemblyLinkVisualizer {
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         VertexConsumer lines = buffers.getBuffer(RenderType.lines());
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
 
         pose.pushPose();
         pose.translate(-camera.x, -camera.y, -camera.z);
 
         if (controller != null) {
+            pushSubLevel(pose, level, controller.getBlockPos(), partialTick);
             renderController(pose, lines, level, controller);
+            pose.popPose();
         } else {
-            renderLinkerPlan(pose, lines, level, linker);
+            BlockPos anchor = planAnchor(linker);
+            if (anchor != null) {
+                pushSubLevel(pose, level, anchor, partialTick);
+                renderLinkerPlan(pose, lines, level, linker);
+                pose.popPose();
+            }
+            renderHovered(pose, lines, level, linker, partialTick);
         }
 
         pose.popPose();
         buffers.endBatch(RenderType.lines());
+    }
+
+    private static void pushSubLevel(PoseStack pose, Level level, BlockPos anchor, float partialTick) {
+        pose.pushPose();
+        Pose3dc subLevel = SubLevels.renderPose(level, anchor, partialTick);
+        if (subLevel == null) {
+            return;
+        }
+        Vector3dc position = subLevel.position();
+        Vector3dc scale = subLevel.scale();
+        Vector3dc rotationPoint = subLevel.rotationPoint();
+        Quaterniondc orientation = subLevel.orientation();
+        pose.translate(position.x(), position.y(), position.z());
+        pose.mulPose(new Quaternionf(
+                (float) orientation.x(), (float) orientation.y(), (float) orientation.z(), (float) orientation.w()));
+        pose.scale((float) scale.x(), (float) scale.y(), (float) scale.z());
+        pose.translate(-rotationPoint.x(), -rotationPoint.y(), -rotationPoint.z());
+    }
+
+    @Nullable
+    private static BlockPos planAnchor(@Nullable ItemStack linker) {
+        if (linker == null) {
+            return null;
+        }
+        BlockPos input = linker.get(NepCreateContent.LINKER_INPUT.get());
+        if (input != null) {
+            return input;
+        }
+        List<BlockPos> machines = linker.getOrDefault(NepCreateContent.LINKER_MACHINES.get(), List.of());
+        return machines.isEmpty() ? linker.get(NepCreateContent.LINKER_OUTPUT.get()) : machines.getFirst();
     }
 
     @Nullable
@@ -143,13 +187,23 @@ final class AssemblyLinkVisualizer {
         for (int i = 0; i + 1 < chain.size(); i++) {
             beam(pose, lines, Vec3.atCenterOf(chain.get(i)), Vec3.atCenterOf(chain.get(i + 1)), BEAM, BEAM_ALPHA);
         }
+    }
 
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK) {
-            BlockPos hovered = hit.getBlockPos();
-            boolean linked = hovered.equals(input) || hovered.equals(output) || machines.contains(hovered);
-            box(pose, lines, hovered, 0.03F, linked ? UNLINK : modeColor(mode), pulse(level));
+    private static void renderHovered(
+            PoseStack pose, VertexConsumer lines, Level level, ItemStack linker, float partialTick) {
+        if (!(Minecraft.getInstance().hitResult instanceof BlockHitResult hit)
+                || hit.getType() != HitResult.Type.BLOCK) {
+            return;
         }
+        BlockPos hovered = hit.getBlockPos();
+        boolean linked = hovered.equals(linker.get(NepCreateContent.LINKER_INPUT.get()))
+                || hovered.equals(linker.get(NepCreateContent.LINKER_OUTPUT.get()))
+                || linker.getOrDefault(NepCreateContent.LINKER_MACHINES.get(), List.<BlockPos>of())
+                        .contains(hovered);
+        LinkerMode mode = linker.getOrDefault(NepCreateContent.LINKER_MODE.get(), LinkerMode.INPUT);
+        pushSubLevel(pose, level, hovered, partialTick);
+        box(pose, lines, hovered, 0.03F, linked ? UNLINK : modeColor(mode), pulse(level));
+        pose.popPose();
     }
 
     @Nullable

@@ -1,5 +1,11 @@
 {
   "type": "create:sequenced_assembly",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "create"
+    }
+  ],
   "ingredient": {
     "item": "nep:sequenced_assembly_controller"
   },
@@ -14,12 +20,12 @@
       "type": "create:cutting",
       "ingredients": [
         {
-          "item": "nep:incomplete_matrix_circuitry"
+          "item": "nep:incomplete_sequenced_assembly_matrix"
         }
       ],
       "results": [
         {
-          "id": "nep:incomplete_matrix_circuitry"
+          "id": "nep:incomplete_sequenced_assembly_matrix"
         }
       ]
     },
@@ -27,7 +33,7 @@
       "type": "create:deploying",
       "ingredients": [
         {
-          "item": "nep:incomplete_matrix_circuitry"
+          "item": "nep:incomplete_sequenced_assembly_matrix"
         },
         {
           "item": "nep:matrix_circuitry"
@@ -35,7 +41,7 @@
       ],
       "results": [
         {
-          "id": "nep:incomplete_matrix_circuitry"
+          "id": "nep:incomplete_sequenced_assembly_matrix"
         }
       ]
     },
@@ -43,7 +49,7 @@
       "type": "create:deploying",
       "ingredients": [
         {
-          "item": "nep:incomplete_matrix_circuitry"
+          "item": "nep:incomplete_sequenced_assembly_matrix"
         },
         {
           "item": "ae2:spatial_cell_component_128"
@@ -51,7 +57,7 @@
       ],
       "results": [
         {
-          "id": "nep:incomplete_matrix_circuitry"
+          "id": "nep:incomplete_sequenced_assembly_matrix"
         }
       ]
     },
@@ -59,7 +65,7 @@
       "type": "create:deploying",
       "ingredients": [
         {
-          "item": "nep:incomplete_matrix_circuitry"
+          "item": "nep:incomplete_sequenced_assembly_matrix"
         },
         {
           "item": "nep:hardened_obsidian_plate"
@@ -67,7 +73,7 @@
       ],
       "results": [
         {
-          "id": "nep:incomplete_matrix_circuitry"
+          "id": "nep:incomplete_sequenced_assembly_matrix"
         }
       ]
     },
@@ -75,17 +81,17 @@
       "type": "create:pressing",
       "ingredients": [
         {
-          "item": "nep:incomplete_matrix_circuitry"
+          "item": "nep:incomplete_sequenced_assembly_matrix"
         }
       ],
       "results": [
         {
-          "id": "nep:incomplete_matrix_circuitry"
+          "id": "nep:incomplete_sequenced_assembly_matrix"
         }
       ]
     }
   ],
   "transitional_item": {
-    "id": "nep:incomplete_matrix_circuitry"
+    "id": "nep:incomplete_sequenced_assembly_matrix"
   }
 }

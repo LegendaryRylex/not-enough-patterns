@@ -15,7 +15,7 @@ public final class NepCreativeTabs {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN =
             TABS.register("main", () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.nep"))
-                    .icon(() -> NepItems.IMPORT_CARD.get().getDefaultInstance())
+                    .icon(() -> NepItems.SEQUENCED_ASSEMBLY_PATTERN.get().getDefaultInstance())
                     .displayItems((params, output) -> {
                         output.accept(NepItems.IMPORT_CARD.get());
                         output.accept(NepItems.MATRIX_CIRCUITRY.get());

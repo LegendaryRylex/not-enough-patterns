@@ -26,7 +26,28 @@ class ModuleStatusTest {
     private static final Pattern MODULE_FIELD = Pattern.compile("\"module\"\\s*:\\s*\"([a-z_]+)\"");
 
     private static final List<String> MODULES = List.of(
-            "create", "mechanical_crafting", "deploying", "filling", "sequenced_assembly", "sequenced_assembly_matrix");
+            "create",
+            "mechanical_crafting",
+            "deploying",
+            "filling",
+            "sequenced_assembly",
+            "sequenced_assembly_matrix",
+            "draconicevolution",
+            "fusion_crafting",
+            "fusion_matrix",
+            "compactcrafting",
+            "miniaturization_matrix",
+            "miniaturization_controller",
+            "actuallyadditions",
+            "empowering",
+            "atomic_reconstruction",
+            "atomic_empowering_matrix",
+            "mysticalagriculture",
+            "infusion_altar",
+            "awakening_altar",
+            "infused_awakening_matrix",
+            "apothic_enchanting",
+            "enchantment_infusion");
 
     @Test
     void everyModuleHasAStatusRecipe() {
@@ -68,7 +89,7 @@ class ModuleStatusTest {
                 String module = matcher.group(1);
                 referenced.add(module);
                 if (!Files.isRegularFile(RECIPES.resolve(module + ".json"))) {
-                    violations.add(page.getFileName() + " references missing 'nep:module_status/" + module + "'");
+                    violations.add(PAGES.relativize(page) + " references missing 'nep:module_status/" + module + "'");
                 }
             }
         }
@@ -77,7 +98,7 @@ class ModuleStatusTest {
     }
 
     private static List<Path> listFiles(Path dir, String suffix) {
-        try (Stream<Path> files = Files.list(dir)) {
+        try (Stream<Path> files = Files.walk(dir)) {
             return files.filter(p -> p.toString().endsWith(suffix)).sorted().toList();
         } catch (IOException e) {
             throw new UncheckedIOException(e);

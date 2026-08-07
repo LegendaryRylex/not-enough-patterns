@@ -5,12 +5,17 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "AEBaseMenuMixin",
+    "AEBaseMenuQuickMoveClaimMixin",
+    "CraftingCpuLogicMixin",
     "PatternEncodingLogicMixin",
     "PatternEncodingTermMenuMixin",
+    "PatternProviderLogicHostMixin",
     "PatternProviderLogicMixin",
-    "PatternProviderMenuMixin"
+    "PatternProviderMenuMixin",
+    "UpgradeCardItemMixin"
   ],
   "client": [
+    "AEBaseScreenMixin",
     "PatternProviderScreenMixin",
     "ScreenStyleAccessor"
   ],

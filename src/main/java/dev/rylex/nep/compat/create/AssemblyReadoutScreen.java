@@ -1,5 +1,6 @@
 package dev.rylex.nep.compat.create;
 
+import dev.rylex.nep.client.ReadoutButton;
 import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.menu.MachineMenu;
 import java.util.ArrayList;

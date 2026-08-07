@@ -8,13 +8,20 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import java.util.List;
+import java.util.Set;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
 
 class PatternContentsTest {
 
-    private record StubInput(GenericStack[] possible, long multiplier) implements IPatternDetails.IInput {
+    private record StubInput(GenericStack[] possible, long multiplier, boolean retained)
+            implements IPatternDetails.IInput {
+
+        StubInput(GenericStack[] possible, long multiplier) {
+            this(possible, multiplier, false);
+        }
+
         @Override
         public GenericStack[] getPossibleInputs() {
             return possible;
@@ -32,7 +39,7 @@ class PatternContentsTest {
 
         @Override
         public AEKey getRemainingKey(AEKey template) {
-            return null;
+            return retained ? template : null;
         }
     }
 
@@ -78,5 +85,50 @@ class PatternContentsTest {
     @Test
     void condenseOfNoInputsIsEmpty() {
         assertTrue(PatternContents.condenseInputs(details()).isEmpty());
+    }
+
+    @Test
+    void condenseKeepsARetainedInputApartFromTheSameConsumedKey() {
+        AEItemKey iron = AEItemKey.of(Items.IRON_INGOT);
+        List<GenericStack> condensed = PatternContents.condenseInputs(details(
+                new StubInput(new GenericStack[] {new GenericStack(iron, 1)}, 2),
+                new StubInput(new GenericStack[] {new GenericStack(iron, 1)}, 1, true)));
+
+        assertEquals(List.of(new GenericStack(iron, 2L), new GenericStack(iron, 1L)), condensed);
+    }
+
+    @Test
+    void condenseSlotsMergesWithinEachGroupOnly() {
+        AEItemKey iron = AEItemKey.of(Items.IRON_INGOT);
+        AEItemKey gold = AEItemKey.of(Items.GOLD_INGOT);
+        List<GenericStack> condensed = PatternContents.condenseSlots(
+                java.util.Arrays.asList(
+                        new GenericStack(iron, 1),
+                        null,
+                        new GenericStack(gold, 1),
+                        new GenericStack(iron, 2),
+                        new GenericStack(iron, 3)),
+                Set.of(3));
+
+        assertEquals(
+                List.of(new GenericStack(iron, 4L), new GenericStack(gold, 1L), new GenericStack(iron, 2L)), condensed);
+    }
+
+    @Test
+    void condenseListMergesRepeatedKeysInFirstSeenOrder() {
+        AEItemKey iron = AEItemKey.of(Items.IRON_INGOT);
+        AEItemKey gold = AEItemKey.of(Items.GOLD_INGOT);
+        List<GenericStack> condensed = PatternContents.condense(List.of(
+                new GenericStack(iron, 1),
+                new GenericStack(gold, 4),
+                new GenericStack(iron, 2),
+                new GenericStack(iron, 1)));
+
+        assertEquals(List.of(new GenericStack(iron, 4L), new GenericStack(gold, 4L)), condensed);
+    }
+
+    @Test
+    void condenseOfEmptyListIsEmpty() {
+        assertTrue(PatternContents.condense(List.of()).isEmpty());
     }
 }

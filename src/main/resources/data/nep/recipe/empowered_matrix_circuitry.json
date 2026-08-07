@@ -1,0 +1,33 @@
+{
+  "type": "actuallyadditions:empowering",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "actuallyadditions"
+    }
+  ],
+  "base": {
+    "item": "actuallyadditions:ender_star"
+  },
+  "modifiers": [
+    {
+      "item": "nep:matrix_circuitry"
+    },
+    {
+      "item": "nep:matrix_circuitry"
+    },
+    {
+      "item": "nep:matrix_circuitry"
+    },
+    {
+      "item": "nep:matrix_circuitry"
+    }
+  ],
+  "energy": 20000,
+  "color": 11762175,
+  "time": 300,
+  "result": {
+    "count": 1,
+    "id": "nep:empowered_matrix_circuitry"
+  }
+}

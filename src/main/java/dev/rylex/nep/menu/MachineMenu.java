@@ -1,14 +1,18 @@
 package dev.rylex.nep.menu;
 
+import dev.rylex.nep.util.SubLevels;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class MachineMenu extends AbstractContainerMenu {
+
+    private static final double REACH_SQR = 64.0;
 
     private int inventoryStart = -1;
     private int hotbarStart = -1;
@@ -34,6 +38,12 @@ public abstract class MachineMenu extends AbstractContainerMenu {
 
     protected boolean movePlayerStackIntoMachine(ItemStack stack) {
         return false;
+    }
+
+    protected static boolean withinReach(Player player, @Nullable BlockEntity machine) {
+        return machine != null
+                && !machine.isRemoved()
+                && SubLevels.distanceSqr(player, machine.getBlockPos()) <= REACH_SQR;
     }
 
     protected final boolean moveIntoPlayerInventory(ItemStack stack) {

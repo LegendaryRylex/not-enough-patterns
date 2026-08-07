@@ -1,5 +1,11 @@
 {
   "type": "minecraft:crafting_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "create"
+    }
+  ],
   "category": "misc",
   "pattern": [
     "  E",
@@ -8,8 +14,8 @@
   ],
   "key": {
     "E": { "item": "ae2:engineering_processor" },
-    "B": { "item": "create:brass_ingot" },
-    "S": { "item": "minecraft:stick" }
+    "B": { "tag": "c:ingots/brass" },
+    "S": { "tag": "c:rods/wooden" }
   },
   "result": {
     "count": 1,

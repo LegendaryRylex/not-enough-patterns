@@ -11,6 +11,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
@@ -29,7 +30,9 @@ public final class CreateCompat {
         modBus.addListener(CreateCompat::registerCapabilities);
         modBus.addListener(CreateCompat::registerPayloads);
         NeoForge.EVENT_BUS.addListener(PatternEncodingHandler::onRightClickBlock);
+        NeoForge.EVENT_BUS.addListener(LogStripping::onDeployerRecipeSearch);
         NeoForge.EVENT_BUS.addListener(CreateCompat::onReload);
+        NeoForge.EVENT_BUS.addListener(CreateCompat::onTagsUpdated);
         NeoForge.EVENT_BUS.addListener(CreateCompat::onServerStarted);
         if (dist.isClient()) {
             SequencedAssemblyClientCompat.init(modBus);
@@ -63,6 +66,11 @@ public final class CreateCompat {
         FillingRecipeResolver.clearCache();
         SequencedAssemblyResolver.clearCache();
         DepotCraftingMachine.clearCache();
+        LogStripping.clearCache();
+    }
+
+    private static void onTagsUpdated(TagsUpdatedEvent event) {
+        LogStripping.clearCache();
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {

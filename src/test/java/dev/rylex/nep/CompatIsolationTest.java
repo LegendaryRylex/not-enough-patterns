@@ -23,10 +23,28 @@ class CompatIsolationTest {
                     List.of("com.simibubi.create", "net.createmod")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "create"), List.of("snownee.jade")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ae2wtlib"), List.of("de.mari_023")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "draconic"), List.of("com.brandon3055", "codechicken")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "apothic"), List.of("dev.shadowsoffire")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "compactcrafting"), List.of("dev.compactmods")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "actuallyadditions"),
+                    List.of("de.ellpeck.actuallyadditions")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "mysticalagriculture"),
+                    List.of("com.blakebr0.mysticalagriculture", "com.blakebr0.cucumber")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "advancedae"), List.of("net.pedroksl.advanced_ae")),
             new ForeignRule(COMPAT_DIR, List.of("mezz.jei")));
 
-    private static final List<String> COMPAT_ENTRY_POINTS =
-            List.of("dev.rylex.nep.compat.create.CreateCompat", "dev.rylex.nep.compat.create.CreateGuideRecipes");
+    private static final List<String> COMPAT_ENTRY_POINTS = List.of(
+            "dev.rylex.nep.compat.create.CreateCompat",
+            "dev.rylex.nep.compat.create.CreateGuideRecipes",
+            "dev.rylex.nep.compat.draconic.DraconicCompat",
+            "dev.rylex.nep.compat.apothic.ApothicCompat",
+            "dev.rylex.nep.compat.compactcrafting.CompactCraftingCompat",
+            "dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsCompat",
+            "dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat");
 
     @Test
     void foreignClassesStayInsideTheirCompatPackage() {

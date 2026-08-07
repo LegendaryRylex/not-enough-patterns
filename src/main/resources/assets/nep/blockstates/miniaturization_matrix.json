@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "status=idle": {
+      "model": "nep:block/miniaturization_matrix_idle"
+    },
+    "status=running": {
+      "model": "nep:block/miniaturization_matrix_running"
+    },
+    "status=stalled": {
+      "model": "nep:block/miniaturization_matrix_stalled"
+    }
+  }
+}

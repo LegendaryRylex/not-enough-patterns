@@ -19,6 +19,9 @@ import dev.rylex.nep.compat.create.SequencedAssemblyResolver.Demand;
 import dev.rylex.nep.compat.create.SequencedAssemblyResolver.FluidDemand;
 import dev.rylex.nep.compat.create.SequencedAssemblyResolver.ItemDemand;
 import dev.rylex.nep.machine.MachineItemView;
+import dev.rylex.nep.machine.MatrixGridNode;
+import dev.rylex.nep.machine.MatrixHost;
+import dev.rylex.nep.machine.PushingCpus;
 import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.machine.ReturnDirections;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
@@ -28,7 +31,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -39,6 +44,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.Clearable;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -58,7 +64,8 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity implements MenuProvider {
+public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
+        implements MenuProvider, MatrixHost, Clearable {
 
     static final int INPUT_SLOTS = 18;
     static final int OUTPUT_SLOTS = 9;
@@ -118,12 +125,17 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
             });
 
     private final Map<Item, Long> owed = new HashMap<>();
+    private final PushingCpus pushingCpus = new PushingCpus();
     private final Map<Item, Long> toReturn = new HashMap<>();
 
     private final Map<Item, Template> templates = new HashMap<>();
     private final List<GenericStack> missingInputs = new ArrayList<>();
 
-    private final MatrixGridNode power = new MatrixGridNode(this);
+    private final MatrixGridNode power = new MatrixGridNode(
+            this,
+            NepCreateContent.MATRIX_ITEM.get(),
+            NepConfig.createSequencedAssemblyMatrixIdleMeDrain(),
+            "SA matrix");
     private final IItemHandler outputView = new OutputView();
     private final IItemHandler machineView =
             MachineItemView.demandLimited(inputBuffer, outputView, this::manualDemandFor);
@@ -144,7 +156,6 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
     private final List<FluidStack> claimedFluids = new ArrayList<>();
     private long progress;
 
-    private boolean powerStarved;
     private boolean outputBlocked;
     private boolean scanNeeded = true;
     private int syncedSignature = Integer.MIN_VALUE;
@@ -156,8 +167,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
     private int clientStress;
     private float clientProgress;
 
-    public SequencedAssemblyMatrixBlockEntity(
-            BlockEntityType<?> type, net.minecraft.core.BlockPos pos, BlockState state) {
+    public SequencedAssemblyMatrixBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
@@ -256,7 +266,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
         }
         if (isRunnable()) {
             if (activeResult.isEmpty()) {
-                powerStarved = false;
+                power.clearStarved();
                 if (scanNeeded && !beginCraft(level)) {
                     scanNeeded = false;
                 }
@@ -343,19 +353,19 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
     }
 
     private boolean drawActivePower() {
-        double extra = powerDraw() - NepConfig.createSequencedAssemblyMatrixIdlePower();
+        double extra = meDrain() - NepConfig.createSequencedAssemblyMatrixIdleMeDrain();
         if (extra <= 0) {
-            powerStarved = false;
+            power.clearStarved();
             return true;
         }
-        powerStarved = power.extractPower(extra) < extra - 0.01;
-        return !powerStarved;
+        power.extractPower(extra);
+        return !power.isStarved();
     }
 
-    int powerDraw() {
+    int meDrain() {
         return activeResult.isEmpty()
-                ? NepConfig.createSequencedAssemblyMatrixIdlePower()
-                : NepConfig.createSequencedAssemblyMatrixPower();
+                ? NepConfig.createSequencedAssemblyMatrixIdleMeDrain()
+                : NepConfig.createSequencedAssemblyMatrixMeDrain();
     }
 
     private void finishCraft(Level level) {
@@ -407,6 +417,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
             decrement(owed, produced, claimed);
             if (!owed.containsKey(produced)) {
                 templates.remove(produced);
+            }
+            if (owed.isEmpty()) {
+                pushingCpus.clear();
             }
             toReturn.merge(produced, claimed, Long::sum);
         }
@@ -614,12 +627,18 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
         if (owed.isEmpty() && templates.isEmpty()) {
             return;
         }
+        int cancelled = pushingCpus.cancelJobsFor(power.grid(), Set.copyOf(templates.keySet()));
         if (NepConfig.debugLogging()) {
-            Nep.LOGGER.info("SA matrix {} cleared {} pending output(s) on request", getBlockPos(), owed.size());
+            Nep.LOGGER.info(
+                    "SA matrix {} cleared {} pending output(s) and cancelled {} network job(s)",
+                    getBlockPos(),
+                    owed.size(),
+                    cancelled);
         }
         owed.clear();
         templates.clear();
         missingInputs.clear();
+        pushingCpus.clear();
         power.cancelRequests();
         markScanNeeded();
         setChanged();
@@ -809,7 +828,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
         templates.put(output, new Template(List.copyOf(keys), List.copyOf(counts)));
     }
 
-    long bufferedAmount(AEKey key) {
+    @Override
+    public long bufferedAmount(AEKey key) {
         long total = 0;
         if (key instanceof AEItemKey itemKey) {
             for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
@@ -829,7 +849,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
         return total;
     }
 
-    long acceptCrafted(AEKey what, long amount, Actionable mode) {
+    @Override
+    public long acceptCrafted(AEKey what, long amount, Actionable mode) {
         boolean simulate = mode == Actionable.SIMULATE;
         if (what instanceof AEItemKey itemKey) {
             long leftover = insertCraftedItem(itemKey, amount, simulate);
@@ -912,6 +933,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
         returnDirections.record(producedItem, ejectionDirection);
         captureTemplate(producedItem, items, patternFluids);
         owed.merge(producedItem, Math.max(1, outputs.get(0).amount()), Long::sum);
+        pushingCpus.record();
         markScanNeeded();
         setChanged();
         if (NepConfig.debugLogging()) {
@@ -978,7 +1000,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
         scanNeeded = true;
     }
 
-    void onGridStateChanged() {
+    @Override
+    public void onGridStateChanged() {
         markScanNeeded();
         setChanged();
     }
@@ -1069,7 +1092,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
                     .append(Component.literal(" "))
                     .append(crafting)));
         }
-        tooltip.add(indented(MatrixReadout.power(powerDraw()).copy().withStyle(ChatFormatting.AQUA)));
+        tooltip.add(indented(MatrixReadout.meDrain(meDrain()).copy().withStyle(ChatFormatting.AQUA)));
         return true;
     }
 
@@ -1083,7 +1106,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
             return clientFlags;
         }
         int flags = 0;
-        if (power.isPowered() && !powerStarved) {
+        if (power.hasUsablePower()) {
             flags |= FLAG_POWERED;
         }
         if (getSpeed() != 0) {
@@ -1104,7 +1127,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
         return flags;
     }
 
-    void dropBuffers(Level level, net.minecraft.core.BlockPos pos) {
+    void dropBuffers(Level level, BlockPos pos) {
         dropHandler(level, pos, inputBuffer);
         dropHandler(level, pos, outputBuffer);
         if (!rolledResult.isEmpty()) {
@@ -1132,9 +1155,30 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
                 fluids.takeFrom(tank, (int) dumped);
             }
         }
+        clearContent();
     }
 
-    private static void dropHandler(Level level, net.minecraft.core.BlockPos pos, ItemStackHandler handler) {
+    @Override
+    public void clearContent() {
+        clearHandler(inputBuffer);
+        clearHandler(outputBuffer);
+        fluids.clear();
+        claimedItems.clear();
+        claimedFluids.clear();
+        missingInputs.clear();
+        owed.clear();
+        toReturn.clear();
+        rolledResult = ItemStack.EMPTY;
+        activeResult = ItemStack.EMPTY;
+    }
+
+    private static void clearHandler(ItemStackHandler handler) {
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            handler.setStackInSlot(slot, ItemStack.EMPTY);
+        }
+    }
+
+    private static void dropHandler(Level level, BlockPos pos, ItemStackHandler handler) {
         for (int slot = 0; slot < handler.getSlots(); slot++) {
             ItemStack stack = handler.getStackInSlot(slot);
             if (!stack.isEmpty()) {
@@ -1255,6 +1299,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
             }
             tag.put(TEMPLATE_KEY, templateList);
         }
+        pushingCpus.save(tag);
         CompoundTag nodeTag = new CompoundTag();
         power.save(nodeTag);
         tag.put(NODE_KEY, nodeTag);
@@ -1343,6 +1388,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity imple
                 }
             }
         }
+        pushingCpus.load(tag);
         if (tag.contains(NODE_KEY)) {
             power.load(tag.getCompound(NODE_KEY));
         }

@@ -28,7 +28,7 @@ final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGr
 
     static final int TRACKER_SIZE = 18;
 
-    private static final double IDLE_POWER_USAGE = 10.0;
+    private static final double IDLE_ME_DRAIN = 10.0;
 
     private static final IGridNodeListener<SequencedAssemblyRequester> LISTENER = new Listener();
 
@@ -43,7 +43,7 @@ final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGr
         this.mainNode = GridHelper.createManagedNode(this, LISTENER)
                 .setInWorldNode(true)
                 .setTagName("proxy")
-                .setIdlePowerUsage(IDLE_POWER_USAGE)
+                .setIdlePowerUsage(IDLE_ME_DRAIN)
                 .setVisualRepresentation(NepCreateContent.CONTROLLER_ITEM.get())
                 .addService(ICraftingRequester.class, this);
         this.tracker = new MultiCraftingTracker(this, TRACKER_SIZE);
@@ -58,6 +58,11 @@ final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGr
 
     void destroy() {
         mainNode.destroy();
+    }
+
+    @Nullable
+    IGrid grid() {
+        return mainNode.getGrid();
     }
 
     void save(CompoundTag tag) {

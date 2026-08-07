@@ -14,12 +14,14 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 final class NepCreateContent {
     private NepCreateContent() {}
@@ -31,6 +33,13 @@ final class NepCreateContent {
     private static final DeferredRegister.DataComponents COMPONENTS =
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, Nep.MOD_ID);
     private static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(Registries.MENU, Nep.MOD_ID);
+    private static final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
+            DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, Nep.MOD_ID);
+
+    static final DeferredHolder<AttachmentType<?>, AttachmentType<DeployerReclaim>> DEPLOYER_RECLAIM =
+            ATTACHMENTS.register("deployer_reclaim", () -> AttachmentType.builder(() -> DeployerReclaim.NONE)
+                    .serialize(DeployerReclaim.CODEC, pending -> !pending.isEmpty())
+                    .build());
 
     static final DeferredBlock<SequencedAssemblyControllerBlock> CONTROLLER = BLOCKS.registerBlock(
             "sequenced_assembly_controller",
@@ -54,8 +63,8 @@ final class NepCreateContent {
     static final DeferredItem<Item> INCOMPLETE_HARDENED_OBSIDIAN_PLATE =
             ITEMS.registerSimpleItem("incomplete_hardened_obsidian_plate");
 
-    static final DeferredItem<Item> INCOMPLETE_MATRIX_CIRCUITRY =
-            ITEMS.registerSimpleItem("incomplete_matrix_circuitry");
+    static final DeferredItem<Item> INCOMPLETE_SEQUENCED_ASSEMBLY_MATRIX =
+            ITEMS.registerSimpleItem("incomplete_sequenced_assembly_matrix");
 
     static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SequencedAssemblyControllerBlockEntity>>
             CONTROLLER_BLOCK_ENTITY =
@@ -105,6 +114,7 @@ final class NepCreateContent {
         BLOCK_ENTITIES.register(modBus);
         COMPONENTS.register(modBus);
         MENUS.register(modBus);
+        ATTACHMENTS.register(modBus);
         modBus.addListener(NepCreateContent::onBuildCreativeTab);
     }
 

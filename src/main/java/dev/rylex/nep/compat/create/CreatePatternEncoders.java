@@ -11,10 +11,14 @@ import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
 import dev.rylex.nep.pattern.GridPlan;
 import dev.rylex.nep.pattern.MechanicalCraftingPattern;
+import dev.rylex.nep.pattern.PatternStacks;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
+import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
 import dev.rylex.nep.pattern.encoding.PatternFallback;
+import dev.rylex.nep.pattern.encoding.SyntheticRecipes;
+import dev.rylex.nep.util.Uniqueness;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.chat.Component;
@@ -28,6 +32,7 @@ final class CreatePatternEncoders {
     private CreatePatternEncoders() {}
 
     static void register() {
+        SyntheticRecipes.register((recipe, level) -> LogStripping.byId(recipe, level) != null);
         PatternConverters.register(SequencedAssemblyRecipe.class, CreatePatternEncoders::sequencedAssembly);
         PatternConverters.register(ItemApplicationRecipe.class, CreatePatternEncoders::itemApplication);
         PatternConverters.register(FillingRecipe.class, CreatePatternEncoders::filling);
@@ -62,10 +67,7 @@ final class CreatePatternEncoders {
             return null;
         }
         EncodedIngredients expected = CreateRecipeIngredients.sequencedAssembly(holder, level);
-        if (expected == null
-                || expected.outputs().size() != 1
-                || !expected.outputs().get(0).equals(result)
-                || !CreateRecipeIngredients.satisfies(expected, inputs)) {
+        if (IngredientMatching.matchAssign(expected, inputs, result) == null) {
             return null;
         }
         return SequencedAssemblyPattern.encode(holder.id(), inputs, result);
@@ -96,23 +98,33 @@ final class CreatePatternEncoders {
         if (inputs == null || result == null) {
             return null;
         }
-        return matchesAndesite(expected, holder, inputs, result)
-                ? AndesiteCraftingPattern.encode(holder.id(), inputs, result)
-                : null;
+        Split split = splitAndesite(expected, holder, inputs, result);
+        return split == null
+                ? null
+                : AndesiteCraftingPattern.encode(holder.id(), split.consumed(), split.kept(), result);
     }
 
-    private static boolean matchesAndesite(
+    private record Split(List<GenericStack> consumed, List<GenericStack> kept) {}
+
+    @Nullable
+    private static Split splitAndesite(
             @Nullable EncodedIngredients expected,
             RecipeHolder<?> holder,
             List<GenericStack> inputs,
             GenericStack result) {
         if (expected == null || !AllRecipeTypes.CAN_BE_AUTOMATED.test(holder)) {
-            return false;
+            return null;
         }
-        if (expected.outputs().size() != 1 || !expected.outputs().get(0).equals(result)) {
-            return false;
+        GenericStack[] chosen = IngredientMatching.matchAssign(expected, inputs, result);
+        if (chosen == null) {
+            return null;
         }
-        return CreateRecipeIngredients.satisfies(expected, inputs);
+        List<GenericStack> consumed = new ArrayList<>();
+        List<GenericStack> kept = new ArrayList<>();
+        for (int slot = 0; slot < chosen.length; slot++) {
+            (expected.isRetained(slot) ? kept : consumed).add(chosen[slot]);
+        }
+        return consumed.isEmpty() ? null : new Split(List.copyOf(consumed), List.copyOf(kept));
     }
 
     @Nullable
@@ -124,32 +136,40 @@ final class CreatePatternEncoders {
         }
 
         RecipeHolder<?> only = null;
+        Split split = null;
 
         if (NepConfig.createDeploying()) {
             for (RecipeHolder<? extends ItemApplicationRecipe> holder : ApplicationRecipeResolver.candidates(level)) {
-                if (matchesAndesite(CreateRecipeIngredients.itemApplication(holder, level), holder, inputs, result)) {
+                Split candidate =
+                        splitAndesite(CreateRecipeIngredients.itemApplication(holder, level), holder, inputs, result);
+                if (candidate != null) {
                     if (only != null) {
                         return null;
                     }
                     only = holder;
+                    split = candidate;
                 }
             }
         }
 
         if (NepConfig.createFilling()) {
             for (RecipeHolder<FillingRecipe> holder : FillingRecipeResolver.candidates(level)) {
-                if (matchesAndesite(CreateRecipeIngredients.spoutFilling(holder, level), holder, inputs, result)) {
+                Split candidate =
+                        splitAndesite(CreateRecipeIngredients.spoutFilling(holder, level), holder, inputs, result);
+                if (candidate != null) {
                     if (only != null) {
                         return null;
                     }
                     only = holder;
+                    split = candidate;
                 }
             }
         }
 
         return only == null
                 ? null
-                : PatternFallback.Result.of(AndesiteCraftingPattern.encode(only.id(), inputs, result));
+                : PatternFallback.Result.of(
+                        AndesiteCraftingPattern.encode(only.id(), split.consumed(), split.kept(), result));
     }
 
     @Nullable
@@ -178,20 +198,13 @@ final class CreatePatternEncoders {
 
         List<GenericStack> inputs = condensedInputs(encoded);
         if (inputs != null) {
-            RecipeHolder<SequencedAssemblyRecipe> only = null;
-            for (RecipeHolder<SequencedAssemblyRecipe> candidate : candidates) {
-                EncodedIngredients expected = CreateRecipeIngredients.sequencedAssembly(candidate, level);
-                if (expected != null
-                        && expected.outputs().size() == 1
-                        && expected.outputs().get(0).equals(result)
-                        && CreateRecipeIngredients.satisfies(expected, inputs)) {
-                    if (only != null) {
-                        only = null;
-                        break;
-                    }
-                    only = candidate;
-                }
-            }
+            RecipeHolder<SequencedAssemblyRecipe> only = Uniqueness.onlyMatch(
+                    candidates,
+                    candidate -> IngredientMatching.matchAssign(
+                                            CreateRecipeIngredients.sequencedAssembly(candidate, level), inputs, result)
+                                    == null
+                            ? null
+                            : candidate);
             if (only != null) {
                 return PatternFallback.Result.of(SequencedAssemblyPattern.encode(only.id(), inputs, result));
             }
@@ -211,24 +224,11 @@ final class CreatePatternEncoders {
 
     @Nullable
     private static GenericStack singleResult(IPatternDetails encoded) {
-        List<GenericStack> outputs = encoded.getOutputs();
-        return outputs.size() == 1 && outputs.get(0).amount() > 0 ? outputs.get(0) : null;
+        return PatternStacks.singleResult(encoded);
     }
 
     @Nullable
     private static List<GenericStack> condensedInputs(IPatternDetails encoded) {
-        List<GenericStack> inputs = new ArrayList<>();
-        for (IPatternDetails.IInput input : encoded.getInputs()) {
-            GenericStack[] possible = input.getPossibleInputs();
-            if (possible.length == 0) {
-                return null;
-            }
-            long amount = possible[0].amount() * input.getMultiplier();
-            if (amount <= 0) {
-                return null;
-            }
-            inputs.add(new GenericStack(possible[0].what(), amount));
-        }
-        return inputs.isEmpty() ? null : inputs;
+        return PatternStacks.condensedInputs(encoded);
     }
 }

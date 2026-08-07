@@ -1,28 +1,48 @@
 package dev.rylex.nep.mixin;
 
 import appeng.menu.me.items.PatternEncodingTermMenu;
+import appeng.menu.slot.FakeSlot;
 import appeng.parts.encoding.EncodingMode;
 import appeng.parts.encoding.PatternEncodingLogic;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import dev.rylex.nep.net.PatternRecipePayload;
+import dev.rylex.nep.net.RetainedSlotsPayload;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
+import dev.rylex.nep.pattern.encoding.RetainedSlotHolder;
+import dev.rylex.nep.pattern.encoding.RetainedSlots;
+import java.util.List;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PatternEncodingTermMenu.class)
-public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolder {
+public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolder, RetainedSlotHolder {
 
     @Shadow
     @Final
     private PatternEncodingLogic encodingLogic;
+
+    @Shadow
+    @Final
+    private FakeSlot[] processingInputSlots;
+
+    @Unique
+    private List<Integer> nep$retainedSlots = List.of();
+
+    @Unique
+    private int nep$syncedVersion = Integer.MIN_VALUE;
 
     @Override
     @Nullable
@@ -38,6 +58,43 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
         } else {
             ((PatternRecipeHolder) encodingLogic).nep$setRecipeId(recipe);
         }
+    }
+
+    @Override
+    public void nep$setRetainedSlots(List<Integer> slots) {
+        this.nep$retainedSlots = List.copyOf(slots);
+    }
+
+    @Override
+    public boolean nep$isRetainedSlot(@Nullable Slot slot) {
+        if (slot == null || nep$retainedSlots.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < processingInputSlots.length; i++) {
+            if (processingInputSlots[i] == slot) {
+                return nep$retainedSlots.contains(i);
+            }
+        }
+        return false;
+    }
+
+    @Inject(method = "broadcastChanges", at = @At("RETURN"))
+    private void nep$syncRetainedSlots(CallbackInfo ci) {
+        PatternEncodingTermMenu menu = (PatternEncodingTermMenu) (Object) this;
+        if (!(menu.getPlayer() instanceof ServerPlayer player)) {
+            return;
+        }
+        int version = ((PatternRecipeHolder) encodingLogic).nep$encodingVersion();
+        if (version == nep$syncedVersion) {
+            return;
+        }
+        nep$syncedVersion = version;
+        List<Integer> slots = RetainedSlots.compute(encodingLogic, nep$recipeId(), player.level());
+        if (slots.equals(nep$retainedSlots)) {
+            return;
+        }
+        nep$retainedSlots = slots;
+        PacketDistributor.sendToPlayer(player, new RetainedSlotsPayload(slots));
     }
 
     @ModifyExpressionValue(

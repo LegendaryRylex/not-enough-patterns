@@ -1,9 +1,12 @@
 package dev.rylex.nep.compat.jei;
 
 import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.registration.IIngredientAliasRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.Level;
 
 public interface JeiTransferSource {
 
@@ -11,8 +14,19 @@ public interface JeiTransferSource {
 
     default void addCatalysts(IRecipeCatalystRegistration registration) {}
 
+    default void addRecipes(IRecipeRegistration registration, Level level) {}
+
+    /** Search terms for a machine beyond its own name, so the mod it automates finds it too. */
+    default void addAliases(IIngredientAliasRegistration registration) {}
+
     interface TransferCollector {
         <R extends Recipe<?>> void add(
-                RecipeType<RecipeHolder<R>> recipeType, PatternTransferHandler.Extractor<R> extractor);
+                RecipeType<RecipeHolder<R>> recipeType, PatternTransferHandler.Extractor<RecipeHolder<R>> extractor);
+
+        /** For categories JEI exposes as the bare recipe rather than its {@link RecipeHolder}. */
+        <T> void addUnwrapped(
+                RecipeType<T> recipeType,
+                PatternTransferHandler.Extractor<T> extractor,
+                PatternTransferHandler.Identifier<T> identifier);
     }
 }

@@ -1,0 +1,33 @@
+{
+  "type": "actuallyadditions:empowering",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "actuallyadditions"
+    }
+  ],
+  "base": {
+    "item": "ae2:molecular_assembler"
+  },
+  "modifiers": [
+    {
+      "item": "actuallyadditions:atomic_reconstructor"
+    },
+    {
+      "item": "nep:empowered_matrix_circuitry"
+    },
+    {
+      "item": "actuallyadditions:empowerer"
+    },
+    {
+      "tag": "c:storage_blocks/empowered_diamatine_crystal"
+    }
+  ],
+  "energy": 50000,
+  "color": 11762175,
+  "time": 500,
+  "result": {
+    "count": 1,
+    "id": "nep:atomic_empowering_matrix"
+  }
+}

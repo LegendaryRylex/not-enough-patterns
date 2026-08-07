@@ -18,8 +18,6 @@ tasks.named('jar', Jar).configure {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-// Game tests need the real game, so they cannot live in `src/test`, but they must not ship
-// either: this source set is wired into the dev runs below and never into `jar`.
 sourceSets {
     gametest {
         compileClasspath += sourceSets.main.output
@@ -33,9 +31,79 @@ repositories {
     maven { url = 'https://maven.ithundxr.dev/snapshots' }
     maven { url = 'https://maven.blamejared.com/' }
     maven {
+        url = 'https://maven.shadowsoffire.dev/releases'
+        content { includeGroup 'dev.shadowsoffire' }
+    }
+    maven {
+        url = 'https://maven.ryanhcode.dev/releases'
+        content { includeGroup 'dev.ryanhcode.sable-companion' }
+    }
+    maven {
         url = 'https://www.cursemaven.com'
         content { includeGroup 'curse.maven' }
     }
+}
+
+// Mod-absence boots: `-Pskip_mods=de,create` drops a family from the run classpath only.
+// Untracked `skip_mods.local` supplies the default set when no -Pskip_mods is given;
+// `-Pskip_mods=none` forces the full classpath. GameTest, datagen, build, check and test
+// invocations ignore the local file so they always see the full dependency set.
+var skippableRuntimeMods = [
+        de     : [[group: 'curse.maven', module: 'draconic-evolution-223565'],
+                  [group: 'curse.maven', module: 'brandons-core-231382'],
+                  [group: 'curse.maven', module: 'codechicken-lib-1-8-242818']],
+        create : [[group: 'com.simibubi.create'],
+                  [group: 'net.createmod.ponder'],
+                  [group: 'dev.engine-room.flywheel'],
+                  [group: 'com.tterrag.registrate']],
+        jei    : [[group: 'mezz.jei'],
+                  [group: 'curse.maven', module: 'ae2-jei-integration-1074338']],
+        jade   : [[group: 'curse.maven', module: 'jade-324717']],
+        apothic: [[group: 'dev.shadowsoffire']],
+        cc     : [[group: 'curse.maven', module: 'compact-crafting-updated-1355698']],
+        aa     : [[group: 'curse.maven', module: 'actually-additions-228404'],
+                  [group: 'curse.maven', module: 'actually-additions-tiers-1549640']],
+        aatiers: [[group: 'curse.maven', module: 'actually-additions-tiers-1549640']],
+        ma     : [[group: 'curse.maven', module: 'mystical-agriculture-246640'],
+                  [group: 'curse.maven', module: 'cucumber-272335']],
+        sable  : [[group: 'curse.maven', module: 'sable-1312371'],
+                  [group: 'curse.maven', module: 'create-aeronautics-676721']],
+        aae    : [[group: 'curse.maven', module: 'advancedae-1084104'],
+                  [group: 'curse.maven', module: 'geckolib-388172'],
+                  [group: 'curse.maven', module: 'ae2addonlib-1366135']],
+        eae    : [[group: 'curse.maven', module: 'ex-pattern-provider-892005'],
+                  [group: 'curse.maven', module: 'glodium-957920']],
+        mega   : [[group: 'curse.maven', module: 'mega-cells-622112']],
+        ac     : [[group: 'curse.maven', module: 'applied-create-1474758'],
+                  [group: 'curse.maven', module: 'kotlin-for-forge-351264']],
+        dfa    : [[group: 'curse.maven', module: 'ae2-draconic-fusion-autocrafter-1521464']],
+        wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
+]
+
+var impliedSkips = [create: ['sable', 'ac'], de: ['dfa'], wtlib: ['aae', 'eae']]
+
+var skipModsLocal = file('skip_mods.local')
+var fullClasspathRequested = gradle.startParameter.taskNames.any {
+    var t = it.toLowerCase()
+    t.contains('gametest') || t.contains('rundata') || t.endsWith('build') || t.endsWith('check') || t.endsWith('test')
+}
+var skipModsRequest = ''
+if (project.hasProperty('skip_mods')) {
+    skipModsRequest = project.skip_mods.toString()
+} else if (skipModsLocal.exists() && !fullClasspathRequested) {
+    skipModsRequest = skipModsLocal.text
+}
+var skippedMods = skipModsRequest.split(',')*.trim().findAll { it }*.toLowerCase() - ['none']
+var unknownSkips = skippedMods.findAll { !skippableRuntimeMods.containsKey(it) }
+if (unknownSkips) {
+    throw new GradleException("unknown skip_mods entries ${unknownSkips.join(', ')}; known: ${skippableRuntimeMods.keySet().join(', ')}")
+}
+skippedMods = (skippedMods + skippedMods.collectMany { impliedSkips[it] ?: [] }).unique()
+if (skippedMods) {
+    skippedMods.each { key -> skippableRuntimeMods[key].each { configurations.runtimeClasspath.exclude(it) } }
+    logger.lifecycle("run classpath is missing: ${skippedMods.join(', ')}")
+} else if (skipModsLocal.exists() && fullClasspathRequested) {
+    logger.lifecycle("skip_mods.local ignored: requested tasks run the full classpath")
 }
 
 neoForge {
@@ -49,26 +117,36 @@ neoForge {
     runs {
         client {
             client()
-            jvmArgument '-Xmx4G'
-            jvmArgument '-XX:MaxDirectMemorySize=2G'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-            // GuideMe live preview: hot-reload our pages of the AE2 guide straight from source.
-            systemProperty 'guideme.ae2.guide.sources', file('src/main/resources/assets/nep/ae2guide').absolutePath
-            systemProperty 'guideme.ae2.guide.sourcesNamespace', project.mod_id
+            if (!skippedMods) {
+                systemProperty 'guideme.ae2.guide.sources', file('src/main/resources/assets/nep/ae2guide').absolutePath
+                systemProperty 'guideme.ae2.guide.sourcesNamespace', project.mod_id
+            }
+        }
+
+        clientAlt {
+            client()
+            programArguments.addAll '--username', 'Dev2'
+            if (!skippedMods) {
+                systemProperty 'guideme.ae2.guide.sources', file('src/main/resources/assets/nep/ae2guide').absolutePath
+                systemProperty 'guideme.ae2.guide.sourcesNamespace', project.mod_id
+            }
         }
 
         server {
             server()
-            jvmArgument '-Xmx4G'
-            jvmArgument '-XX:MaxDirectMemorySize=2G'
             programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        serverAlt {
+            server()
+            programArguments.addAll '--nogui', '--port', '25566'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
         gameTestServer {
             type = "gameTestServer"
-            jvmArgument '-Xmx4G'
-            jvmArgument '-XX:MaxDirectMemorySize=2G'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -78,6 +156,9 @@ neoForge {
         }
 
         configureEach {
+            gameDirectory = file("runs/$name")
+            jvmArgument '-Xmx8G'
+            jvmArgument '-XX:MaxDirectMemorySize=2G'
             systemProperty 'forge.logging.markers', 'REGISTRIES'
             logLevel = org.slf4j.event.Level.DEBUG
         }
@@ -86,8 +167,11 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet(sourceSets.main)
-            // Dev runs only. Deliberately absent from `jar` so no test scaffolding ships.
-            sourceSet(sourceSets.gametest)
+            // Never in `jar`, and not on skip_mods boots: the GameTest scanner reflects over
+            // test signatures that may name classes from the skipped mod.
+            if (!skippedMods) {
+                sourceSet(sourceSets.gametest)
+            }
         }
     }
 
@@ -104,7 +188,22 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 configurations {
     runtimeClasspath.extendsFrom localRuntime
     gametestImplementation.extendsFrom implementation
+    gametestCompileOnly.extendsFrom compileOnly
     gametestRuntimeOnly.extendsFrom runtimeOnly
+    compactCraftingJar
+}
+
+// Compact Crafting ships its API as a jar-in-jar; unpack it for the compile classpath.
+var compactCraftingApiDir = layout.buildDirectory.dir('compactcrafting-api').get().asFile
+
+var extractCompactCraftingApi = tasks.register('extractCompactCraftingApi', Sync) {
+    var jars = configurations.compactCraftingJar
+    from({ jars.collect { zipTree(it) } }) {
+        include 'META-INF/jarjar/*-api-*.jar'
+        eachFile { it.relativePath = new RelativePath(true, it.name) }
+    }
+    includeEmptyDirs = false
+    into compactCraftingApiDir
 }
 
 dependencies {
@@ -117,17 +216,73 @@ dependencies {
     runtimeOnly "dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}"
     implementation "com.tterrag.registrate:Registrate:${registrate_version}"
 
-    compileOnly "curse.maven:ae2wtlib-459929:8450398"
+    compileOnly "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
+    localRuntime "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
+
+    compileOnly "curse.maven:advancedae-1084104:${advanced_ae_file}"
+    localRuntime "curse.maven:advancedae-1084104:${advanced_ae_file}"
+    localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
+    localRuntime "curse.maven:ae2addonlib-1366135:${ae2addonlib_file}"
+
+    localRuntime "curse.maven:ae2-draconic-fusion-autocrafter-1521464:${ae2_draconic_fusion_autocrafter_file}"
+    localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
+    localRuntime "curse.maven:glodium-957920:${glodium_file}"
+    localRuntime "curse.maven:mega-cells-622112:${megacells_file}"
+    localRuntime "curse.maven:applied-create-1474758:${appliedcreate_file}"
+    localRuntime "curse.maven:kotlin-for-forge-351264:${kotlinforforge_file}"
+
+    compileOnly "curse.maven:draconic-evolution-223565:${draconic_evolution_file}"
+    compileOnly "curse.maven:brandons-core-231382:${brandonscore_file}"
+    compileOnly "curse.maven:codechicken-lib-1-8-242818:${codechickenlib_file}"
+    localRuntime "curse.maven:draconic-evolution-223565:${draconic_evolution_file}"
+    localRuntime "curse.maven:brandons-core-231382:${brandonscore_file}"
+    localRuntime "curse.maven:codechicken-lib-1-8-242818:${codechickenlib_file}"
+
+    compileOnly "curse.maven:compact-crafting-updated-1355698:${compact_crafting_file}"
+    localRuntime "curse.maven:compact-crafting-updated-1355698:${compact_crafting_file}"
+    compactCraftingJar "curse.maven:compact-crafting-updated-1355698:${compact_crafting_file}"
+    compileOnly fileTree(dir: compactCraftingApiDir, include: '*.jar').builtBy(extractCompactCraftingApi)
+
+    compileOnly "curse.maven:actually-additions-228404:${actually_additions_file}"
+    compileOnly "curse.maven:actually-additions-tiers-1549640:${actually_additions_tiers_file}"
+    localRuntime "curse.maven:actually-additions-228404:${actually_additions_file}"
+    localRuntime "curse.maven:actually-additions-tiers-1549640:${actually_additions_tiers_file}"
+
+    compileOnly "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
+    compileOnly "curse.maven:cucumber-272335:${cucumber_file}"
+    localRuntime "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
+    localRuntime "curse.maven:cucumber-272335:${cucumber_file}"
+
+    // transitive = false: their poms pull in Curios from a maven we do not carry
+    compileOnly("dev.shadowsoffire:ApothicEnchanting:${minecraft_version}-${apothic_enchanting_version}") { transitive = false }
+    compileOnly("dev.shadowsoffire:ApothicAttributes:${minecraft_version}-${apothic_attributes_version}") { transitive = false }
+    compileOnly("dev.shadowsoffire:Placebo:${minecraft_version}-${placebo_version}") { transitive = false }
+    localRuntime("dev.shadowsoffire:ApothicEnchanting:${minecraft_version}-${apothic_enchanting_version}") { transitive = false }
+    localRuntime("dev.shadowsoffire:ApothicAttributes:${minecraft_version}-${apothic_attributes_version}") { transitive = false }
+    localRuntime("dev.shadowsoffire:Placebo:${minecraft_version}-${placebo_version}") { transitive = false }
 
     localRuntime "curse.maven:ae2-jei-integration-1074338:7727898"
     localRuntime "curse.maven:architectury-api-419699:8492726"
     localRuntime "curse.maven:tool-kit-324888:8216546"
+
+    localRuntime "curse.maven:functional-storage-556861:${functionalstorage_file}"
+    localRuntime "curse.maven:titanium-287342:${titanium_file}"
+    localRuntime "curse.maven:spark-361579:${spark_file}"
 
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
     runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
     compileOnly "curse.maven:jade-324717:7545219"
     localRuntime "curse.maven:jade-324717:7545219"
+
+    compileOnly "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}"
+    localRuntime "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}"
+    jarJar("dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:[${sable_companion_version},2.0)") {
+        version { prefer sable_companion_version }
+    }
+
+    localRuntime "curse.maven:sable-1312371:${sable_file}"
+    localRuntime "curse.maven:create-aeronautics-676721:${aeronautics_file}"
 
     testImplementation platform('org.junit:junit-bom:5.14.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -136,8 +291,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    // The modded unit test runtime relocates the working directory, so hand the
-    // source-scanning tests an absolute anchor instead of relying on it.
     systemProperty 'nep.projectDir', projectDir.absolutePath
 }
 
@@ -163,7 +316,16 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             create_version_range   : create_version_range,
             jei_version_range      : jei_version_range,
             ae2wtlib_version_range : ae2wtlib_version_range,
+            advanced_ae_version_range: advanced_ae_version_range,
+            extendedae_version_range: extendedae_version_range,
+            megacells_version_range: megacells_version_range,
+            draconic_evolution_version_range: draconic_evolution_version_range,
+            compact_crafting_version_range: compact_crafting_version_range,
+            actually_additions_version_range: actually_additions_version_range,
+            mysticalagriculture_version_range: mysticalagriculture_version_range,
             jade_version_range     : jade_version_range,
+            sable_version_range    : sable_version_range,
+            apothic_enchanting_version_range: apothic_enchanting_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,

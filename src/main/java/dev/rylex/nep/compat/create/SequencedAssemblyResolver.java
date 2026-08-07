@@ -5,6 +5,7 @@ import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.processing.sequenced.IAssemblyRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedRecipe;
+import dev.rylex.nep.util.RecipeCache;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,7 +16,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -35,8 +35,8 @@ final class SequencedAssemblyResolver {
     record Requirements(
             int deployers,
             int spouts,
-            boolean press,
-            boolean saw,
+            int presses,
+            int saws,
             List<Ingredient> deployerTools,
             List<StationKind> stationOrder) {}
 
@@ -46,8 +46,8 @@ final class SequencedAssemblyResolver {
 
     record Demand(List<ItemDemand> items, List<FluidDemand> fluids) {}
 
-    private static final Map<Item, Optional<SequencedAssemblyRecipe>> CACHE =
-            Collections.synchronizedMap(new HashMap<>());
+    private static final RecipeCache<Map<Item, Optional<SequencedAssemblyRecipe>>> CACHE =
+            RecipeCache.of(level -> Collections.synchronizedMap(new HashMap<>()));
     private static final Map<SequencedAssemblyRecipe, Requirements> REQ_CACHE =
             Collections.synchronizedMap(new IdentityHashMap<>());
     private static final Map<SequencedAssemblyRecipe, Demand> DEMAND_CACHE =
@@ -102,7 +102,8 @@ final class SequencedAssemblyResolver {
         if (target.isEmpty()) {
             return null;
         }
-        return CACHE.computeIfAbsent(target.getItem(), item -> Optional.ofNullable(compute(level, target)))
+        return CACHE.get(level)
+                .computeIfAbsent(target.getItem(), item -> Optional.ofNullable(compute(level, target)))
                 .orElse(null);
     }
 
@@ -154,8 +155,8 @@ final class SequencedAssemblyResolver {
             Requirements req = requirementsOf(holder.value());
             if (req.deployers() == counts.deployers()
                     && req.spouts() == counts.spouts()
-                    && req.press() == (counts.presses() >= 1)
-                    && req.saw() == (counts.saws() >= 1)) {
+                    && req.presses() == counts.presses()
+                    && req.saws() == counts.saws()) {
                 matches.add(holder.value());
             }
         }
@@ -250,17 +251,15 @@ final class SequencedAssemblyResolver {
     }
 
     private static Requirements requirements(SequencedAssemblyRecipe recipe) {
-        Set<String> tools = new LinkedHashSet<>();
         List<Ingredient> orderedTools = new ArrayList<>();
-        Set<SizedFluidIngredient> fluids = new LinkedHashSet<>();
-        boolean press = false;
-        boolean saw = false;
-        int step = 0;
         List<StationKind> order = new ArrayList<>();
+        int deployers = 0;
+        int spouts = 0;
+        int presses = 0;
+        int saws = 0;
 
         for (SequencedRecipe<?> sequenced : recipe.getSequence()) {
             IAssemblyRecipe assembly = sequenced.getAsAssemblyRecipe();
-            step++;
 
             Set<ItemLike> stepMachines = new LinkedHashSet<>();
             assembly.addRequiredMachines(stepMachines);
@@ -268,45 +267,26 @@ final class SequencedAssemblyResolver {
                 case DEPLOYER -> {
                     List<Ingredient> ingredients = new ArrayList<>();
                     assembly.addAssemblyIngredients(ingredients);
-                    if (ingredients.isEmpty()) {
-                        if (tools.add("deploy#" + step)) {
-                            orderedTools.add(Ingredient.EMPTY);
-                            order.add(StationKind.DEPLOYER);
-                        }
-                    } else {
-                        for (Ingredient ingredient : ingredients) {
-                            if (tools.add(signature(ingredient))) {
-                                orderedTools.add(ingredient);
-                                order.add(StationKind.DEPLOYER);
-                            }
-                        }
-                    }
+                    orderedTools.add(ingredients.isEmpty() ? Ingredient.EMPTY : ingredients.get(0));
+                    order.add(StationKind.DEPLOYER);
+                    deployers++;
                 }
                 case SPOUT -> {
-                    List<SizedFluidIngredient> stepFluids = new ArrayList<>();
-                    assembly.addAssemblyFluidIngredients(stepFluids);
-                    for (SizedFluidIngredient fluid : stepFluids) {
-                        if (fluids.add(fluid)) {
-                            order.add(StationKind.SPOUT);
-                        }
-                    }
+                    order.add(StationKind.SPOUT);
+                    spouts++;
                 }
                 case PRESS -> {
-                    if (!press) {
-                        press = true;
-                        order.add(StationKind.PRESS);
-                    }
+                    order.add(StationKind.PRESS);
+                    presses++;
                 }
                 case SAW -> {
-                    if (!saw) {
-                        saw = true;
-                        order.add(StationKind.SAW);
-                    }
+                    order.add(StationKind.SAW);
+                    saws++;
                 }
                 default -> {}
             }
         }
-        return new Requirements(tools.size(), fluids.size(), press, saw, orderedTools, List.copyOf(order));
+        return new Requirements(deployers, spouts, presses, saws, List.copyOf(orderedTools), List.copyOf(order));
     }
 
     static List<List<Ingredient>> deployerToolLayout(List<SequencedAssemblyRecipe> recipes) {
@@ -328,15 +308,6 @@ final class SequencedAssemblyResolver {
             layout.add(accepted);
         }
         return layout;
-    }
-
-    private static String signature(Ingredient ingredient) {
-        List<String> ids = new ArrayList<>();
-        for (ItemStack stack : ingredient.getItems()) {
-            ids.add(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
-        }
-        ids.sort(null);
-        return String.join(",", ids);
     }
 
     private static List<RecipeHolder<SequencedAssemblyRecipe>> all(Level level) {

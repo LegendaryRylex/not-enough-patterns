@@ -40,8 +40,8 @@ final class MatrixReadout {
                 || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_STARVED) != 0;
     }
 
-    static Component power(int draw) {
-        return Component.translatable("gui.nep.sequenced_assembly_matrix.power", count(draw));
+    static Component meDrain(int drain) {
+        return Component.translatable("gui.nep.sequenced_assembly_matrix.me_drain", count(drain));
     }
 
     static Component speed(float rpm, float fraction) {

@@ -3,7 +3,7 @@ navigation:
   title: Overview
   icon: ae2:pattern_provider
   parent: nep/nep-index.md
-  position: 10
+  position: 1
 ---
 # <Color id="aqua">Overview</Color>
 
@@ -12,38 +12,57 @@ navigation:
 
   <ItemImage id="nep:import_card" scale="2"/>
 
-  Every integration is one autocrafting step. A Pattern Provider feeds the machine, then collects the result and marks the step done.
+  Every integration is one auto-crafting step. A Pattern Provider feeds the machine, then collects the result and marks the step done.
 </Column>
-
-<Recipe id="nep:module_status/create"/>
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 ***
 
 <Column alignItems="center" fullWidth={true}>
-  ## <Color id="gold">What nep Changes</Color>
+  ## <Color id="gold">What NEP Changes</Color>
 </Column>
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
-* Point the Provider at the machine for Mechanical Crafting, or at the <ItemLink id="create:depot"/> for Deploying and Filling.
-* Create machines leave their result in the world, so the Provider needs a <ItemLink id="nep:import_card"/> to collect it. Without one the craft never finishes.
+* Point the Provider at the block each machine's page names and the auto-craft becomes system-driven. Sometimes this may be the machine itself, or the block it works over, like a Depot or a Crafting Core.
+* Most modded machines leave their result in their output buffer, so the installing an <ItemLink id="nep:import_card"/> onto the Provider allows the system to collect it. Without one some crafts may never finish.
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 ***
 
 <Column alignItems="center" fullWidth={true}>
-  ## <Color id="gold">Config</Color>
+  ## <Color id="gold">Matrices</Color>
+</Column>
+
+Most mods NEP has support for also have a Matrix machine.
+
+These Matrices are a late-game "one-block solution" to that mods crafting methods.
+
+Below is a list of all current Matrices available in the mod:
+
+* <ItemImage id="nep:atomic_empowering_matrix" scale="0.5"/> [Atomic Empowering Matrix](/nep/actuallyadditions/atomic-empowering-matrix.md) (Actually Additions)
+* <ItemImage id="nep:miniaturization_matrix" scale="0.5"/> [Miniaturization Matrix](/nep/compactcrafting/miniaturization-matrix.md) (Compact Crafting)
+* <ItemImage id="nep:sequenced_assembly_matrix" scale="0.5"/> [Sequenced Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) (Create)
+* <ItemImage id="nep:fusion_matrix" scale="0.5"/> [Fusion Matrix](/nep/draconicevolution/fusion-matrix.md) (Draconic Evolution)
+* <ItemImage id="nep:infused_awakening_matrix" scale="0.5"/> [Infused Awakening Matrix](/nep/mysticalagriculture/infused-awakening-matrix.md) (Mystical Agriculture)
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Configs for Pack Devs</Color>
 </Column>
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
-Every integration toggles on its own. Settings live in `config/nep-server.toml`, or open Mods → Not Enough Patterns → Config. To vary them per world, drop a copy in that world's `serverconfig` folder and it overrides the shared file.
+Integration settings live in `config/nep-server.toml`, or open Mods → Not Enough Patterns → Config. To vary them per world, drop a copy in that world's `serverconfig` folder and it overrides the shared file.
 
-Disabling an integration stops it encoding patterns and stops Pattern Providers pushing to those machines. Patterns already in the world are left alone and resume working when you turn it back on.
+Every integration and Matrix have their own toggle. Disabling an integration stops it encoding patterns and stops Pattern Providers pushing to those machines. Patterns already in the world are left alone and resume working when the module is turned back on.
 
-> <Color id="yellow">Modules → Create → Module Override is the master switch.</Color> Turn it off and every Create integration stops regardless of its own toggle. In the file it is `modules.create.allow_create_module`.
+Each machine page lists the settings that belong to it, and a page whose module is switched off says so in red at the top. Turn on `Debug → Verbose Logging` to print every push and why it was accepted or rejected.
 
-Each machine page lists the settings that belong to it, and a page whose module is switched off says so in red at the top. Turn on Debug → Verbose Logging to print every push and why it was accepted or rejected.
+<Color id="green">Each mod has a Module Override master switch.</Color> Turn off Modules → Create → Module Override and every Create integration stops regardless of its own toggle; the same goes for Modules → Draconic Evolution → Module Override.

@@ -133,7 +133,7 @@ public class SequencedAssemblyMatrixScreen extends AssemblyReadoutScreen<Sequenc
         Component status = MatrixReadout.status(flags, makingEntries.isEmpty());
         graphics.drawString(font, status, 12, 21, MatrixReadout.faulted(flags) ? READOUT_FAULT : READOUT_TEXT, false);
         addStatusHotspot(matrix, flags, status);
-        drawTrailing(graphics, powerText(matrix), 21, 12 + font.width(status), READOUT_DIM);
+        drawTrailing(graphics, meDrainText(matrix), 21, 12 + font.width(status), READOUT_DIM);
         drawMakingRow(
                 graphics,
                 Component.translatable("gui.nep.sequenced_assembly_matrix.making"),
@@ -208,9 +208,9 @@ public class SequencedAssemblyMatrixScreen extends AssemblyReadoutScreen<Sequenc
         graphics.drawString(font, text, x, y, color, false);
     }
 
-    private static Component powerText(@Nullable SequencedAssemblyMatrixBlockEntity matrix) {
-        return MatrixReadout.power(
-                matrix == null ? NepConfig.createSequencedAssemblyMatrixIdlePower() : matrix.powerDraw());
+    private static Component meDrainText(@Nullable SequencedAssemblyMatrixBlockEntity matrix) {
+        return MatrixReadout.meDrain(
+                matrix == null ? NepConfig.createSequencedAssemblyMatrixIdleMeDrain() : matrix.meDrain());
     }
 
     private static Component speedText(@Nullable SequencedAssemblyMatrixBlockEntity matrix) {

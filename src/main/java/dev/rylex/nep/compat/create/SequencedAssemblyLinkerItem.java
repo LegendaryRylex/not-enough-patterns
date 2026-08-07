@@ -1,8 +1,10 @@
 package dev.rylex.nep.compat.create;
 
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.util.SubLevels;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -150,30 +152,24 @@ public class SequencedAssemblyLinkerItem extends Item {
             return;
         }
         BlockPos origin = controller.getBlockPos();
-        int range = NepConfig.createSequencedAssemblyLinkRange();
-        List<Component> tooFar = new ArrayList<>();
-        if (outOfRange(origin, in, range)) {
-            tooFar.add(Component.translatable("chat.nep.linker.target.input", format(in)));
-        }
-        if (outOfRange(origin, out, range)) {
-            tooFar.add(Component.translatable("chat.nep.linker.target.output", format(out)));
-        }
-        for (int i = 0; i < machines.size(); i++) {
-            if (outOfRange(origin, machines.get(i), range)) {
-                tooFar.add(Component.translatable("chat.nep.linker.target.step", i + 1, format(machines.get(i))));
-            }
-        }
-        if (!tooFar.isEmpty()) {
-            MutableComponent list = Component.empty();
-            for (int i = 0; i < tooFar.size(); i++) {
-                if (i > 0) {
-                    list.append(", ");
-                }
-                list.append(tooFar.get(i));
-            }
+        Level level = controller.getLevel();
+        List<Component> elsewhere =
+                targets(in, out, machines, target -> target != null && !SubLevels.sameSubLevel(level, origin, target));
+        if (!elsewhere.isEmpty()) {
             message(
                     player,
-                    Component.translatable("chat.nep.linker.too_far", range, list)
+                    Component.translatable("chat.nep.linker.different_sub_level", join(elsewhere))
+                            .withStyle(ChatFormatting.RED),
+                    false);
+            return;
+        }
+
+        int range = NepConfig.createSequencedAssemblyLinkRange();
+        List<Component> tooFar = targets(in, out, machines, target -> outOfRange(origin, target, range));
+        if (!tooFar.isEmpty()) {
+            message(
+                    player,
+                    Component.translatable("chat.nep.linker.too_far", range, join(tooFar))
                             .withStyle(ChatFormatting.RED),
                     false);
             return;
@@ -261,6 +257,34 @@ public class SequencedAssemblyLinkerItem extends Item {
 
     private static void message(Player player, Component text, boolean actionBar) {
         player.displayClientMessage(text, actionBar);
+    }
+
+    private static List<Component> targets(
+            @Nullable BlockPos in, @Nullable BlockPos out, List<BlockPos> machines, Predicate<BlockPos> flagged) {
+        List<Component> named = new ArrayList<>();
+        if (in != null && flagged.test(in)) {
+            named.add(Component.translatable("chat.nep.linker.target.input", format(in)));
+        }
+        if (out != null && flagged.test(out)) {
+            named.add(Component.translatable("chat.nep.linker.target.output", format(out)));
+        }
+        for (int i = 0; i < machines.size(); i++) {
+            if (flagged.test(machines.get(i))) {
+                named.add(Component.translatable("chat.nep.linker.target.step", i + 1, format(machines.get(i))));
+            }
+        }
+        return named;
+    }
+
+    private static Component join(List<Component> parts) {
+        MutableComponent list = Component.empty();
+        for (int i = 0; i < parts.size(); i++) {
+            if (i > 0) {
+                list.append(", ");
+            }
+            list.append(parts.get(i));
+        }
+        return list;
     }
 
     private static boolean outOfRange(BlockPos origin, @Nullable BlockPos target, int range) {

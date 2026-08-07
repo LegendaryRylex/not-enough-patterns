@@ -2,13 +2,13 @@ package dev.rylex.nep.compat.create;
 
 import dev.rylex.nep.machine.MachineFluidInput;
 import dev.rylex.nep.menu.MachineMenu;
+import dev.rylex.nep.menu.MachineSlot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
-import net.neoforged.neoforge.items.SlotItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 public class SequencedAssemblyMatrixMenu extends MachineMenu {
@@ -55,7 +55,7 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu {
                 : new ItemStackHandler(SequencedAssemblyMatrixBlockEntity.INPUT_SLOTS);
         for (int row = 0; row < INPUT_ROWS; row++) {
             for (int col = 0; col < INPUT_COLUMNS; col++) {
-                addSlot(new SlotItemHandler(input, row * INPUT_COLUMNS + col, INPUT_X + col * 18, INPUT_Y + row * 18) {
+                addSlot(new MachineSlot(input, row * INPUT_COLUMNS + col, INPUT_X + col * 18, INPUT_Y + row * 18) {
                     @Override
                     public boolean mayPlace(ItemStack stack) {
                         return matrix != null && matrix.manualDemandFor(stack) > 0;
@@ -76,7 +76,7 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu {
                 ? matrix.getOutputBuffer()
                 : new ItemStackHandler(SequencedAssemblyMatrixBlockEntity.OUTPUT_SLOTS);
         for (int col = 0; col < SequencedAssemblyMatrixBlockEntity.OUTPUT_SLOTS; col++) {
-            addSlot(new SlotItemHandler(output, col, OUTPUT_X + col * 18, OUTPUT_Y) {
+            addSlot(new MachineSlot(output, col, OUTPUT_X + col * 18, OUTPUT_Y) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
                     return false;
@@ -126,8 +126,6 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return matrix != null
-                && !matrix.isRemoved()
-                && player.distanceToSqr(matrix.getBlockPos().getCenter()) <= 64.0;
+        return withinReach(player, matrix);
     }
 }
