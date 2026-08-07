@@ -18,7 +18,9 @@ import dev.rylex.nep.compat.create.SequencedAssemblyMatrixBlock.MatrixStatus;
 import dev.rylex.nep.compat.create.SequencedAssemblyResolver.Demand;
 import dev.rylex.nep.compat.create.SequencedAssemblyResolver.FluidDemand;
 import dev.rylex.nep.compat.create.SequencedAssemblyResolver.ItemDemand;
+import dev.rylex.nep.compat.create.newage.CreateNewAgeCompat;
 import dev.rylex.nep.machine.MachineItemView;
+import dev.rylex.nep.machine.MatrixEnergyBuffer;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.machine.MatrixHost;
 import dev.rylex.nep.machine.PushingCpus;
@@ -56,6 +58,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -76,6 +79,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     static final int FLAG_FAST_ENOUGH = 8;
     static final int FLAG_STARVED = 16;
     static final int FLAG_OUTPUT_BLOCKED = 32;
+    static final int FLAG_NO_ENERGY = 64;
+
+    static final boolean NEW_AGE_LOADED = ModList.get().isLoaded(CreateNewAgeCompat.MOD_ID);
 
     private static final int PROGRESS_SYNC_STEPS = 32;
     private static final int RUNNING_GRACE_TICKS = 10;
@@ -101,6 +107,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private static final String PROGRESS_KEY = "Progress";
     private static final String STRESS_KEY = "Stress";
     private static final String REDSTONE_MODE_KEY = "RedstoneMode";
+    private static final String ENERGY_KEY = "Energy";
+    private static final String ENERGY_STORED_KEY = "EnergyStored";
+    private static final String ENERGY_PENDING_KEY = "EnergyPending";
 
     private final ItemStackHandler inputBuffer = new ItemStackHandler(INPUT_SLOTS) {
         @Override
@@ -156,6 +165,11 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private final List<FluidStack> claimedFluids = new ArrayList<>();
     private long progress;
 
+    private final MatrixEnergyBuffer energy = new MatrixEnergyBuffer(
+            NepConfig.createSequencedAssemblyMatrixEnergyCapacity(),
+            NepConfig.createSequencedAssemblyMatrixChargeRate());
+    private long pendingEnergyCost;
+
     private boolean outputBlocked;
     private boolean scanNeeded = true;
     private int syncedSignature = Integer.MIN_VALUE;
@@ -166,6 +180,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private int clientFlags;
     private int clientStress;
     private float clientProgress;
+    private long clientEnergy;
+    private long clientEnergyPending;
 
     public SequencedAssemblyMatrixBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -252,6 +268,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             return;
         }
         power.create(level, getBlockPos());
+        energy.resize(
+                Math.max(NepConfig.createSequencedAssemblyMatrixEnergyCapacity(), pendingEnergyCost),
+                NepConfig.createSequencedAssemblyMatrixChargeRate());
         long phase = level.getGameTime() + getBlockPos().hashCode();
         if (Math.floorMod(phase, TRIM_INTERVAL) == 0 && fluids.overCapacity()) {
             fluids.trimToCapacity(fluidOverflow);
@@ -260,6 +279,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             republishStress();
             if (owed.isEmpty()) {
                 setMissingInputs(List.of());
+                pendingEnergyCost = 0;
             } else {
                 autoRequest(level);
             }
@@ -492,10 +512,20 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         if (result.isEmpty()) {
             return false;
         }
-        Plan plan = planConsumption(SequencedAssemblyResolver.demandOf(recipe));
+        Demand demand = SequencedAssemblyResolver.demandOf(recipe);
+        Plan plan = planConsumption(demand);
         if (plan == null || !fitsInOutput(result)) {
             return false;
         }
+        if (demand.energy() > 0) {
+            if (energy.stored() < demand.energy()) {
+                pendingEnergyCost = demand.energy();
+                setChanged();
+                return false;
+            }
+            energy.spend(demand.energy());
+        }
+        pendingEnergyCost = 0;
         claimedItems.clear();
         claimedFluids.clear();
         for (int[] take : plan.itemTakes()) {
@@ -1093,7 +1123,33 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
                     .append(crafting)));
         }
         tooltip.add(indented(MatrixReadout.meDrain(meDrain()).copy().withStyle(ChatFormatting.AQUA)));
+        if (NEW_AGE_LOADED) {
+            tooltip.add(indented(MatrixReadout.energy(energyStored(), energyCapacity())
+                    .copy()
+                    .withStyle(ChatFormatting.AQUA)));
+        }
         return true;
+    }
+
+    long energyStored() {
+        Level level = getLevel();
+        return level != null && level.isClientSide ? clientEnergy : energy.stored();
+    }
+
+    long energyCapacity() {
+        Level level = getLevel();
+        return level != null && level.isClientSide
+                ? Math.max(NepConfig.createSequencedAssemblyMatrixEnergyCapacity(), clientEnergyPending)
+                : energy.capacity();
+    }
+
+    long energyPending() {
+        Level level = getLevel();
+        return level != null && level.isClientSide ? clientEnergyPending : pendingEnergyCost;
+    }
+
+    MatrixEnergyBuffer energyStorage() {
+        return energy;
     }
 
     private static Component indented(Component line) {
@@ -1123,6 +1179,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         }
         if (outputBlocked) {
             flags |= FLAG_OUTPUT_BLOCKED;
+        }
+        if (activeResult.isEmpty() && pendingEnergyCost > 0 && energy.stored() < pendingEnergyCost) {
+            flags |= FLAG_NO_ENERGY;
         }
         return flags;
     }
@@ -1190,6 +1249,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private void syncIfChanged() {
         int signature = statusFlags();
         signature = signature * 31 + stressDrawAt(Math.abs(getSpeed()));
+        signature = signature * 31 + (int) (energy.stored() * 16 / Math.max(1, energy.capacity()));
+        signature = signature * 31 + Long.hashCode(pendingEnergyCost);
         signature = signature * 31 + (int) (craftProgress() * PROGRESS_SYNC_STEPS);
         signature = signature * 31 + activeResult.getItem().hashCode();
         for (Map.Entry<Item, Long> entry : owed.entrySet()) {
@@ -1257,9 +1318,13 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             tag.putInt(FLAGS_KEY, statusFlags());
             tag.putInt(STRESS_KEY, stressDrawAt(Math.abs(getSpeed())));
             tag.putFloat(PROGRESS_KEY, craftProgress());
+            tag.putLong(ENERGY_STORED_KEY, energy.stored());
+            tag.putLong(ENERGY_PENDING_KEY, pendingEnergyCost);
             return;
         }
         tag.putLong(PROGRESS_KEY, progress);
+        tag.put(ENERGY_KEY, energy.save());
+        tag.putLong(ENERGY_PENDING_KEY, pendingEnergyCost);
         if (!claimedItems.isEmpty()) {
             ListTag claimedList = new ListTag();
             for (ItemStack stack : claimedItems) {
@@ -1335,9 +1400,16 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             clientFlags = tag.getInt(FLAGS_KEY);
             clientStress = tag.getInt(STRESS_KEY);
             clientProgress = tag.getFloat(PROGRESS_KEY);
+            clientEnergy = tag.getLong(ENERGY_STORED_KEY);
+            clientEnergyPending = tag.getLong(ENERGY_PENDING_KEY);
             return;
         }
         progress = tag.getLong(PROGRESS_KEY);
+        pendingEnergyCost = tag.getLong(ENERGY_PENDING_KEY);
+        energy.resize(
+                Math.max(NepConfig.createSequencedAssemblyMatrixEnergyCapacity(), pendingEnergyCost),
+                NepConfig.createSequencedAssemblyMatrixChargeRate());
+        energy.load(tag.getCompound(ENERGY_KEY));
         claimedItems.clear();
         if (tag.contains(CLAIMED_ITEMS_KEY, Tag.TAG_LIST)) {
             ListTag claimedList = tag.getList(CLAIMED_ITEMS_KEY, Tag.TAG_COMPOUND);

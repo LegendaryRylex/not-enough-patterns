@@ -56,6 +56,7 @@ var skippableRuntimeMods = [
                   [group: 'net.createmod.ponder'],
                   [group: 'dev.engine-room.flywheel'],
                   [group: 'com.tterrag.registrate']],
+        cna    : [[group: 'curse.maven', module: 'create-new-age-905861']],
         jei    : [[group: 'mezz.jei'],
                   [group: 'curse.maven', module: 'ae2-jei-integration-1074338']],
         jade   : [[group: 'curse.maven', module: 'jade-324717']],
@@ -80,7 +81,7 @@ var skippableRuntimeMods = [
         wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
 ]
 
-var impliedSkips = [create: ['sable', 'ac'], de: ['dfa'], wtlib: ['aae', 'eae']]
+var impliedSkips = [create: ['sable', 'ac', 'cna'], de: ['dfa'], wtlib: ['aae', 'eae']]
 
 var skipModsLocal = file('skip_mods.local')
 var fullClasspathRequested = gradle.startParameter.taskNames.any {
@@ -216,6 +217,9 @@ dependencies {
     runtimeOnly "dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}"
     implementation "com.tterrag.registrate:Registrate:${registrate_version}"
 
+    compileOnly "curse.maven:create-new-age-905861:${create_new_age_file}"
+    localRuntime "curse.maven:create-new-age-905861:${create_new_age_file}"
+
     compileOnly "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
     localRuntime "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
 
@@ -314,6 +318,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             loader_version_range   : loader_version_range,
             ae2_version_range      : ae2_version_range,
             create_version_range   : create_version_range,
+            create_new_age_version_range: create_new_age_version_range,
             jei_version_range      : jei_version_range,
             ae2wtlib_version_range : ae2wtlib_version_range,
             advanced_ae_version_range: advanced_ae_version_range,

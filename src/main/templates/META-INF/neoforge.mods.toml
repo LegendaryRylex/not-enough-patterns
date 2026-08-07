@@ -38,6 +38,13 @@ ordering="AFTER"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
+modId="create_new_age"
+type="optional"
+versionRange="${create_new_age_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
 modId="draconicevolution"
 type="optional"
 versionRange="${draconic_evolution_version_range}"

@@ -3,6 +3,7 @@ package dev.rylex.nep.compat.create;
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.client.EnergyGauge;
 import dev.rylex.nep.machine.MachineFluidInput;
 import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.util.MissingStacks;
@@ -116,8 +117,17 @@ public class SequencedAssemblyMatrixScreen extends AssemblyReadoutScreen<Sequenc
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
-        if (menu.matrix() != null) {
+        SequencedAssemblyMatrixBlockEntity matrix = menu.matrix();
+        if (matrix != null) {
             drawTanks(graphics, this::tankFluid, tankCapacity());
+            if (SequencedAssemblyMatrixBlockEntity.NEW_AGE_LOADED) {
+                EnergyGauge.draw(
+                        graphics,
+                        leftPos + SequencedAssemblyMatrixMenu.ENERGY_X,
+                        topPos + SequencedAssemblyMatrixMenu.ENERGY_Y,
+                        matrix.energyStored(),
+                        matrix.energyCapacity());
+            }
         }
     }
 
@@ -147,6 +157,18 @@ public class SequencedAssemblyMatrixScreen extends AssemblyReadoutScreen<Sequenc
         drawProgress(graphics, matrix);
         if (matrix != null) {
             addTankHotspots(this::tankFluid, tankCapacity(), "gui.nep.sequenced_assembly_matrix");
+            if (SequencedAssemblyMatrixBlockEntity.NEW_AGE_LOADED) {
+                addHotspot(
+                        SequencedAssemblyMatrixMenu.ENERGY_X,
+                        SequencedAssemblyMatrixMenu.ENERGY_Y,
+                        EnergyGauge.WIDTH,
+                        EnergyGauge.HEIGHT,
+                        () -> List.of(
+                                Component.translatable("gui.nep.sequenced_assembly_matrix.energy_buffer"),
+                                MatrixReadout.energy(matrix.energyStored(), matrix.energyCapacity())
+                                        .copy()
+                                        .withStyle(ChatFormatting.GRAY)));
+            }
         }
 
         graphics.drawString(
@@ -178,13 +200,21 @@ public class SequencedAssemblyMatrixScreen extends AssemblyReadoutScreen<Sequenc
         }
         boolean blocked = (flags & SequencedAssemblyMatrixBlockEntity.FLAG_OUTPUT_BLOCKED) != 0;
         boolean starved = (flags & SequencedAssemblyMatrixBlockEntity.FLAG_STARVED) != 0;
-        if (!blocked && !starved) {
+        boolean noEnergy = (flags & SequencedAssemblyMatrixBlockEntity.FLAG_NO_ENERGY) != 0;
+        if (!blocked && !starved && !noEnergy) {
             return;
         }
         addHotspot(12, 21, font.width(status), font.lineHeight, () -> {
             List<Component> lines = new ArrayList<>();
             if (blocked) {
                 lines.add(Component.translatable("gui.nep.sequenced_assembly_matrix.status.output_blocked.hint")
+                        .withStyle(ChatFormatting.GRAY));
+            }
+            if (noEnergy) {
+                lines.add(Component.translatable(
+                                "gui.nep.sequenced_assembly_matrix.status.no_energy.hint",
+                                MatrixReadout.count(matrix.energyStored()),
+                                MatrixReadout.count(matrix.energyPending()))
                         .withStyle(ChatFormatting.GRAY));
             }
             if (starved) {

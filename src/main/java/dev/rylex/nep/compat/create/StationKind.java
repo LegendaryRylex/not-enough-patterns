@@ -1,12 +1,14 @@
 package dev.rylex.nep.compat.create;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 
 enum StationKind {
     DEPLOYER,
     PRESS,
     SPOUT,
     SAW,
+    ENERGIZER,
     UNKNOWN;
 
     static StationKind byName(String name) {
@@ -19,8 +21,9 @@ enum StationKind {
     }
 
     Component displayName() {
-        return recognized()
-                ? Stations.icon(this).getHoverName()
+        ItemStack icon = Stations.icon(this);
+        return recognized() && !icon.isEmpty()
+                ? icon.getHoverName()
                 : Component.translatable("chat.nep.sequenced_assembly.station.unknown");
     }
 
@@ -29,6 +32,6 @@ enum StationKind {
     }
 
     boolean needsRotation() {
-        return this == DEPLOYER || this == PRESS || this == SAW;
+        return this == DEPLOYER || this == PRESS || this == SAW || this == ENERGIZER;
     }
 }

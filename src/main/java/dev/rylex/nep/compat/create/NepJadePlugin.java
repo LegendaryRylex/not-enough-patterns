@@ -132,6 +132,10 @@ public final class NepJadePlugin implements IWailaPlugin {
             nep.putInt("flags", be.statusFlags());
             nep.putInt("stress", be.stressDraw());
             nep.putFloat("progress", be.craftProgress());
+            if (SequencedAssemblyMatrixBlockEntity.NEW_AGE_LOADED) {
+                nep.putLong("energy", be.energyStored());
+                nep.putLong("energyCapacity", be.energyCapacity());
+            }
             List<ItemStack> makingNow = be.makingNow();
             ListTag making = new ListTag();
             for (ItemStack stack : makingNow) {
@@ -166,6 +170,7 @@ public final class NepJadePlugin implements IWailaPlugin {
             boolean fastEnough = (flags & SequencedAssemblyMatrixBlockEntity.FLAG_FAST_ENOUGH) != 0;
             boolean blocked = (flags & SequencedAssemblyMatrixBlockEntity.FLAG_OUTPUT_BLOCKED) != 0;
             boolean starved = (flags & SequencedAssemblyMatrixBlockEntity.FLAG_STARVED) != 0;
+            boolean noEnergy = (flags & SequencedAssemblyMatrixBlockEntity.FLAG_NO_ENERGY) != 0;
             ListTag making = nep.getList("making", Tag.TAG_COMPOUND);
             if (overstressed) {
                 tooltip.add(line("jade.nep.matrix.overstressed", ChatFormatting.RED));
@@ -179,6 +184,8 @@ public final class NepJadePlugin implements IWailaPlugin {
                 tooltip.add(line("jade.nep.matrix.output_blocked", ChatFormatting.RED));
             } else if (starved) {
                 tooltip.add(line("jade.nep.matrix.starved", ChatFormatting.RED));
+            } else if (noEnergy) {
+                tooltip.add(line("jade.nep.matrix.no_energy", ChatFormatting.RED));
             } else if (!making.isEmpty()) {
                 int percent = Mth.clamp(Mth.floor(nep.getFloat("progress") * 100.0F), 0, 100);
                 tooltip.add(Component.translatable("jade.nep.matrix.assembling", percent)
@@ -190,6 +197,13 @@ public final class NepJadePlugin implements IWailaPlugin {
             if (stress > 0) {
                 tooltip.add(
                         Component.translatable("jade.nep.matrix.stress", stress).withStyle(ChatFormatting.DARK_GRAY));
+            }
+            if (nep.contains("energy")) {
+                tooltip.add(Component.translatable(
+                                "jade.nep.matrix.energy",
+                                MatrixReadout.count(nep.getLong("energy")),
+                                MatrixReadout.count(nep.getLong("energyCapacity")))
+                        .withStyle(ChatFormatting.DARK_GRAY));
             }
             appendMaking(tooltip, "jade.nep.matrix.making", making, nep.getInt("makingTotal"));
             if (starved) {

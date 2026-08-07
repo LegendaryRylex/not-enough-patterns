@@ -37,13 +37,13 @@
     {
       "consume": true,
       "ingredient": {
-        "item": "draconicevolution:awakened_core"
+        "item": "draconicevolution:chaotic_core"
       }
     },
     {
       "consume": true,
       "ingredient": {
-        "item": "draconicevolution:awakened_core"
+        "item": "draconicevolution:chaotic_crafting_injector"
       }
     },
     {

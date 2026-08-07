@@ -62,6 +62,8 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_MINIMUM_SPEED;
     private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CRAFT_TICKS;
     private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_TANK_CAPACITY;
+    private static final ModConfigSpec.LongValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY;
+    private static final ModConfigSpec.LongValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE;
     private static final ModConfigSpec.BooleanValue DRACONIC_OVERRIDE;
     private static final ModConfigSpec.BooleanValue DRACONIC_FUSION_CRAFTING;
     private static final ModConfigSpec.BooleanValue DRACONIC_FUSION_MATRIX;
@@ -401,6 +403,14 @@ public final class NepConfig {
                         "Capacity of each of the Matrix's four internal tanks, in millibuckets.")
                 .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.tankCapacity")
                 .defineInRange("tankCapacity", 64_000, 1_000, 1_000_000);
+        CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY = builder.comment(
+                        "Size of the Matrix's internal energy buffer, in FE. Only sequenced assembly recipes with an energising step (Create: New Age) cost energy; the buffer grows on its own when a single craft needs more than this.")
+                .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.energyCapacity")
+                .defineInRange("energyCapacity", 1_000_000L, 1_000L, Integer.MAX_VALUE);
+        CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE = builder.comment(
+                        "Maximum energy the Matrix accepts per tick, in FE.")
+                .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.chargeRate")
+                .defineInRange("chargeRate", 100_000L, 1L, Integer.MAX_VALUE);
         builder.pop();
 
         builder.pop();
@@ -839,6 +849,14 @@ public final class NepConfig {
 
     public static int createSequencedAssemblyMatrixTankCapacity() {
         return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_TANK_CAPACITY.get() : 64_000;
+    }
+
+    public static long createSequencedAssemblyMatrixEnergyCapacity() {
+        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY.get() : 1_000_000L;
+    }
+
+    public static long createSequencedAssemblyMatrixChargeRate() {
+        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE.get() : 100_000L;
     }
 
     public static boolean draconicOverride() {

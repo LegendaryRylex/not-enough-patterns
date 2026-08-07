@@ -5,9 +5,11 @@ import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.processing.sequenced.IAssemblyRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedRecipe;
+import dev.rylex.nep.compat.create.newage.CreateNewAgeCompat;
 import dev.rylex.nep.util.RecipeCache;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -24,6 +26,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
@@ -32,19 +35,16 @@ import org.jetbrains.annotations.Nullable;
 final class SequencedAssemblyResolver {
     private SequencedAssemblyResolver() {}
 
+    private static final boolean NEW_AGE_LOADED = ModList.get().isLoaded(CreateNewAgeCompat.MOD_ID);
+
     record Requirements(
-            int deployers,
-            int spouts,
-            int presses,
-            int saws,
-            List<Ingredient> deployerTools,
-            List<StationKind> stationOrder) {}
+            Map<StationKind, Integer> counts, List<Ingredient> deployerTools, List<StationKind> stationOrder) {}
 
     record ItemDemand(Ingredient ingredient, int count) {}
 
     record FluidDemand(FluidIngredient ingredient, int amount) {}
 
-    record Demand(List<ItemDemand> items, List<FluidDemand> fluids) {}
+    record Demand(List<ItemDemand> items, List<FluidDemand> fluids, long energy) {}
 
     private static final RecipeCache<Map<Item, Optional<SequencedAssemblyRecipe>>> CACHE =
             RecipeCache.of(level -> Collections.synchronizedMap(new HashMap<>()));
@@ -117,28 +117,19 @@ final class SequencedAssemblyResolver {
         return null;
     }
 
-    record StationCounts(int deployers, int spouts, int presses, int saws) {
-        static StationCounts of(Level level, List<BlockPos> machines) {
-            int deployers = 0;
-            int spouts = 0;
-            int presses = 0;
-            int saws = 0;
-            for (BlockPos pos : machines) {
-                BlockState state = level.getBlockState(pos);
-                switch (Stations.detect(state)) {
-                    case DEPLOYER -> {
-                        if (Stations.deployerFacesDown(state)) {
-                            deployers++;
-                        }
-                    }
-                    case SPOUT -> spouts++;
-                    case PRESS -> presses++;
-                    case SAW -> saws++;
-                    default -> {}
-                }
+    private static Map<StationKind, Integer> countStations(Level level, List<BlockPos> machines) {
+        Map<StationKind, Integer> counts = new EnumMap<>(StationKind.class);
+        for (BlockPos pos : machines) {
+            BlockState state = level.getBlockState(pos);
+            StationKind kind = Stations.detect(state);
+            if (kind == StationKind.DEPLOYER && !Stations.deployerFacesDown(state)) {
+                continue;
             }
-            return new StationCounts(deployers, spouts, presses, saws);
+            if (kind.recognized()) {
+                counts.merge(kind, 1, Integer::sum);
+            }
         }
+        return counts;
     }
 
     static List<SequencedAssemblyRecipe> recipesForLine(
@@ -150,13 +141,9 @@ final class SequencedAssemblyResolver {
         if (level.getBlockState(output).getBlock() != AllBlocks.DEPOT.get()) {
             return matches;
         }
-        StationCounts counts = StationCounts.of(level, machines);
+        Map<StationKind, Integer> counts = countStations(level, machines);
         for (RecipeHolder<SequencedAssemblyRecipe> holder : all(level)) {
-            Requirements req = requirementsOf(holder.value());
-            if (req.deployers() == counts.deployers()
-                    && req.spouts() == counts.spouts()
-                    && req.presses() == counts.presses()
-                    && req.saws() == counts.saws()) {
+            if (requirementsOf(holder.value()).counts().equals(counts)) {
                 matches.add(holder.value());
             }
         }
@@ -247,46 +234,33 @@ final class SequencedAssemblyResolver {
                 fluids.add(new FluidDemand(fluid.ingredient(), fluid.amount() * loops));
             }
         }
-        return new Demand(List.copyOf(items), List.copyOf(fluids));
+        long energy = NEW_AGE_LOADED ? CreateNewAgeCompat.energyCost(recipe) : 0;
+        return new Demand(List.copyOf(items), List.copyOf(fluids), energy);
     }
 
     private static Requirements requirements(SequencedAssemblyRecipe recipe) {
         List<Ingredient> orderedTools = new ArrayList<>();
         List<StationKind> order = new ArrayList<>();
-        int deployers = 0;
-        int spouts = 0;
-        int presses = 0;
-        int saws = 0;
+        Map<StationKind, Integer> counts = new EnumMap<>(StationKind.class);
 
         for (SequencedRecipe<?> sequenced : recipe.getSequence()) {
             IAssemblyRecipe assembly = sequenced.getAsAssemblyRecipe();
 
             Set<ItemLike> stepMachines = new LinkedHashSet<>();
             assembly.addRequiredMachines(stepMachines);
-            switch (Stations.kindOf(stepMachines)) {
-                case DEPLOYER -> {
-                    List<Ingredient> ingredients = new ArrayList<>();
-                    assembly.addAssemblyIngredients(ingredients);
-                    orderedTools.add(ingredients.isEmpty() ? Ingredient.EMPTY : ingredients.get(0));
-                    order.add(StationKind.DEPLOYER);
-                    deployers++;
-                }
-                case SPOUT -> {
-                    order.add(StationKind.SPOUT);
-                    spouts++;
-                }
-                case PRESS -> {
-                    order.add(StationKind.PRESS);
-                    presses++;
-                }
-                case SAW -> {
-                    order.add(StationKind.SAW);
-                    saws++;
-                }
-                default -> {}
+            StationKind kind = Stations.kindOf(stepMachines);
+            if (!kind.recognized()) {
+                continue;
             }
+            if (kind == StationKind.DEPLOYER) {
+                List<Ingredient> ingredients = new ArrayList<>();
+                assembly.addAssemblyIngredients(ingredients);
+                orderedTools.add(ingredients.isEmpty() ? Ingredient.EMPTY : ingredients.get(0));
+            }
+            order.add(kind);
+            counts.merge(kind, 1, Integer::sum);
         }
-        return new Requirements(deployers, spouts, presses, saws, List.copyOf(orderedTools), List.copyOf(order));
+        return new Requirements(counts, List.copyOf(orderedTools), List.copyOf(order));
     }
 
     static List<List<Ingredient>> deployerToolLayout(List<SequencedAssemblyRecipe> recipes) {

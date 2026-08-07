@@ -47,6 +47,7 @@ The line itself is an ordinary Create build. It does not have to be a closed loo
 
 * An **input** belt at the head of the line.
 * Your **stations** over that belt. Deployers must face down, and every station needs rotational power.
+* With Create: New Age installed, its Energisers count as stations too. An Energiser needs Forge Energy on top of rotation; the Controller leaves the wiring to you, exactly as it leaves you the shafts.
 * A **Depot** at the end as the output. This one is mandatory.
 * The **Pattern Provider** goes on the Controller, not on the Depot.
 
@@ -134,6 +135,7 @@ If the network runs dry, the Controller halts and its face turns <Color id="red"
 
 * Hold the finished item and use it on the Controller. It prints a full report of what the recipe needs against what your line actually has.
 * Every Deployer must face down, and every station needs rotational power.
+* A Create: New Age Energiser also needs Forge Energy. The Controller only checks its rotation, so a wired-but-empty Energiser holds the part on the belt until its buffer fills.
 * The output must be a <ItemLink id="create:depot"/>. Nothing else is accepted.
 * Open the Controller to see its station strip. A red bar under a station means that station is the problem.
 * A job that can never finish, because you cancelled it in the terminal or the recipe changed, can be dropped with the <Color id="red">✗</Color> button at the top right of the interface. It forgets every craft the Controller still owes and cancels the ingredients it has on request. Anything already finished is still handed back.

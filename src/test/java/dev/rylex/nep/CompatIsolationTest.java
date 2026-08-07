@@ -22,6 +22,8 @@ class CompatIsolationTest {
                     Paths.get("dev", "rylex", "nep", "compat", "create"),
                     List.of("com.simibubi.create", "net.createmod")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "create"), List.of("snownee.jade")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "create", "newage"), List.of("org.antarcticgardens")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ae2wtlib"), List.of("de.mari_023")),
             new ForeignRule(
                     Paths.get("dev", "rylex", "nep", "compat", "draconic"), List.of("com.brandon3055", "codechicken")),

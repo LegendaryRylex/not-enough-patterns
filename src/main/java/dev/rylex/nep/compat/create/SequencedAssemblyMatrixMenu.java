@@ -18,7 +18,7 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu {
     static final int BUTTON_REDSTONE_MODE = 3;
     static final int BUTTON_CLEAR_BUFFER = 4;
 
-    static final int WIDTH = 200;
+    static final int WIDTH = 204;
     static final int HEIGHT = 256;
     static final int SEPARATOR_Y = 158;
 
@@ -28,14 +28,16 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu {
     static final int INPUT_Y = 72;
     static final int INPUT_COLUMNS = 6;
     static final int INPUT_ROWS = 3;
-    static final int TANK_X = 122;
+    static final int TANK_X = 120;
     static final int TANK_Y = 72;
-    static final int TANK_WIDTH = 16;
+    static final int TANK_WIDTH = 12;
     static final int TANK_HEIGHT = 52;
-    static final int TANK_STEP = 18;
-    static final int OUTPUT_X = 19;
+    static final int TANK_STEP = 14;
+    static final int ENERGY_X = 181;
+    static final int ENERGY_Y = 73;
+    static final int OUTPUT_X = 21;
     static final int OUTPUT_Y = 137;
-    static final int INV_X = 19;
+    static final int INV_X = 21;
     static final int INV_Y = 172;
 
     @Nullable

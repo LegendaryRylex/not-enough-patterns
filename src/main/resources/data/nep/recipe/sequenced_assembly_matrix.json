@@ -7,7 +7,7 @@
     }
   ],
   "ingredient": {
-    "item": "nep:sequenced_assembly_controller"
+    "item": "ae2:molecular_assembler"
   },
   "loops": 4,
   "results": [
@@ -53,6 +53,22 @@
         },
         {
           "item": "ae2:spatial_cell_component_128"
+        }
+      ],
+      "results": [
+        {
+          "id": "nep:incomplete_sequenced_assembly_matrix"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "nep:incomplete_sequenced_assembly_matrix"
+        },
+        {
+          "item": "nep:sequenced_assembly_controller"
         }
       ],
       "results": [

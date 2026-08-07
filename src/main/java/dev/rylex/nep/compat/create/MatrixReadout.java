@@ -27,6 +27,9 @@ final class MatrixReadout {
         if ((flags & SequencedAssemblyMatrixBlockEntity.FLAG_STARVED) != 0) {
             return Component.translatable("gui.nep.sequenced_assembly_matrix.status.starved");
         }
+        if ((flags & SequencedAssemblyMatrixBlockEntity.FLAG_NO_ENERGY) != 0) {
+            return Component.translatable("gui.nep.sequenced_assembly_matrix.status.no_energy");
+        }
         return idle
                 ? Component.translatable("gui.nep.sequenced_assembly_matrix.status.idle")
                 : Component.translatable("gui.nep.sequenced_assembly_matrix.status.running");
@@ -37,11 +40,16 @@ final class MatrixReadout {
                 || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_FAST_ENOUGH) == 0
                 || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_OVERSTRESSED) != 0
                 || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_OUTPUT_BLOCKED) != 0
-                || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_STARVED) != 0;
+                || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_STARVED) != 0
+                || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_NO_ENERGY) != 0;
     }
 
     static Component meDrain(int drain) {
         return Component.translatable("gui.nep.sequenced_assembly_matrix.me_drain", count(drain));
+    }
+
+    static Component energy(long stored, long capacity) {
+        return Component.translatable("gui.nep.sequenced_assembly_matrix.energy", count(stored), count(capacity));
     }
 
     static Component speed(float rpm, float fraction) {
@@ -53,7 +61,7 @@ final class MatrixReadout {
         return Component.translatable("gui.nep.sequenced_assembly_matrix.stress", count(units), percent(fraction));
     }
 
-    static String count(int value) {
+    static String count(long value) {
         return String.format("%,d", value);
     }
 

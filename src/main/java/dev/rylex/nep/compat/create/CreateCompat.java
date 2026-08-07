@@ -110,5 +110,11 @@ public final class CreateCompat {
                 Capabilities.FluidHandler.BLOCK,
                 NepCreateContent.MATRIX_BLOCK_ENTITY.get(),
                 (be, side) -> be.fluidHandler());
+        if (SequencedAssemblyMatrixBlockEntity.NEW_AGE_LOADED) {
+            event.registerBlockEntity(
+                    Capabilities.EnergyStorage.BLOCK,
+                    NepCreateContent.MATRIX_BLOCK_ENTITY.get(),
+                    (be, side) -> be.energyStorage());
+        }
     }
 }
