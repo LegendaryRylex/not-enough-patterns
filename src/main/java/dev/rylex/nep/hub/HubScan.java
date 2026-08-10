@@ -1,0 +1,189 @@
+package dev.rylex.nep.hub;
+
+import appeng.api.AECapabilities;
+import dev.rylex.nep.util.SubLevels;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Walks outward from the blocks touching a hub and proposes whatever it finds that holds items or
+ * fluids. Nothing here names a mod. The walk spreads freely through machine parts, meaning any block
+ * carrying a block entity of its own, which covers hatches, ports, buffers and the controllers that
+ * expose nothing at all; a vanilla block entity has to offer an inventory before it counts, so a sign
+ * or a lectern is not a bridge to somewhere else. Everything else is casing, and casing is only ever
+ * stepped through for a bounded run of blocks, from a mod already confirmed to own a machine part.
+ * That is what lets the walk cross a wall to the hatch on the far side without ever leaving through
+ * the terrain the machine is standing on. Roles are guessed from what a block will accept, and a
+ * guess is wrong often enough that the result is a proposal the player edits rather than a decision
+ * made for them.
+ */
+public final class HubScan {
+
+    private HubScan() {}
+
+    private static final String VANILLA = "minecraft";
+    private static final ItemStack PROBE = new ItemStack(Items.STONE);
+
+    public static List<HubLink> propose(
+            Level level, BlockPos origin, int reach, int budget, int casingDepth, int limit) {
+        List<HubLink> proposed = new ArrayList<>();
+        Walk walk = new Walk(level, origin, reach, casingDepth);
+
+        for (Direction side : Direction.values()) {
+            walk.consider(origin.relative(side), 0, true);
+        }
+
+        int examined = 0;
+        while (!walk.frontier.isEmpty() && examined < budget && proposed.size() < limit) {
+            Step step = walk.frontier.poll();
+            examined++;
+            if (linkable(level, step.pos())) {
+                proposed.add(new HubLink(step.pos(), roleFor(items(level, step.pos()))));
+            }
+            for (Direction side : Direction.values()) {
+                walk.consider(step.pos().relative(side), step.casing(), false);
+            }
+        }
+        return proposed;
+    }
+
+    private record Step(BlockPos pos, int casing) {}
+
+    private static final class Walk {
+
+        private final Level level;
+        private final BlockPos origin;
+        private final int reach;
+        private final int casingDepth;
+        private final Set<BlockPos> seen = new HashSet<>();
+        private final Set<String> machineMods = new HashSet<>();
+        private final Deque<Step> frontier = new ArrayDeque<>();
+
+        private Walk(Level level, BlockPos origin, int reach, int casingDepth) {
+            this.level = level;
+            this.origin = origin;
+            this.reach = reach;
+            this.casingDepth = casingDepth;
+            seen.add(origin);
+        }
+
+        private void consider(BlockPos pos, int casingSoFar, boolean touchingTheHub) {
+            BlockPos at = pos.immutable();
+            if (!seen.add(at) || beyond(origin, at, reach) || !level.isLoaded(at)) {
+                return;
+            }
+            if (!SubLevels.sameSubLevel(level, origin, at)) {
+                return;
+            }
+            BlockState state = level.getBlockState(at);
+            if (state.isAir() || state.liquid()) {
+                return;
+            }
+            BlockEntity be = level.getBlockEntity(at);
+            if (be instanceof MachineHubBlockEntity || networkBlock(level, at)) {
+                return;
+            }
+
+            String mod = namespace(state);
+            boolean vanilla = VANILLA.equals(mod);
+            if (machinePart(level, at, be, vanilla)) {
+                if (!vanilla) {
+                    machineMods.add(mod);
+                }
+                frontier.add(new Step(at, 0));
+                return;
+            }
+            if (vanilla) {
+                return;
+            }
+            int casing = casingSoFar + 1;
+            if (casing > casingDepth) {
+                return;
+            }
+            if (touchingTheHub) {
+                machineMods.add(mod);
+            } else if (!machineMods.contains(mod)) {
+                return;
+            }
+            frontier.add(new Step(at, casing));
+        }
+    }
+
+    private static boolean machinePart(Level level, BlockPos pos, @Nullable BlockEntity be, boolean vanilla) {
+        if (be == null) {
+            return false;
+        }
+        return !vanilla || items(level, pos) != null || fluids(level, pos) != null;
+    }
+
+    private static boolean beyond(BlockPos origin, BlockPos pos, int reach) {
+        int dx = Math.abs(pos.getX() - origin.getX());
+        int dy = Math.abs(pos.getY() - origin.getY());
+        int dz = Math.abs(pos.getZ() - origin.getZ());
+        return Math.max(dx, Math.max(dy, dz)) > reach;
+    }
+
+    private static String namespace(BlockState state) {
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        return id == null ? VANILLA : id.getNamespace();
+    }
+
+    public static boolean networkBlock(Level level, BlockPos pos) {
+        return level.getCapability(AECapabilities.IN_WORLD_GRID_NODE_HOST, pos, null) != null;
+    }
+
+    public static boolean linkable(Level level, BlockPos pos) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be == null || be instanceof MachineHubBlockEntity || networkBlock(level, pos)) {
+            return false;
+        }
+        IItemHandler items = items(level, pos);
+        if (items != null && items.getSlots() > 0) {
+            return true;
+        }
+        IFluidHandler fluids = fluids(level, pos);
+        return fluids != null && fluids.getTanks() > 0;
+    }
+
+    @Nullable
+    public static IItemHandler items(Level level, BlockPos pos) {
+        return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
+    }
+
+    @Nullable
+    public static IFluidHandler fluids(Level level, BlockPos pos) {
+        return level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
+    }
+
+    public static HubRole roleFor(@Nullable IItemHandler handler) {
+        if (handler == null || handler.getSlots() == 0) {
+            return HubRole.INPUT;
+        }
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            ItemStack held = handler.getStackInSlot(slot);
+            ItemStack probe = (held.isEmpty() ? PROBE : held).copyWithCount(1);
+            if (handler.isItemValid(slot, probe)
+                    || handler.insertItem(slot, probe, true).isEmpty()) {
+                return HubRole.INPUT;
+            }
+        }
+        return HubRole.OUTPUT;
+    }
+}

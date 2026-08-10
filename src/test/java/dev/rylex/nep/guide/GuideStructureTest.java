@@ -27,7 +27,8 @@ class GuideStructureTest {
     private static final Path PAGES = RESOURCES.resolve("assets/nep/ae2guide/nep");
     private static final Path FILTERS = RESOURCES.resolve("guide_filters");
 
-    private static final Set<String> ALWAYS_PRESENT = Set.of("nep-index.md", "getting-started.md", "import-card.md");
+    private static final Set<String> ALWAYS_PRESENT =
+            Set.of("nep-index.md", "getting-started.md", "import-card.md", "pattern-conversion.md", "machine-hub.md");
     private static final String INDEX = "nep-index.md";
 
     private static final Pattern PARENT = Pattern.compile("(?m)^\\s*parent:\\s*(\\S+)\\s*$");

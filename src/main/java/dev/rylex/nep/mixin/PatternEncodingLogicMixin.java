@@ -2,15 +2,16 @@ package dev.rylex.nep.mixin;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.stacks.GenericStack;
 import appeng.helpers.IPatternTerminalLogicHost;
 import appeng.parts.encoding.EncodingMode;
 import appeng.parts.encoding.PatternEncodingLogic;
 import appeng.util.ConfigInventory;
+import dev.rylex.nep.NepComponents;
 import dev.rylex.nep.pattern.NepPattern;
 import dev.rylex.nep.pattern.encoding.PatternContents;
+import dev.rylex.nep.pattern.encoding.PatternEncodeGuard;
+import dev.rylex.nep.pattern.encoding.PatternGrid;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
-import java.util.List;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -27,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PatternEncodingLogic.class)
-public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
+public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, PatternEncodeGuard {
 
     @Unique
     private static final String NEP_RECIPE_TAG = "nepRecipe";
@@ -53,7 +54,16 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
     private ResourceLocation nep$recipe;
 
     @Unique
+    @Nullable
+    private ItemStack nep$justEncoded;
+
+    @Unique
     private int nep$version;
+
+    @Override
+    public void nep$expectEncoded(@Nullable ItemStack pattern) {
+        this.nep$justEncoded = pattern == null || pattern.isEmpty() ? null : pattern.copy();
+    }
 
     @Override
     @Nullable
@@ -85,7 +95,16 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
         this.nep$version++;
     }
 
-    @Inject(method = "loadEncodedPattern", at = @At("HEAD"))
+    @Inject(method = "loadEncodedPattern", at = @At("HEAD"), cancellable = true)
+    private void nep$keepGridOnOwnEncode(ItemStack pattern, CallbackInfo ci) {
+        if (nep$justEncoded == null || !ItemStack.isSameItemSameComponents(pattern, nep$justEncoded)) {
+            return;
+        }
+        this.nep$justEncoded = null;
+        ci.cancel();
+    }
+
+    @Inject(method = "loadEncodedPattern", at = @At("RETURN"))
     private void nep$loadPatternIntoGrid(ItemStack pattern, CallbackInfo ci) {
         if (pattern.isEmpty()) {
             return;
@@ -95,14 +114,30 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
             return;
         }
         IPatternDetails details = PatternDetailsHelper.decodePattern(pattern, level);
-        if (!(details instanceof NepPattern nepPattern)) {
+        if (details == null) {
             return;
         }
-        setMode(EncodingMode.PROCESSING);
-        nep$fill(getEncodedInputInv(), PatternContents.condenseInputs(details));
-        nep$fill(getEncodedOutputInv(), details.getOutputs());
-        this.nep$recipe = nepPattern.nepRecipeId();
-        this.nep$version++;
+        PatternGrid grid = pattern.get(NepComponents.PATTERN_GRID.get());
+        if (details instanceof NepPattern nepPattern) {
+            setMode(EncodingMode.PROCESSING);
+            if (grid != null) {
+                grid.restore(getEncodedInputInv(), getEncodedOutputInv());
+            } else {
+                PatternGrid.fill(getEncodedInputInv(), PatternContents.condenseInputs(details));
+                PatternGrid.fill(getEncodedOutputInv(), details.getOutputs());
+            }
+            this.nep$recipe = nepPattern.nepRecipeId();
+            this.nep$version++;
+            return;
+        }
+        if (grid != null) {
+            grid.restore(getEncodedInputInv(), getEncodedOutputInv());
+        }
+        ResourceLocation source = pattern.get(NepComponents.SOURCE_RECIPE.get());
+        if (source != null) {
+            this.nep$recipe = source;
+            this.nep$version++;
+        }
     }
 
     @Inject(method = "writeToNBT", at = @At("RETURN"))
@@ -118,17 +153,5 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder {
                 ? ResourceLocation.tryParse(data.getString(NEP_RECIPE_TAG))
                 : null;
         this.nep$version++;
-    }
-
-    @Unique
-    private static void nep$fill(ConfigInventory inv, List<GenericStack> stacks) {
-        inv.beginBatch();
-        try {
-            for (int i = 0; i < inv.size(); i++) {
-                inv.setStack(i, i < stacks.size() ? stacks.get(i) : null);
-            }
-        } finally {
-            inv.endBatch();
-        }
     }
 }

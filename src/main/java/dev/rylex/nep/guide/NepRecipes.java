@@ -2,11 +2,13 @@ package dev.rylex.nep.guide;
 
 import com.mojang.serialization.MapCodec;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.pattern.encoding.ProcessingPatternConversionRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -24,6 +26,11 @@ public final class NepRecipes {
 
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ModuleStatusRecipe>>
             MODULE_STATUS_SERIALIZER = SERIALIZERS.register("module_status", () -> new ModuleStatusSerializer());
+
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ProcessingPatternConversionRecipe>>
+            PROCESSING_PATTERN_CONVERSION = SERIALIZERS.register(
+                    "processing_pattern_conversion",
+                    () -> new SimpleCraftingRecipeSerializer<>(ProcessingPatternConversionRecipe::new));
 
     public static void init(IEventBus modBus) {
         TYPES.register(modBus);

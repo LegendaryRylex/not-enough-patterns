@@ -214,6 +214,10 @@ class ConfigDocumentationTest {
                 "modules.compactcrafting.miniaturizationController.blocksPerTick",
                 NepConfig.compactCraftingControllerBlocksPerTick());
         fallbacks.put("provider.importCardGrace", NepConfig.importCardGrace());
+        fallbacks.put("machineHub.linkRange", NepConfig.machineHubLinkRange());
+        fallbacks.put("machineHub.maximumLinks", NepConfig.machineHubMaximumLinks());
+        fallbacks.put("machineHub.scanBudget", NepConfig.machineHubScanBudget());
+        fallbacks.put("machineHub.casingDepth", NepConfig.machineHubCasingDepth());
         fallbacks.put("modules.create.sequencedAssembly.haltGrace", NepConfig.createSequencedAssemblyHaltGrace());
         fallbacks.put("modules.create.sequencedAssembly.reclaimGrace", NepConfig.createSequencedAssemblyReclaimGrace());
 

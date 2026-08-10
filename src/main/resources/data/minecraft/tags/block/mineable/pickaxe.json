@@ -2,6 +2,10 @@
   "replace": false,
   "values": [
     {
+      "id": "nep:machine_hub",
+      "required": false
+    },
+    {
       "id": "nep:sequenced_assembly_controller",
       "required": false
     },

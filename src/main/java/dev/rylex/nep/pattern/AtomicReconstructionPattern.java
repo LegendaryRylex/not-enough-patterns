@@ -15,6 +15,11 @@ public class AtomicReconstructionPattern extends RecipePattern {
         super(definition, NepComponents.ENCODED_ATOMIC_RECONSTRUCTION_PATTERN.get(), level);
     }
 
+    @Override
+    public boolean supportsPushInputsToExternalInventory() {
+        return true;
+    }
+
     public static ItemStack encode(ResourceLocation recipe, List<GenericStack> inputs, GenericStack result) {
         return encode(
                 NepItems.ATOMIC_RECONSTRUCTION_PATTERN.get(),

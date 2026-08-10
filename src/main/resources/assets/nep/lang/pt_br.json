@@ -277,7 +277,7 @@
   "nep.configuration.modules.actuallyadditions.empowering": "Fortalecimento",
   "nep.configuration.modules.actuallyadditions.empowering.tooltip": "Módulo de Fortalecimento: um Fortalecedor com um provedor de padrões encostado nele recebe uma receita inteira de uma vez.\nCada item da fabricação vai automaticamente para seu compartimento de receita designado. O item base vai para o Fortalecedor e o restante para cada Suporte de Exibição.\nOs suportes continuam fornecendo a energia, e o item finalizado permanece no Fortalecedor.",
   "nep.configuration.modules.actuallyadditions.atomicReconstruction": "Reconstrução Atômica",
-  "nep.configuration.modules.actuallyadditions.atomicReconstruction.tooltip": "Módulo de Reconstrução Atômica: codifica receitas do Reconstrutor Atômico como padrões para a Matriz de Fortalecimento Atômico.\nO Reconstrutor Atômico real não é operado por esses padrões.",
+  "nep.configuration.modules.actuallyadditions.atomicReconstruction.tooltip": "Módulo de Reconstrução Atômica: codifica receitas do Reconstrutor Atômico como padrões para a Matriz de Fortalecimento Atômico.\nOs padrões também enviam seus ingredientes para inventários adjacentes como um padrão de processamento comum, então um ejetor alimentando um Reconstrutor Atômico real também funciona.",
   "nep.configuration.modules.actuallyadditions.atomicEmpoweringMatrix": "Matriz de Fortalecimento Atômico",
   "nep.configuration.modules.actuallyadditions.atomicEmpoweringMatrix.enabled": "Ativado",
   "nep.configuration.modules.actuallyadditions.atomicEmpoweringMatrix.enabled.tooltip": "A Matriz de Fortalecimento Atômico executa receitas inteiras de fortalecimento e reconstrução atômica dentro de um único bloco.",

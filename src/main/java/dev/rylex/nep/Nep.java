@@ -10,6 +10,7 @@ import dev.rylex.nep.compat.create.CreateCompat;
 import dev.rylex.nep.compat.draconic.DraconicCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat;
 import dev.rylex.nep.guide.NepRecipes;
+import dev.rylex.nep.hub.NepContent;
 import dev.rylex.nep.net.NepNetwork;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -41,6 +42,7 @@ public final class Nep {
         NepComponents.COMPONENTS.register(modBus);
         NepItems.ITEMS.register(modBus);
         NepCreativeTabs.TABS.register(modBus);
+        NepContent.register(modBus);
         NepRecipes.init(modBus);
         modBus.addListener(NepNetwork::registerPayloads);
         modBus.addListener(this::commonSetup);
@@ -69,7 +71,7 @@ public final class Nep {
             LOGGER.info("Mystical Agriculture integration enabled");
         }
         if (dist.isClient()) {
-            NepClient.init(container);
+            NepClient.init(container, modBus);
         }
         LOGGER.info("{} initialized", MOD_ID);
     }

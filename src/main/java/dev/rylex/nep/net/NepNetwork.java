@@ -1,5 +1,7 @@
 package dev.rylex.nep.net;
 
+import dev.rylex.nep.client.MachineHubStateClient;
+import dev.rylex.nep.hub.MachineHubState;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
 import dev.rylex.nep.pattern.encoding.RetainedSlotHolder;
 import net.minecraft.world.entity.player.Player;
@@ -18,7 +20,11 @@ public final class NepNetwork {
                 .playToClient(
                         RetainedSlotsPayload.TYPE,
                         RetainedSlotsPayload.STREAM_CODEC,
-                        (payload, context) -> context.enqueueWork(() -> handleRetainedSlots(payload, context)));
+                        (payload, context) -> context.enqueueWork(() -> handleRetainedSlots(payload, context)))
+                .playToClient(
+                        MachineHubState.TYPE,
+                        MachineHubState.STREAM_CODEC,
+                        (payload, context) -> context.enqueueWork(() -> MachineHubStateClient.handle(payload)));
     }
 
     private static void handleRecipe(PatternRecipePayload payload, IPayloadContext context) {

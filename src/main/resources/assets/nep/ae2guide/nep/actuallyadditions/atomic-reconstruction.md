@@ -14,7 +14,7 @@ item_ids:
 
   <ItemImage id="nep:atomic_reconstruction_pattern" scale="2"/>
 
-  Encodes the Atomic Reconstructor's laser recipes as patterns. The recipes run in the <ItemLink id="nep:atomic_empowering_matrix"/>, not in the Reconstructor itself it has no item buffer.
+  Encodes the Atomic Reconstructor's laser recipes as patterns. They run in the <ItemLink id="nep:atomic_empowering_matrix"/>, or push their ingredients out like a plain processing pattern to feed the real Reconstructor.
 </Column>
 
 <Recipe id="nep:module_status/atomic_reconstruction"/>
@@ -24,16 +24,17 @@ item_ids:
 ***
 
 <Column alignItems="center" fullWidth={true}>
-  ## <Color id="gold">Why Not The Reconstructor</Color>
+  ## <Color id="gold">The Matrix Or The Real Thing</Color>
 </Column>
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
-The real Atomic Reconstructor cannot be driven by a Pattern Provider, and no configuration changes that:
+The same pattern drives both machines:
 
-* Its input is whatever is **lying on the ground** touching the beam, and its output is a dropped item. There is nothing for a Provider to push into or pull out of.
+* **In the Matrix.** Put the pattern in a Provider on any Matrix face. Ingredients, energy and outputs are all handled inside the block.
+* **At the real Reconstructor.** The Reconstructor has no item buffer. Its input is whatever is **lying on the ground** touching the beam, and its output is a dropped item. So the Provider cannot push into the block itself: aim it at a dropper facing the beam instead, and bring the drops back into the network with a Ranged Collector or hopper feeding an ME Interface.
 
-Automating the block itself is still a job for other mods that add Ranged Collectors or hoppers. This module exists so the same recipes can be encoded and run in the Matrix instead.
+A Provider face holding the Matrix always uses the Matrix. Every other adjacent inventory receives the raw ingredients like any processing pattern push, so give these patterns their own Provider if it also touches storage.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 

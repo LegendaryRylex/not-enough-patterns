@@ -11,6 +11,12 @@ public final class NepConfig {
 
     private static final ModConfigSpec.BooleanValue DEBUG_LOGGING;
     private static final ModConfigSpec.IntValue IMPORT_CARD_GRACE;
+    private static final ModConfigSpec.BooleanValue PROCESSING_PATTERN_CONVERSION;
+    private static final ModConfigSpec.BooleanValue MACHINE_HUB;
+    private static final ModConfigSpec.IntValue MACHINE_HUB_LINK_RANGE;
+    private static final ModConfigSpec.IntValue MACHINE_HUB_MAXIMUM_LINKS;
+    private static final ModConfigSpec.IntValue MACHINE_HUB_SCAN_BUDGET;
+    private static final ModConfigSpec.IntValue MACHINE_HUB_CASING_DEPTH;
     private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_OVERRIDE;
     private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_EMPOWERING;
     private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_ATOMIC_RECONSTRUCTION;
@@ -118,7 +124,7 @@ public final class NepConfig {
                 .define("empowering", true);
         ACTUALLY_ADDITIONS_ATOMIC_RECONSTRUCTION = builder.comment(
                         "Atomic Reconstruction Module: Encodes Atomic Reconstructor recipes as patterns for the Atomic Empowering Matrix.",
-                        "The real Atomic Reconstructor is not driven by these patterns.")
+                        "The patterns also push their ingredients into adjacent inventories like a plain processing pattern, so a dropper feeding a real Atomic Reconstructor works too.")
                 .translation("nep.configuration.modules.actuallyadditions.atomicReconstruction")
                 .define("atomicReconstruction", true);
 
@@ -580,6 +586,46 @@ public final class NepConfig {
 
         builder.pop();
 
+        builder.comment("Pattern behaviour outside any one integration.")
+                .translation("nep.configuration.patterns")
+                .push("patterns");
+        PROCESSING_PATTERN_CONVERSION = builder.comment(
+                        "Lets a NEP pattern be crafted back into a plain AE2 Processing Pattern carrying the same ingredients and result, one pattern per crafting grid.",
+                        "This is the escape hatch for a pack that moves a recipe onto a machine NEP does not drive, so an encoded NEP pattern can never leave a player with no way to automate the craft.",
+                        "Patterns that keep an ingredient instead of consuming it, such as Deploying and Filling, are refused: a Processing Pattern has no way to say an ingredient comes back, and converting one would consume the tool on every craft.")
+                .translation("nep.configuration.patterns.processingPatternConversion")
+                .define("processingPatternConversion", true);
+        builder.pop();
+
+        builder.comment("Machine Hub behaviour.")
+                .translation("nep.configuration.machineHub")
+                .push("machineHub");
+        MACHINE_HUB = builder.comment(
+                        "The Machine Hub presents the inventories it is linked to as one inventory, so a pattern provider against the Hub can load a multiblock whose item and fluid hatches are separate blocks.",
+                        "When disabled, a placed Hub keeps its links but stops offering storage, so pattern providers ignore it entirely.")
+                .translation("nep.configuration.machineHub.enabled")
+                .define("enabled", true);
+        MACHINE_HUB_LINK_RANGE = builder.comment(
+                        "Maximum distance, in blocks, that a linked inventory may sit from the Machine Hub. This is also how far the Hub's scan may reach.",
+                        "Links beyond this range are refused when syncing the Hub Linker, guarding against distant links that would force-load far chunks on every push.")
+                .translation("nep.configuration.machineHub.linkRange")
+                .defineInRange("linkRange", 16, 1, 64);
+        MACHINE_HUB_MAXIMUM_LINKS = builder.comment(
+                        "How many inventories one Machine Hub may be linked to, and how many a scan may propose. The screen shows twelve rows at a time and scrolls past that.")
+                .translation("nep.configuration.machineHub.maximumLinks")
+                .defineInRange("maximumLinks", 24, 1, 64);
+        MACHINE_HUB_SCAN_BUDGET = builder.comment(
+                        "How many blocks the Machine Hub's scan may walk through before it stops, which is what bounds the cost of pressing the button.",
+                        "The scan spreads from the blocks touching the Hub through anything that looks like part of the same machine, so it never walks off into the terrain and rarely gets near this ceiling. Raise it for a machine larger than the budget can cover.")
+                .translation("nep.configuration.machineHub.scanBudget")
+                .defineInRange("scanBudget", 16, 4, 128);
+        MACHINE_HUB_CASING_DEPTH = builder.comment(
+                        "How many plain blocks in a row the Machine Hub's scan may step through between one machine part and the next.",
+                        "The scan travels freely through blocks carrying a block entity, which is every hatch, port and controller. Everything else is casing, and casing is only crossed for this many blocks at a time, and only when it belongs to a mod that already owns a machine part nearby. Raise it for a multiblock with thick walls between its hatches; set it to zero to have the scan follow machine parts alone.")
+                .translation("nep.configuration.machineHub.casingDepth")
+                .defineInRange("casingDepth", 3, 0, 8);
+        builder.pop();
+
         builder.comment("Pattern Provider behaviour.")
                 .translation("nep.configuration.provider")
                 .push("provider");
@@ -640,6 +686,30 @@ public final class NepConfig {
 
     public static boolean debugLogging() {
         return SPEC.isLoaded() && DEBUG_LOGGING.get();
+    }
+
+    public static boolean processingPatternConversion() {
+        return SPEC.isLoaded() && PROCESSING_PATTERN_CONVERSION.get();
+    }
+
+    public static boolean machineHubEnabled() {
+        return !SPEC.isLoaded() || MACHINE_HUB.get();
+    }
+
+    public static int machineHubLinkRange() {
+        return SPEC.isLoaded() ? MACHINE_HUB_LINK_RANGE.get() : 16;
+    }
+
+    public static int machineHubMaximumLinks() {
+        return SPEC.isLoaded() ? MACHINE_HUB_MAXIMUM_LINKS.get() : 24;
+    }
+
+    public static int machineHubScanBudget() {
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : 16;
+    }
+
+    public static int machineHubCasingDepth() {
+        return SPEC.isLoaded() ? MACHINE_HUB_CASING_DEPTH.get() : 3;
     }
 
     public static boolean actuallyAdditionsOverride() {

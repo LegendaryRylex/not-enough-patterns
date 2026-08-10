@@ -5,9 +5,12 @@ import appeng.menu.slot.FakeSlot;
 import appeng.parts.encoding.EncodingMode;
 import appeng.parts.encoding.PatternEncodingLogic;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import dev.rylex.nep.NepComponents;
 import dev.rylex.nep.net.PatternRecipePayload;
 import dev.rylex.nep.net.RetainedSlotsPayload;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
+import dev.rylex.nep.pattern.encoding.PatternEncodeGuard;
+import dev.rylex.nep.pattern.encoding.PatternGrid;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
 import dev.rylex.nep.pattern.encoding.RetainedSlotHolder;
 import dev.rylex.nep.pattern.encoding.RetainedSlots;
@@ -105,6 +108,19 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
                             target =
                                     "Lappeng/menu/me/items/PatternEncodingTermMenu;encodePattern()Lnet/minecraft/world/item/ItemStack;"))
     private ItemStack nep$convertEncodedPattern(@Nullable ItemStack encoded) {
+        ItemStack result = nep$encodeResult(encoded);
+        ((PatternEncodeGuard) encodingLogic).nep$expectEncoded(result);
+        return result;
+    }
+
+    @Inject(method = "encode", at = @At("RETURN"))
+    private void nep$forgetEncodeResult(CallbackInfo ci) {
+        ((PatternEncodeGuard) encodingLogic).nep$expectEncoded(null);
+    }
+
+    @Unique
+    @Nullable
+    private ItemStack nep$encodeResult(@Nullable ItemStack encoded) {
         if (encoded == null || encoded.isEmpty()) {
             return encoded;
         }
@@ -117,6 +133,13 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
             return encoded;
         }
         ItemStack converted = PatternConverters.convert(nep$recipeId(), encoded, player);
-        return converted == null ? encoded : converted;
+        if (converted == null) {
+            return encoded;
+        }
+        PatternGrid grid = PatternGrid.capture(encodingLogic.getEncodedInputInv(), encodingLogic.getEncodedOutputInv());
+        if (!grid.isEmpty()) {
+            converted.set(NepComponents.PATTERN_GRID.get(), grid);
+        }
+        return converted;
     }
 }

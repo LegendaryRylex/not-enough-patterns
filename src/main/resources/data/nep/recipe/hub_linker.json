@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "  C",
+    " F ",
+    "S  "
+  ],
+  "key": {
+    "C": { "item": "ae2:calculation_processor" },
+    "F": { "item": "ae2:fluix_crystal" },
+    "S": { "tag": "c:rods/wooden" }
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:hub_linker"
+  }
+}

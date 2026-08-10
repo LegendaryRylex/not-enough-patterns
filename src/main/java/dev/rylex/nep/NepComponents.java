@@ -2,8 +2,10 @@ package dev.rylex.nep;
 
 import dev.rylex.nep.pattern.EncodedMechanicalPattern;
 import dev.rylex.nep.pattern.EncodedRecipePattern;
+import dev.rylex.nep.pattern.encoding.PatternGrid;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -62,4 +64,12 @@ public final class NepComponents {
             ENCODED_ENCHANTING_PATTERN = COMPONENTS.registerComponentType(
                     "encoded_enchanting_pattern", builder -> builder.persistent(EncodedRecipePattern.CODEC)
                             .networkSynchronized(EncodedRecipePattern.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<ResourceLocation>> SOURCE_RECIPE =
+            COMPONENTS.registerComponentType("source_recipe", builder -> builder.persistent(ResourceLocation.CODEC)
+                    .networkSynchronized(ResourceLocation.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<PatternGrid>> PATTERN_GRID =
+            COMPONENTS.registerComponentType("pattern_grid", builder -> builder.persistent(PatternGrid.CODEC)
+                    .networkSynchronized(PatternGrid.STREAM_CODEC));
 }
