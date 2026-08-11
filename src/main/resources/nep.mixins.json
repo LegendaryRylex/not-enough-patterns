@@ -1,0 +1,25 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "dev.rylex.nep.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "AEBaseMenuMixin",
+    "AEBaseMenuQuickMoveClaimMixin",
+    "CraftingCpuLogicMixin",
+    "PatternEncodingLogicMixin",
+    "PatternEncodingTermMenuMixin",
+    "PatternProviderLogicHostMixin",
+    "PatternProviderLogicMixin",
+    "PatternProviderMenuMixin",
+    "UpgradeCardItemMixin"
+  ],
+  "client": [
+    "AEBaseScreenMixin",
+    "PatternProviderScreenMixin",
+    "ScreenStyleAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

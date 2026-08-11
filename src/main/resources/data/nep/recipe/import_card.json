@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "ae2:advanced_card",
+    "ae2:crafting_unit"
+  ],
+  "result": {
+    "count": 1,
+    "id": "nep:import_card"
+  }
+}

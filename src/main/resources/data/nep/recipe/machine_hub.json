@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IEO",
+    "CPC",
+    "OEI"
+  ],
+  "key": {
+    "I": "ae2:import_bus",
+    "O": "ae2:export_bus",
+    "E": "ae2:engineering_processor",
+    "C": "ae2:calculation_processor",
+    "P": "ae2:pattern_provider"
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:machine_hub"
+  }
+}

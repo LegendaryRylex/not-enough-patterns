@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "nep:machine_hub",
+      "required": false
+    },
+    {
+      "id": "nep:infused_awakening_matrix",
+      "required": false
+    }
+  ]
+}

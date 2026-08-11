@@ -1,0 +1,38 @@
+{
+  "type": "mysticalagriculture:awakening",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "mysticalagriculture"
+    }
+  ],
+  "essences": [
+    {
+      "ingredient": "mysticalagriculture:air_essence",
+      "count": 40
+    },
+    {
+      "ingredient": "mysticalagriculture:earth_essence",
+      "count": 40
+    },
+    {
+      "ingredient": "mysticalagriculture:water_essence",
+      "count": 40
+    },
+    {
+      "ingredient": "mysticalagriculture:fire_essence",
+      "count": 40
+    }
+  ],
+  "input": "ae2:molecular_assembler",
+  "ingredients": [
+    "nep:matrix_circuitry",
+    "nep:matrix_circuitry",
+    "nep:matrix_circuitry",
+    "nep:matrix_circuitry"
+  ],
+  "result": {
+    "count": 1,
+    "id": "nep:infused_awakening_matrix"
+  }
+}

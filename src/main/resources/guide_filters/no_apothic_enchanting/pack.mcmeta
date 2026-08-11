@@ -1,0 +1,15 @@
+{
+  "pack": {
+    "description": "Hides nep's Apothic Enchanting guide pages when that mod is absent",
+    "min_format": 84,
+    "max_format": 84
+  },
+  "filter": {
+    "block": [
+      {
+        "namespace": "nep",
+        "path": "^ae2guide/nep/apothic_enchanting/.*\\.md$"
+      }
+    ]
+  }
+}

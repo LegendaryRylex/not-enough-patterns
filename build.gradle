@@ -1,0 +1,259 @@
+plugins {
+    id 'idea'
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.142'
+    id 'com.diffplug.spotless' version '8.8.0'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = "$mod_id-$minecraft_version"
+}
+
+tasks.named('jar', Jar).configure {
+    from 'LICENSE'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.blamejared.com/' }
+    maven {
+        url = 'https://maven.shadowsoffire.dev/releases'
+        content { includeGroup 'dev.shadowsoffire' }
+    }
+    maven {
+        url = 'https://www.cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+}
+
+// Mod-absence boots: `-Pskip_mods=ma,apothic` drops a family from the run classpath only.
+// Untracked `skip_mods.local` supplies the default set when no -Pskip_mods is given;
+// `-Pskip_mods=none` forces the full classpath. GameTest, datagen, build, check and test
+// invocations ignore the local file so they always see the full dependency set.
+var skippableRuntimeMods = [
+        jei    : [[group: 'mezz.jei']],
+        apothic: [[group: 'dev.shadowsoffire']],
+        ma     : [[group: 'curse.maven', module: 'mystical-agriculture-246640'],
+                  [group: 'curse.maven', module: 'cucumber-272335']],
+        aae    : [[group: 'curse.maven', module: 'advancedae-1084104'],
+                  [group: 'curse.maven', module: 'geckolib-388172'],
+                  [group: 'curse.maven', module: 'ae2addonlib-1366135']],
+        eae    : [[group: 'curse.maven', module: 'ex-pattern-provider-892005'],
+                  [group: 'curse.maven', module: 'glodium-957920']],
+        appflux: [[group: 'curse.maven', module: 'applied-flux-965012']],
+        wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
+]
+
+var impliedSkips = [wtlib: ['aae', 'eae', 'appflux'], eae: ['appflux']]
+
+var skipModsLocal = file('skip_mods.local')
+var fullClasspathRequested = gradle.startParameter.taskNames.any {
+    var t = it.toLowerCase()
+    t.contains('gametest') || t.contains('rundata') || t.endsWith('build') || t.endsWith('check') || t.endsWith('test')
+}
+var skipModsRequest = ''
+if (project.hasProperty('skip_mods')) {
+    skipModsRequest = project.skip_mods.toString()
+} else if (skipModsLocal.exists() && !fullClasspathRequested) {
+    skipModsRequest = skipModsLocal.text
+}
+var skippedMods = skipModsRequest.split(',')*.trim().findAll { it }*.toLowerCase() - ['none']
+var unknownSkips = skippedMods.findAll { !skippableRuntimeMods.containsKey(it) }
+if (unknownSkips) {
+    throw new GradleException("unknown skip_mods entries ${unknownSkips.join(', ')}; known: ${skippableRuntimeMods.keySet().join(', ')}")
+}
+skippedMods = (skippedMods + skippedMods.collectMany { impliedSkips[it] ?: [] }).unique()
+if (skippedMods) {
+    skippedMods.each { key -> skippableRuntimeMods[key].each { configurations.runtimeClasspath.exclude(it) } }
+    logger.lifecycle("run classpath is missing: ${skippedMods.join(', ')}")
+} else if (skipModsLocal.exists() && fullClasspathRequested) {
+    logger.lifecycle("skip_mods.local ignored: requested tasks run the full classpath")
+}
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            if (!skippedMods) {
+                systemProperty 'guideme.ae2.guide.sources', file('src/main/resources/assets/nep/ae2guide').absolutePath
+                systemProperty 'guideme.ae2.guide.sourcesNamespace', project.mod_id
+            }
+        }
+
+        clientAlt {
+            client()
+            programArguments.addAll '--username', 'Dev2'
+            if (!skippedMods) {
+                systemProperty 'guideme.ae2.guide.sources', file('src/main/resources/assets/nep/ae2guide').absolutePath
+                systemProperty 'guideme.ae2.guide.sourcesNamespace', project.mod_id
+            }
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        serverAlt {
+            server()
+            programArguments.addAll '--nogui', '--port', '25566'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            data()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            gameDirectory = file("runs/$name")
+            jvmArgument '-Xmx8G'
+            jvmArgument '-XX:MaxDirectMemorySize=2G'
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+            // Never in `jar`, and not on skip_mods boots: the GameTest scanner reflects over
+            // test signatures that may name classes from the skipped mod.
+            if (!skippedMods) {
+                sourceSet(sourceSets.gametest)
+            }
+        }
+    }
+
+    addModdingDependenciesTo(sourceSets.gametest)
+
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+    gametestImplementation.extendsFrom implementation
+    gametestCompileOnly.extendsFrom compileOnly
+    gametestRuntimeOnly.extendsFrom runtimeOnly
+}
+
+dependencies {
+    implementation "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    compileOnly "org.appliedenergistics:guideme:${guideme_version}"
+
+    compileOnly "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
+    localRuntime "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
+
+    compileOnly "curse.maven:advancedae-1084104:${advanced_ae_file}"
+    localRuntime "curse.maven:advancedae-1084104:${advanced_ae_file}"
+    localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
+    localRuntime "curse.maven:ae2addonlib-1366135:${ae2addonlib_file}"
+
+    localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
+    localRuntime "curse.maven:glodium-957920:${glodium_file}"
+    localRuntime "curse.maven:applied-flux-965012:${appliedflux_file}"
+
+    compileOnly "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
+    compileOnly "curse.maven:cucumber-272335:${cucumber_file}"
+    localRuntime "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
+    localRuntime "curse.maven:cucumber-272335:${cucumber_file}"
+
+    // transitive = false: their poms pull in Curios from a maven we do not carry
+    compileOnly("dev.shadowsoffire:ApothicEnchanting:${minecraft_version}-${apothic_enchanting_version}") { transitive = false }
+    compileOnly("dev.shadowsoffire:ApothicAttributes:${minecraft_version}-${apothic_attributes_version}") { transitive = false }
+    compileOnly("dev.shadowsoffire:Placebo:${minecraft_version}-${placebo_version}") { transitive = false }
+    localRuntime("dev.shadowsoffire:ApothicEnchanting:${minecraft_version}-${apothic_enchanting_version}") { transitive = false }
+    localRuntime("dev.shadowsoffire:ApothicAttributes:${minecraft_version}-${apothic_attributes_version}") { transitive = false }
+    localRuntime("dev.shadowsoffire:Placebo:${minecraft_version}-${placebo_version}") { transitive = false }
+
+    localRuntime "curse.maven:spark-361579:${spark_file}"
+
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+
+    testImplementation platform('org.junit:junit-bom:5.14.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    systemProperty 'nep.projectDir', projectDir.absolutePath
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        palantirJavaFormat()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            ae2_version_range      : ae2_version_range,
+            jei_version_range      : jei_version_range,
+            ae2wtlib_version_range : ae2wtlib_version_range,
+            advanced_ae_version_range: advanced_ae_version_range,
+            extendedae_version_range: extendedae_version_range,
+            mysticalagriculture_version_range: mysticalagriculture_version_range,
+            apothic_enchanting_version_range: apothic_enchanting_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

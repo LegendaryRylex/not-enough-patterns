@@ -1,0 +1,15 @@
+{
+  "type": "mysticalagriculture:infusion",
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "mysticalagriculture" }
+  ],
+  "input": "minecraft:diamond",
+  "ingredients": [
+    "minecraft:iron_ingot",
+    "minecraft:iron_ingot"
+  ],
+  "result": {
+    "count": 1,
+    "id": "minecraft:netherite_scrap"
+  }
+}

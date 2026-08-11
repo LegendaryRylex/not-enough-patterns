@@ -1,0 +1,15 @@
+{
+  "type": "mysticalagriculture:infusion",
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "mysticalagriculture" }
+  ],
+  "input": "minecraft:emerald",
+  "ingredients": [
+    "minecraft:gold_ingot",
+    "minecraft:gold_ingot"
+  ],
+  "result": {
+    "count": 1,
+    "id": "minecraft:netherite_scrap"
+  }
+}

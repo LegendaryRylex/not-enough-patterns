@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ALA",
+    "EMC",
+    "ASA"
+  ],
+  "key": {
+    "A": "ae2:crafting_accelerator",
+    "L": "ae2:logic_processor",
+    "E": "ae2:engineering_processor",
+    "C": "ae2:calculation_processor",
+    "M": "ae2:singularity",
+    "S": "ae2:cell_component_256k"
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:matrix_circuitry"
+  }
+}
