@@ -25,8 +25,8 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
     private static final int READOUT_TEXT = 0xF2E8D0;
     private static final int READOUT_DIM = 0xC8A882;
 
-    private static final int BAR_TRACK = 0x0C2A1A;
-    private static final int CRAFT_FILL = 0x50D090;
+    private static final int BAR_TRACK = 0x0D333D;
+    private static final int CRAFT_FILL = 0x208BFF;
 
     @Nullable
     private ReadoutButton clearPending;

@@ -136,7 +136,7 @@
   "chat.nep.linker.target.input": "Input %s",
   "chat.nep.linker.target.output": "Output %s",
   "chat.nep.linker.target.step": "Step %s %s",
-  "tooltip.nep.pattern_conversion": "Place in crafting grid for a plain Processing Pattern",
+  "tooltip.nep.pattern_conversion": "Craft alone for a plain Processing Pattern",
   "tooltip.nep.linker.mode": "Mode: %s",
   "tooltip.nep.linker.input": "Input: %s",
   "tooltip.nep.linker.output": "Output: %s",
