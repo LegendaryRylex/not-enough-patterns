@@ -1,0 +1,7 @@
+labels:
+  - name: Bug
+    color: d73a49
+    description: Something isn't working
+  - name: Suggestion
+    color: a2eeef
+    description: A suggestion or feature request
