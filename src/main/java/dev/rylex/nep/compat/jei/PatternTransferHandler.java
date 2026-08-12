@@ -14,7 +14,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,10 +26,6 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
         EncodedIngredients extract(T recipe, Level level);
     }
 
-    /**
-     * Recipe types JEI exposes without their {@link RecipeHolder} carry no id of their own, so nep looks one up
-     * to hand to the encoder.
-     */
     @FunctionalInterface
     public interface Identifier<T> {
         @Nullable

@@ -128,6 +128,18 @@ final class FusionResults {
         return Map.copyOf(forms);
     }
 
+    static GenericStack producedForm(IFusionRecipe recipe, Level level, GenericStack supplied) {
+        if (!(supplied.what() instanceof AEItemKey key)) {
+            return supplied;
+        }
+        AEItemKey assembled = AEItemKey.of(expectedResult(recipe, level));
+        if (assembled == null || assembled.equals(key)) {
+            return supplied;
+        }
+        AEItemKey declared = AEItemKey.of(recipe.getResultItem(level.registryAccess()));
+        return declared != null && declared.equals(key) ? new GenericStack(assembled, supplied.amount()) : supplied;
+    }
+
     static ItemStack normalize(ItemStack stack) {
         if (stack.isEmpty() || !stack.has(ItemData.PROVIDER_IDENTITY.get())) {
             return stack;

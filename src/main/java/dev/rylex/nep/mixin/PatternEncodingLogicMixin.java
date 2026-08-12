@@ -11,6 +11,7 @@ import dev.rylex.nep.pattern.NepPattern;
 import dev.rylex.nep.pattern.encoding.PatternContents;
 import dev.rylex.nep.pattern.encoding.PatternEncodeGuard;
 import dev.rylex.nep.pattern.encoding.PatternGrid;
+import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -33,6 +34,9 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
     @Unique
     private static final String NEP_RECIPE_TAG = "nepRecipe";
 
+    @Unique
+    private static final String NEP_RECIPE_VIEWER_TAG = "nepRecipeViewer";
+
     @Shadow
     @Final
     private IPatternTerminalLogicHost host;
@@ -50,8 +54,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
     public abstract void saveChanges();
 
     @Unique
-    @Nullable
-    private ResourceLocation nep$recipe;
+    private PatternOrigin nep$origin = PatternOrigin.MANUAL;
 
     @Unique
     @Nullable
@@ -66,14 +69,13 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
     }
 
     @Override
-    @Nullable
-    public ResourceLocation nep$recipeId() {
-        return nep$recipe;
+    public PatternOrigin nep$origin() {
+        return nep$origin;
     }
 
     @Override
-    public void nep$setRecipeId(@Nullable ResourceLocation recipe) {
-        this.nep$recipe = recipe;
+    public void nep$setOrigin(PatternOrigin origin) {
+        this.nep$origin = origin;
         this.nep$version++;
         saveChanges();
     }
@@ -85,13 +87,13 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
 
     @Inject(method = "onEncodedInputChanged", at = @At("HEAD"))
     private void nep$forgetRecipeOnInputChange(CallbackInfo ci) {
-        this.nep$recipe = null;
+        this.nep$origin = PatternOrigin.MANUAL;
         this.nep$version++;
     }
 
     @Inject(method = "onEncodedOutputChanged", at = @At("HEAD"))
     private void nep$forgetRecipeOnOutputChange(CallbackInfo ci) {
-        this.nep$recipe = null;
+        this.nep$origin = PatternOrigin.MANUAL;
         this.nep$version++;
     }
 
@@ -126,7 +128,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
                 PatternGrid.fill(getEncodedInputInv(), PatternContents.condenseInputs(details));
                 PatternGrid.fill(getEncodedOutputInv(), details.getOutputs());
             }
-            this.nep$recipe = nepPattern.nepRecipeId();
+            this.nep$origin = PatternOrigin.ofRecipe(nepPattern.nepRecipeId());
             this.nep$version++;
             return;
         }
@@ -135,23 +137,29 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
         }
         ResourceLocation source = pattern.get(NepComponents.SOURCE_RECIPE.get());
         if (source != null) {
-            this.nep$recipe = source;
+            this.nep$origin = PatternOrigin.ofRecipe(source);
             this.nep$version++;
         }
     }
 
     @Inject(method = "writeToNBT", at = @At("RETURN"))
     private void nep$writeToNBT(CompoundTag data, HolderLookup.Provider registries, CallbackInfo ci) {
-        if (nep$recipe != null) {
-            data.putString(NEP_RECIPE_TAG, nep$recipe.toString());
+        ResourceLocation recipe = nep$origin.recipe();
+        if (recipe != null) {
+            data.putString(NEP_RECIPE_TAG, recipe.toString());
+        }
+        if (nep$origin.recipeViewer()) {
+            data.putBoolean(NEP_RECIPE_VIEWER_TAG, true);
         }
     }
 
     @Inject(method = "readFromNBT", at = @At("RETURN"))
     private void nep$readFromNBT(CompoundTag data, HolderLookup.Provider registries, CallbackInfo ci) {
-        this.nep$recipe = data.contains(NEP_RECIPE_TAG, Tag.TAG_STRING)
+        ResourceLocation recipe = data.contains(NEP_RECIPE_TAG, Tag.TAG_STRING)
                 ? ResourceLocation.tryParse(data.getString(NEP_RECIPE_TAG))
                 : null;
+        this.nep$origin =
+                data.getBoolean(NEP_RECIPE_VIEWER_TAG) ? PatternOrigin.RECIPE_VIEWER : PatternOrigin.ofRecipe(recipe);
         this.nep$version++;
     }
 }

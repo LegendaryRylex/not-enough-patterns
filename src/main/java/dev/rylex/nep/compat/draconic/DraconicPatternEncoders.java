@@ -35,7 +35,7 @@ final class DraconicPatternEncoders {
         if (inputs == null || result == null) {
             return null;
         }
-        result = FusionResults.canonical(result, level);
+        result = FusionResults.producedForm(holder.value(), level, FusionResults.canonical(result, level));
         Split split = split(holder, level, inputs, result);
         return split == null ? null : FusionCraftingPattern.encode(holder.id(), split.consumed(), split.kept(), result);
     }
@@ -57,20 +57,23 @@ final class DraconicPatternEncoders {
 
         RecipeHolder<IFusionRecipe> only = null;
         Split split = null;
+        GenericStack produced = null;
         for (RecipeHolder<IFusionRecipe> candidate : FusionRecipeResolver.candidates(level)) {
-            Split candidateSplit = split(candidate, level, inputs, result);
+            GenericStack candidateResult = FusionResults.producedForm(candidate.value(), level, result);
+            Split candidateSplit = split(candidate, level, inputs, candidateResult);
             if (candidateSplit != null) {
                 if (only != null) {
                     return null;
                 }
                 only = candidate;
                 split = candidateSplit;
+                produced = candidateResult;
             }
         }
         return only == null
                 ? null
                 : PatternFallback.Result.of(
-                        FusionCraftingPattern.encode(only.id(), split.consumed(), split.kept(), result));
+                        FusionCraftingPattern.encode(only.id(), split.consumed(), split.kept(), produced));
     }
 
     private record Split(List<GenericStack> consumed, List<GenericStack> kept) {}

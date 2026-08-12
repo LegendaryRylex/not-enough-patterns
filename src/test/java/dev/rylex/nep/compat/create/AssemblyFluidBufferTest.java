@@ -83,8 +83,6 @@ class AssemblyFluidBufferTest {
         assertEquals(10, buffer.fill(stack(Fluids.LAVA, 10), FluidAction.EXECUTE));
         assertEquals(10, buffer.fill(stack(Fluids.FLOWING_WATER, 10), FluidAction.EXECUTE));
         assertEquals(10, buffer.fill(stack(Fluids.FLOWING_LAVA, 10), FluidAction.EXECUTE));
-
-        // All four tanks are claimed; a fifth distinct fluid has nowhere to go.
         assertEquals(0, buffer.fill(tagged(Fluids.WATER, 10), FluidAction.EXECUTE));
         assertEquals(4, occupiedTanks());
         assertEquals(10, buffer.getFluidInTank(0).getAmount(), "the rejected fluid must not join another tank");

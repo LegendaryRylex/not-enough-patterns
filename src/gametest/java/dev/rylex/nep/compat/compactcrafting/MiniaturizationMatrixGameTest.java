@@ -13,6 +13,7 @@ import dev.rylex.nep.Nep;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
+import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -305,8 +306,8 @@ public final class MiniaturizationMatrixGameTest {
         ItemStack processing = PatternDetailsHelper.encodeProcessingPattern(
                 shown, List.of(expected.outputs().get(0)));
 
-        ItemStack converted =
-                PatternConverters.convert(holder.id(), processing, helper.makeMockPlayer(GameType.SURVIVAL));
+        ItemStack converted = PatternConverters.convert(
+                PatternOrigin.ofRecipe(holder.id()), processing, helper.makeMockPlayer(GameType.SURVIVAL));
         helper.assertTrue(
                 converted != null && !converted.isEmpty(),
                 "a processing pattern carrying a miniaturization recipe, as JEI transfers it, would not encode");

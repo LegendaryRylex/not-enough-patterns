@@ -1,6 +1,6 @@
 ---
 navigation:
-  title: Sequenced Assembly Matrix
+  title: Assembly Matrix
   icon: nep:sequenced_assembly_matrix
   parent: nep/create/index.md
   position: 65
@@ -9,10 +9,10 @@ item_ids:
   - nep:matrix_circuitry
   - nep:hardened_obsidian_plate
 ---
-# <Color id="gold">Sequenced Assembly Matrix</Color>
+# <Color id="gold">Assembly Matrix</Color>
 
 <Column alignItems="center" fullWidth={true}>
-  # <Color id="gold">Sequenced Assembly Matrix</Color>
+  # <Color id="gold">Assembly Matrix</Color>
 
   <ItemImage id="nep:sequenced_assembly_matrix" scale="2"/>
 
@@ -87,7 +87,35 @@ A recipe runs the moment everything it consumes is sitting inside the Matrix at 
 
 A Precision Mechanism, which loops five times over three deploying steps, needs one Golden Sheet, five Cogwheels, five Large Cogwheels, and five Iron Nuggets. Put those in and one Precision Mechanism comes out, every time.
 
-Every job starts with a pattern, and it must be a <ItemLink id="nep:sequenced_assembly_pattern"/>. A Matrix that owes the network nothing refuses items at every face and in its own interface, so it can never sit on loose ingredients wondering what they were for. Obsidian Dust alone could be headed for a Sturdy Sheet or a <ItemLink id="hardened_obsidian_plate"/>, and a pattern is what settles the question. Encode one by looking the recipe up in JEI and clicking the **+** on it in a <ItemLink id="ae2:pattern_encoding_terminal"/>; the pattern names the recipe outright, so it settles that question even when two recipes end in the same item. Encoding the ingredients by hand in processing mode works too, and comes back as a Sequenced Assembly Pattern whenever they fit exactly one recipe. A plain processing pattern is <Color id="red">not</Color> accepted and is never pushed.
+Every sequenced assembly job starts with a <ItemLink id="nep:sequenced_assembly_pattern"/>. A Matrix that owes the network nothing refuses items at every face and in its own interface, so it can never sit on loose ingredients wondering what they were for. Obsidian Dust alone could be headed for a Sturdy Sheet or a <ItemLink id="hardened_obsidian_plate"/>, and a pattern is what settles the question. Encode one by looking the recipe up in JEI and clicking the **+** on it in a <ItemLink id="ae2:pattern_encoding_terminal"/>; the pattern names the recipe outright, so it settles that question even when two recipes end in the same item. Encoding the ingredients by hand in processing mode works too, and comes back as a Sequenced Assembly Pattern whenever they fit exactly one recipe.
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Filling And Deploying</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+The same steps the Matrix runs inside a sequenced assembly recipe are offered on their own. Push it a <Color id="aqua">Filling</Color> or <Color id="aqua">Deploying</Color> pattern and it runs that single recipe, so a build that already has a Matrix needs no Spout over a Depot for [Filling](/nep/create/filling.md) and no Deployer for [Deploying](/nep/create/deploying.md). Those patterns are the ordinary ones, encoded exactly as they are for a Depot, and each craft costs the same speed and stress as an assembly craft.
+
+* Recipes that keep their tool, such as stripping a log with an axe, work if the pattern hands the Matrix the tool. Create never wears a kept tool down, so the same axe is handed straight back to the Pattern Provider with the result.
+* Recipes whose tool a Deployer <Color id="red">damages</Color> rather than consumes are refused, because a pattern cannot name an item that comes back with a point of durability missing. Build the Depot and Deployer for those.
+* An item the Matrix is already assembling cannot also be filled or deployed until that job finishes, since one Matrix runs one recipe per result at a time.
+
+Turning off the Filling or Deploying module turns it off in the Matrix too; there is no separate switch.
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Helping A Job Along</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
 
 Once a job is underway you can help it along. The Matrix accepts hoppers, pipes and items placed by hand, but only up to what the job it already owes is still short of, and only for items that job actually uses. Offer a stack of sixty-four when it needs one and it takes the one. See If Nothing Happens below for reading what it is short of.
 
@@ -200,7 +228,7 @@ The universal upgrade component shared by every Matrix, built entirely from ME p
 
 <Row>
   <ItemImage id="nep:sequenced_assembly_matrix"/>
-  ### <Color id="gold">Sequenced Assembly Matrix</Color>
+  ### <Color id="gold">Assembly Matrix</Color>
 </Row>
 
 Starts from a <ItemLink id="nep:sequenced_assembly_controller"/> and loops <Color id="red">four</Color> times, so multiply every deployed item by four when you encode the pattern. That means four each of the Matrix Circuitry, Printed Silicon, and Hardened Obsidian Plate.

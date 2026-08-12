@@ -17,6 +17,7 @@ import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
+import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -173,7 +174,7 @@ public final class FusionMatrixGameTest {
                 ItemStack.isSameItem(
                         holder.value().getResultItem(helper.getLevel().registryAccess()),
                         new ItemStack(NepDraconicContent.MATRIX_ITEM.get())),
-                "the nep:fusion_matrix recipe does not produce a Fusion Matrix");
+                "the nep:fusion_matrix recipe does not produce an Injector Fusion Matrix");
         helper.succeed();
     }
 
@@ -234,8 +235,8 @@ public final class FusionMatrixGameTest {
         ItemStack processing = PatternDetailsHelper.encodeProcessingPattern(
                 shown, List.of(expected.outputs().get(0)));
 
-        ItemStack converted =
-                PatternConverters.convert(holder.id(), processing, helper.makeMockPlayer(GameType.SURVIVAL));
+        ItemStack converted = PatternConverters.convert(
+                PatternOrigin.ofRecipe(holder.id()), processing, helper.makeMockPlayer(GameType.SURVIVAL));
         helper.assertTrue(
                 converted != null && !converted.isEmpty(),
                 "a pattern carrying the kept ingredient, as JEI transfers it, would not encode as a fusion pattern");
@@ -283,6 +284,63 @@ public final class FusionMatrixGameTest {
                     holder.id() + " was refused; stripping the provider identity should make every gear upgrade"
                             + " reproducible and so encodable");
         }
+        helper.succeed();
+    }
+
+    @Nullable
+    private static ItemStack asJeiTransfersIt(GameTestHelper helper, RecipeHolder<IFusionRecipe> holder) {
+        ItemStack[] catalysts = holder.value().getCatalyst().getItems();
+        if (catalysts.length == 0) {
+            return null;
+        }
+        AEItemKey catalyst = AEItemKey.of(catalysts[0]);
+        if (catalyst == null) {
+            return null;
+        }
+        List<GenericStack> shown = new ArrayList<>();
+        shown.add(new GenericStack(catalyst, 1));
+        for (IFusionRecipe.IFusionIngredient ingredient : holder.value().fusionIngredients()) {
+            ItemStack[] options = ingredient.get().getItems();
+            if (options.length == 0) {
+                return null;
+            }
+            AEItemKey key = AEItemKey.of(options[0]);
+            if (key == null) {
+                return null;
+            }
+            shown.add(new GenericStack(key, 1));
+        }
+        AEItemKey result =
+                AEItemKey.of(holder.value().getResultItem(helper.getLevel().registryAccess()));
+        return result == null
+                ? null
+                : PatternDetailsHelper.encodeProcessingPattern(shown, List.of(new GenericStack(result, 1)));
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void everyGearUpgradeEncodesFromTheStacksJeiTransfers(GameTestHelper helper) {
+        List<RecipeHolder<IFusionRecipe>> upgrades = gearUpgrades(helper);
+        helper.assertTrue(!upgrades.isEmpty(), "no fusion recipe produces modular gear, so this test proves nothing");
+
+        List<String> refused = new ArrayList<>();
+        for (RecipeHolder<IFusionRecipe> holder : upgrades) {
+            ItemStack processing = asJeiTransfersIt(helper, holder);
+            if (processing == null || processing.isEmpty()) {
+                continue;
+            }
+            ItemStack converted = PatternConverters.convert(
+                    PatternOrigin.ofRecipe(holder.id()), processing, helper.makeMockPlayer(GameType.SURVIVAL));
+            IPatternDetails details = converted == null || converted.isEmpty()
+                    ? null
+                    : PatternDetailsHelper.decodePattern(converted, helper.getLevel());
+            if (!(details instanceof FusionCraftingPattern)) {
+                refused.add(holder.id().toString());
+            }
+        }
+        helper.assertTrue(
+                refused.isEmpty(),
+                "JEI transfers a recipe's plain result, not the assembled one, so these fell back to a plain"
+                        + " processing pattern the fusion crafter refuses: " + refused);
         helper.succeed();
     }
 

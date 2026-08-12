@@ -102,8 +102,8 @@ class LangKeysTest {
         List<String> untitled = new ArrayList<>();
         for (Map.Entry<String, String> machine : Map.of(
                         "gui.nep.sequenced_assembly.title", "Sequenced Assembly Controller",
-                        "gui.nep.sequenced_assembly_matrix.title", "Sequenced Assembly Matrix",
-                        "gui.nep.fusion_matrix.title", "Fusion Matrix",
+                        "gui.nep.sequenced_assembly_matrix.title", "Assembly Matrix",
+                        "gui.nep.fusion_matrix.title", "Injector Fusion Matrix",
                         "gui.nep.atomic_empowering_matrix.title", "Atomic Empowering Matrix",
                         "gui.nep.miniaturization_matrix.title", "Miniaturization Matrix",
                         "gui.nep.miniaturization_controller.title", "Miniaturization Controller",

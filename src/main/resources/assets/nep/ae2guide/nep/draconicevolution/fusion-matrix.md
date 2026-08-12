@@ -1,16 +1,16 @@
 ---
 navigation:
-  title: Fusion Matrix
+  title: Injector Fusion Matrix
   icon: nep:fusion_matrix
   parent: nep/draconicevolution/index.md
   position: 20
 item_ids:
   - nep:fusion_matrix
 ---
-# <Color id="gold">Fusion Matrix</Color>
+# <Color id="gold">Injector Fusion Matrix</Color>
 
 <Column alignItems="center" fullWidth={true}>
-  # <Color id="gold">Fusion Matrix</Color>
+  # <Color id="gold">Injector Fusion Matrix</Color>
 
   <ItemImage id="nep:fusion_matrix" scale="2"/>
 
@@ -37,7 +37,7 @@ item_ids:
     **Pattern Provider**, pushing patterns in
   </BlockAnnotation>
   <BlockAnnotation y="0" color="#ffaa00">
-    **Fusion Matrix**, wired to energy and to the ME network
+    **Injector Fusion Matrix**, wired to energy and to the ME network
   </BlockAnnotation>
 </GameScene>
 

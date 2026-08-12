@@ -62,6 +62,8 @@ A plain processing pattern with the same inputs and result still works; the Depo
 
 If the Deployer is already holding a matching tool, that one is used and the lent copy goes straight back to the Provider untouched. A pattern with the tool left out still works too, but then the Deployer has to be loaded by hand and pushes are rejected until it is.
 
+An [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) takes the same pattern and deploys inside itself, with no Depot and no Deployer. It holds nothing by hand, so there the tool must be in the pattern, and it turns down the rare recipe whose tool a Deployer wears down instead of consuming.
+
 <ItemImage id="minecraft:air" scale="0.5"/>
 
 ***

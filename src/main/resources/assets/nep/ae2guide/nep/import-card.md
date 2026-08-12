@@ -65,4 +65,4 @@ The grace period is set to 10 seconds by default under `importCardGrace`.
 
 Beyond AE2's own Pattern Provider, in block and cable form, the card slots into the pattern providers other mods add: Advanced AE's Advanced and Small Advanced Pattern Providers, ExtendedAE's Extended Pattern Provider, MEGA Cells' MEGA Pattern Provider, Applied Create's Andesite and Brass Pattern Providers, and the AE2 Draconic Fusion Autocrafter's ME Draconic Pattern Provider.
 
-The ME Draconic Pattern Provider hands its jobs to a Fusion Crafting Core rather than an adjacent machine, so the card has nothing to collect from it; for fusion crafting that returns its own results, use this mod's Fusion Matrix instead.
+The ME Draconic Pattern Provider hands its jobs to a Fusion Crafting Core rather than an adjacent machine, so the card has nothing to collect from it; for fusion crafting that returns its own results, use this mod's Injector Fusion Matrix instead.

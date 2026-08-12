@@ -21,6 +21,7 @@ import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepItems;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
+import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -122,7 +123,8 @@ public final class SequencedAssemblyMatrixPowerGameTest {
                         new GenericStack(AEFluidKey.of(Fluids.WATER), FILL_PER_STEP)),
                 List.of(new GenericStack(AEItemKey.of(NepCreateContent.HARDENED_OBSIDIAN_PLATE.get()), 1)));
 
-        ItemStack converted = PatternConverters.convert(null, processing, helper.makeMockPlayer(GameType.SURVIVAL));
+        ItemStack converted =
+                PatternConverters.convert(PatternOrigin.MANUAL, processing, helper.makeMockPlayer(GameType.SURVIVAL));
         helper.assertTrue(
                 converted != null && converted.is(NepItems.SEQUENCED_ASSEMBLY_PATTERN.get()),
                 "a hand-encoded processing pattern was not converted without a JEI recipe intent; sequenced assembly "
@@ -136,6 +138,25 @@ public final class SequencedAssemblyMatrixPowerGameTest {
         helper.assertTrue(
                 machine.pushPattern(details, inputsOf(details), EJECTION),
                 "the matrix refused the pattern the fallback produced");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aRecipeViewerTransferIsLeftAsAProcessingPattern(GameTestHelper helper) {
+        placeMatrix(helper);
+        ItemStack processing = PatternDetailsHelper.encodeProcessingPattern(
+                List.of(
+                        new GenericStack(AEItemKey.of(AllItems.POWDERED_OBSIDIAN.get()), 1),
+                        new GenericStack(AEFluidKey.of(Fluids.LAVA), FILL_PER_STEP),
+                        new GenericStack(AEFluidKey.of(Fluids.WATER), FILL_PER_STEP)),
+                List.of(new GenericStack(AEItemKey.of(NepCreateContent.HARDENED_OBSIDIAN_PLATE.get()), 1)));
+
+        ItemStack converted = PatternConverters.convert(
+                PatternOrigin.RECIPE_VIEWER, processing, helper.makeMockPlayer(GameType.SURVIVAL));
+        helper.assertTrue(
+                converted == null,
+                "a recipe viewer filled these slots for a machine NEP does not drive, and NEP still claimed them as "
+                        + converted + "; the pattern belongs to whichever machine the open category was for");
         helper.succeed();
     }
 

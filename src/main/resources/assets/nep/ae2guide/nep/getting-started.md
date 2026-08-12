@@ -44,8 +44,8 @@ Below is a list of all current Matrices available in the mod:
 
 * <ItemImage id="nep:atomic_empowering_matrix" scale="0.5"/> [Atomic Empowering Matrix](/nep/actuallyadditions/atomic-empowering-matrix.md) (Actually Additions)
 * <ItemImage id="nep:miniaturization_matrix" scale="0.5"/> [Miniaturization Matrix](/nep/compactcrafting/miniaturization-matrix.md) (Compact Crafting)
-* <ItemImage id="nep:sequenced_assembly_matrix" scale="0.5"/> [Sequenced Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) (Create)
-* <ItemImage id="nep:fusion_matrix" scale="0.5"/> [Fusion Matrix](/nep/draconicevolution/fusion-matrix.md) (Draconic Evolution)
+* <ItemImage id="nep:sequenced_assembly_matrix" scale="0.5"/> [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) (Create)
+* <ItemImage id="nep:fusion_matrix" scale="0.5"/> [Injector Fusion Matrix](/nep/draconicevolution/fusion-matrix.md) (Draconic Evolution)
 * <ItemImage id="nep:infused_awakening_matrix" scale="0.5"/> [Infused Awakening Matrix](/nep/mysticalagriculture/infused-awakening-matrix.md) (Mystical Agriculture)
 
 <ItemImage id="minecraft:air" scale="0.5"/>

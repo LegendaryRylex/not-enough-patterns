@@ -30,7 +30,7 @@ public final class NepNetwork {
     private static void handleRecipe(PatternRecipePayload payload, IPayloadContext context) {
         Player player = context.player();
         if (player.containerMenu instanceof PatternRecipeHolder holder) {
-            holder.nep$setRecipeId(payload.recipe().orElse(null));
+            holder.nep$setOrigin(payload.origin());
         }
     }
 

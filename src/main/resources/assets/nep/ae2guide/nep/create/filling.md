@@ -58,6 +58,8 @@ A plain processing pattern with the same inputs and result still works, and is t
 
 > <Color id="yellow">The fluid amount must be exact.</Color> A different amount never matches, and the push is rejected.
 
+An [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) takes the same pattern and fills the item inside itself, with no Depot and no Spout. It is the same recipe and the same pattern, so nothing about the encoding changes.
+
 <ItemImage id="minecraft:air" scale="0.5"/>
 
 ***

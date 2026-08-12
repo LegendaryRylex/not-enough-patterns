@@ -39,7 +39,6 @@ public final class MiniaturizationControllerGameTest {
     private static final String TEMPLATE = "empty_9x6x9";
     private static final String BATCH = "nep_miniaturization_controller";
 
-    /** A small field spans nine blocks projector to projector, which is exactly the template's footprint. */
     private static final BlockPos FIELD_CENTER = new BlockPos(4, 2, 4);
 
     private static final BlockPos WEST_PROJECTOR = new BlockPos(0, 2, 4);
@@ -63,10 +62,6 @@ public final class MiniaturizationControllerGameTest {
                         .setValue(FieldProjectorBlock.SIZE, size));
     }
 
-    /**
-     * A projector only forms its field when it is placed already carrying a size, so the first three go in inactive and
-     * the last one activates the set.
-     */
     private static IMiniaturizationField<MiniaturizationRecipe> formField(GameTestHelper helper) {
         placeProjector(helper, WEST_PROJECTOR, Direction.EAST, MiniaturizationFieldSize.INACTIVE);
         placeProjector(helper, NORTH_PROJECTOR, Direction.SOUTH, MiniaturizationFieldSize.INACTIVE);
@@ -197,10 +192,6 @@ public final class MiniaturizationControllerGameTest {
         helper.succeed();
     }
 
-    /**
-     * A signal on any projector switches the whole field off, and a full block is a redstone conductor unless it says
-     * otherwise, so a conductive controller would let a repeater beside it cancel every craft.
-     */
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void doesNotConductRedstoneIntoTheProjectorItTouches(GameTestHelper helper) {
         place(helper);
@@ -236,7 +227,6 @@ public final class MiniaturizationControllerGameTest {
         helper.succeed();
     }
 
-    /** Adjacency is what keeps the controller from being counted as a filled block and cleared with the recipe. */
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void sitsOutsideTheFieldItDrives(GameTestHelper helper) {
         IMiniaturizationField<MiniaturizationRecipe> field = formField(helper);
@@ -283,10 +273,6 @@ public final class MiniaturizationControllerGameTest {
         });
     }
 
-    /**
-     * A layout that snapped into place in a single tick would never be seen going up, and a field the size of a house
-     * would fill faster than the projectors could show it.
-     */
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
     public static void buildsItsLayoutOneBlockAtATime(GameTestHelper helper) {
         IMiniaturizationField<MiniaturizationRecipe> field = formField(helper);
@@ -346,7 +332,6 @@ public final class MiniaturizationControllerGameTest {
         });
     }
 
-    /** A layout the field cannot match costs nothing: the blocks come back out and the ingredients are re-buffered. */
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aFieldWithBlocksAlreadyInItIsLeftAlone(GameTestHelper helper) {
         formField(helper);

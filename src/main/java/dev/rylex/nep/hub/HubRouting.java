@@ -11,11 +11,6 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
 
-/**
- * Spreads one ME key across the inventories a hub is linked to. Every slot and tank is visited at
- * most once per call, so a simulation reports what the linked machine can really take rather than
- * counting the same empty slot again for every stack a large request is cut into.
- */
 public final class HubRouting {
 
     private HubRouting() {}

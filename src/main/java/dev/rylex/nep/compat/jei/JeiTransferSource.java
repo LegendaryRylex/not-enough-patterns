@@ -16,14 +16,12 @@ public interface JeiTransferSource {
 
     default void addRecipes(IRecipeRegistration registration, Level level) {}
 
-    /** Search terms for a machine beyond its own name, so the mod it automates finds it too. */
     default void addAliases(IIngredientAliasRegistration registration) {}
 
     interface TransferCollector {
         <R extends Recipe<?>> void add(
                 RecipeType<RecipeHolder<R>> recipeType, PatternTransferHandler.Extractor<RecipeHolder<R>> extractor);
 
-        /** For categories JEI exposes as the bare recipe rather than its {@link RecipeHolder}. */
         <T> void addUnwrapped(
                 RecipeType<T> recipeType,
                 PatternTransferHandler.Extractor<T> extractor,

@@ -52,7 +52,7 @@ public final class CreateCompat {
         float peakSpeed = SequencedAssemblyMatrixBlockEntity.peakSpeed();
         if (configured > peakSpeed) {
             Nep.LOGGER.warn(
-                    "Sequenced Assembly Matrix minimumSpeed ({} RPM) is above Create's maxRotationSpeed ({} RPM), which"
+                    "Assembly Matrix minimumSpeed ({} RPM) is above Create's maxRotationSpeed ({} RPM), which"
                             + " no shaft can reach; treating {} RPM as the threshold so the Matrix stays usable.",
                     configured,
                     Math.round(peakSpeed),

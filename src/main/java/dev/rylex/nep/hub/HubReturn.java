@@ -13,12 +13,6 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
 
-/**
- * Empties the inventories a hub has marked as outputs into the ME network it is standing against.
- * Nothing is ever taken out of a linked inventory before the network has said in simulation that it
- * will take it, so a network with no room leaves the results exactly where the machine left them and
- * the hub reports that rather than voiding anything.
- */
 public final class HubReturn {
 
     private HubReturn() {}

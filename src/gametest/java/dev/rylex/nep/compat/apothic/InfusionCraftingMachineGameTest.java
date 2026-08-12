@@ -12,6 +12,7 @@ import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepItems;
 import dev.rylex.nep.pattern.EnchantingPattern;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
+import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import dev.shadowsoffire.apothic_enchanting.Ench;
 import dev.shadowsoffire.apothic_enchanting.table.RavenTableStats;
 import dev.shadowsoffire.apothic_enchanting.table.infusion.InfusionRecipe;
@@ -339,7 +340,8 @@ public final class InfusionCraftingMachineGameTest {
         ItemStack bare = PatternDetailsHelper.encodeProcessingPattern(
                 List.of(new GenericStack(AEItemKey.of(holder.value().getInput().getItems()[0]), 1)),
                 List.of(GenericStack.fromItemStack(holder.value().getOutput())));
-        ItemStack converted = PatternConverters.convertQuietly(holder.id(), bare, helper.getLevel());
+        ItemStack converted =
+                PatternConverters.convertQuietly(PatternOrigin.ofRecipe(holder.id()), bare, helper.getLevel());
         helper.assertTrue(converted != null, "the infusion recipe encoded no pattern");
         helper.assertTrue(
                 converted.is(NepItems.ENCHANTING_PATTERN.get()),
@@ -361,7 +363,7 @@ public final class InfusionCraftingMachineGameTest {
         RecipeHolder<InfusionRecipe> holder = simpleRecipe(helper);
         IPatternDetails processing = patternFor(helper, holder);
         ItemStack converted = PatternConverters.convertQuietly(
-                null, processing.getDefinition().toStack(), helper.getLevel());
+                PatternOrigin.MANUAL, processing.getDefinition().toStack(), helper.getLevel());
         helper.assertTrue(
                 converted != null && converted.is(NepItems.ENCHANTING_PATTERN.get()),
                 "a processing pattern paying a whole infusion was not recognised as one: " + converted);

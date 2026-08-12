@@ -29,9 +29,10 @@ public final class NepGuidePacks {
         hidePagesWithout(event, "apothic_enchanting", "no_apothic_enchanting");
     }
 
-    // GuideMe has no conditional frontmatter and no page filter API, but it reads pages through the
-    // ordinary ResourceManager, so a pack whose only content is a `filter` section can take them
-    // back out. Pages stay in `assets/nep/ae2guide`, which keeps the dev live preview working.
+    /**
+     * GuideMe has no conditional frontmatter and no page filter API, so pages stay in {@code assets/nep/ae2guide} where
+     * the dev live preview can see them and a filter-only pack takes them back out.
+     */
     private static void hidePagesWithout(AddPackFindersEvent event, String modId, String pack) {
         if (ModList.get().isLoaded(modId)) {
             return;

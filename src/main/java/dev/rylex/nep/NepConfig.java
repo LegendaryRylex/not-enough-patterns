@@ -291,7 +291,8 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.create.override")
                 .define("allow_create_module", true);
         CREATE_FILLING = builder.comment(
-                        "Spout Filling Module: Automates `create:filling` recipes and Create's generic bucket and bottle filling.")
+                        "Spout Filling Module: Automates `create:filling` recipes and Create's generic bucket and bottle filling.",
+                        "Covers both machines: a Spout over a Depot, and the Assembly Matrix, which fills without either.")
                 .translation("nep.configuration.modules.create.filling")
                 .define("filling", true);
 
@@ -300,7 +301,8 @@ public final class NepConfig {
                 .push("deploying");
         CREATE_DEPLOYING = builder.comment(
                         "Automates the Deployer for create:deploying and create:item_application recipes.",
-                        "The Depot is the machine: the base item is staged on it and a Deployer two blocks above presses onto it.")
+                        "The Depot is the machine: the base item is staged on it and a Deployer two blocks above presses onto it.",
+                        "The Assembly Matrix runs the same recipes on its own, with no Depot or Deployer built.")
                 .translation("nep.configuration.modules.create.deploying.enabled")
                 .define("enabled", true);
         CREATE_DEPLOYING_LOG_STRIPPING = builder.comment(
@@ -361,11 +363,11 @@ public final class NepConfig {
                 .defineInRange("reclaimGrace", 200, 0, 24_000);
         builder.pop();
 
-        builder.comment("Sequenced Assembly Matrix:")
+        builder.comment("Assembly Matrix:")
                 .translation("nep.configuration.modules.create.sequencedAssemblyMatrix")
                 .push("sequencedAssemblyMatrix");
         CREATE_SEQUENCED_ASSEMBLY_MATRIX = builder.comment(
-                        "The Sequenced Assembly Matrix runs a whole sequenced assembly recipe inside a single block.")
+                        "The Assembly Matrix runs a whole sequenced assembly recipe inside a single block.")
                 .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.enabled")
                 .define("enabled", true);
         CREATE_SEQUENCED_ASSEMBLY_MATRIX_GUARANTEED_RESULTS = builder.comment(
@@ -374,7 +376,7 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.guaranteedResults")
                 .define("guaranteedResults", true);
         CREATE_SEQUENCED_ASSEMBLY_MATRIX_AUTO_REQUEST = builder.comment(
-                        "Treats the Sequenced Assembly Matrix as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a craft it owes is left without materials.",
+                        "Treats the Assembly Matrix as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a craft it owes is left without materials.",
                         "This lets a Matrix with guaranteedResults disabled retry after a chance recipe rolls junk. When disabled, an unlucky streak stalls the crafting network until manually fixed.")
                 .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.autoRequest")
                 .define("autoRequest", true);
@@ -434,15 +436,15 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.draconicevolution.fusionCrafting")
                 .define("fusionCrafting", true);
 
-        builder.comment("Fusion Matrix:")
+        builder.comment("Injector Fusion Matrix:")
                 .translation("nep.configuration.modules.draconicevolution.fusionMatrix")
                 .push("fusionMatrix");
         DRACONIC_FUSION_MATRIX = builder.comment(
-                        "The Fusion Matrix runs a whole fusion crafting recipe inside a single block, with no Crafting Core or Injectors.")
+                        "The Injector Fusion Matrix runs a whole fusion crafting recipe inside a single block, with no Crafting Core or Injectors.")
                 .translation("nep.configuration.modules.draconicevolution.fusionMatrix.enabled")
                 .define("enabled", true);
         DRACONIC_FUSION_MATRIX_AUTO_REQUEST = builder.comment(
-                        "Treats the Fusion Matrix as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a craft it owes is left without materials.",
+                        "Treats the Injector Fusion Matrix as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a craft it owes is left without materials.",
                         "When disabled, a Matrix left short of materials stalls until you restock it by hand.")
                 .translation("nep.configuration.modules.draconicevolution.fusionMatrix.autoRequest")
                 .define("autoRequest", true);
@@ -479,7 +481,7 @@ public final class NepConfig {
                 .define("maximumTier", "chaotic");
 
         builder.comment(
-                        "Draconic Evolution cores slotted into the Fusion Matrix's upgrade slot tune the machine to the tier of core it holds. Each higher tier compounds lower tiers' upgrades.",
+                        "Draconic Evolution cores slotted into the Injector Fusion Matrix's upgrade slot tune the machine to the tier of core it holds. Each higher tier compounds lower tiers' upgrades.",
                         "One slot means one tier at a time; Wyvern Cores increases energy buffer; Draconic Cores also increase fusion speed; Chaotic Cores also decrease energy costs.")
                 .translation("nep.configuration.modules.draconicevolution.fusionMatrix.upgrades")
                 .push("upgrades");
@@ -657,7 +659,7 @@ public final class NepConfig {
         int activeDrain = CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_DRAIN.get();
         if (idleDrain > activeDrain) {
             Nep.LOGGER.warn(
-                    "Sequenced Assembly Matrix idleMeNetworkDrain ({} AE/t) is above meNetworkDrain ({} AE/t); the idle"
+                    "Assembly Matrix idleMeNetworkDrain ({} AE/t) is above meNetworkDrain ({} AE/t); the idle"
                             + " drain is clamped to {} AE/t, so assembling costs no more than sitting idle.",
                     idleDrain,
                     activeDrain,
@@ -667,7 +669,7 @@ public final class NepConfig {
         int maximumStress = CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS.get();
         if (minimumStress > maximumStress) {
             Nep.LOGGER.warn(
-                    "Sequenced Assembly Matrix stressUnitsMinimum ({} SU) is above stressUnits ({} SU); the floor is"
+                    "Assembly Matrix stressUnitsMinimum ({} SU) is above stressUnits ({} SU); the floor is"
                             + " clamped to {} SU, which flattens the speed ramp so shaft speed no longer changes how"
                             + " fast the Matrix assembles.",
                     minimumStress,

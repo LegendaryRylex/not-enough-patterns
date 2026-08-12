@@ -22,18 +22,6 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Walks outward from the blocks touching a hub and proposes whatever it finds that holds items or
- * fluids. Nothing here names a mod. The walk spreads freely through machine parts, meaning any block
- * carrying a block entity of its own, which covers hatches, ports, buffers and the controllers that
- * expose nothing at all; a vanilla block entity has to offer an inventory before it counts, so a sign
- * or a lectern is not a bridge to somewhere else. Everything else is casing, and casing is only ever
- * stepped through for a bounded run of blocks, from a mod already confirmed to own a machine part.
- * That is what lets the walk cross a wall to the hatch on the far side without ever leaving through
- * the terrain the machine is standing on. Roles are guessed from what a block will accept, and a
- * guess is wrong often enough that the result is a proposal the player edits rather than a decision
- * made for them.
- */
 public final class HubScan {
 
     private HubScan() {}

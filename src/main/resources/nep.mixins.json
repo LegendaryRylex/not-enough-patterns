@@ -16,6 +16,7 @@
   ],
   "client": [
     "AEBaseScreenMixin",
+    "EncodingHelperMixin",
     "PatternProviderScreenMixin",
     "ScreenStyleAccessor"
   ],

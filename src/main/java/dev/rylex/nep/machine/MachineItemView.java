@@ -6,12 +6,6 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * The face a hopper or pipe sees: staging slots followed by result slots that only give items up.
- * The controller passes no result handler at all, because its finished items owe themselves to the
- * pattern provider and must never be pullable from the side. A demand limited view takes only what
- * an outstanding job is still short of, so loose ingredients can never sit there naming no recipe.
- */
 public final class MachineItemView implements IItemHandler {
 
     private final IItemHandler input;

@@ -17,13 +17,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
-/**
- * The colour an arbitrary item reads as, for gauges and bars that stand in for a stack. A registered
- * {@code ItemColor} is preferred, since a mod that tints one greyscale texture per variant (Mystical
- * Agriculture's essences being the case in point) keeps its palette there; failing that the item's
- * particle sprite is averaged, which covers untinted items from any mod. Results are cached per item
- * variant and dropped on a resource reload, because the sprite behind them can change.
- */
 @EventBusSubscriber(modid = Nep.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class StackTint {
 
