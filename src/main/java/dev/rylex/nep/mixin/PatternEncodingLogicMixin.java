@@ -11,6 +11,7 @@ import dev.rylex.nep.pattern.NepPattern;
 import dev.rylex.nep.pattern.encoding.PatternContents;
 import dev.rylex.nep.pattern.encoding.PatternEncodeGuard;
 import dev.rylex.nep.pattern.encoding.PatternGrid;
+import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -32,6 +33,9 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
     @Unique
     private static final String NEP_RECIPE_TAG = "nepRecipe";
 
+    @Unique
+    private static final String NEP_RECIPE_VIEWER_TAG = "nepRecipeViewer";
+
     @Shadow
     @Final
     private IPatternTerminalLogicHost host;
@@ -49,8 +53,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
     public abstract void saveChanges();
 
     @Unique
-    @Nullable
-    private Identifier nep$recipe;
+    private PatternOrigin nep$origin = PatternOrigin.MANUAL;
 
     @Unique
     @Nullable
@@ -65,14 +68,13 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
     }
 
     @Override
-    @Nullable
-    public Identifier nep$recipeId() {
-        return nep$recipe;
+    public PatternOrigin nep$origin() {
+        return nep$origin;
     }
 
     @Override
-    public void nep$setRecipeId(@Nullable Identifier recipe) {
-        this.nep$recipe = recipe;
+    public void nep$setOrigin(PatternOrigin origin) {
+        this.nep$origin = origin;
         this.nep$version++;
         saveChanges();
     }
@@ -84,13 +86,13 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
 
     @Inject(method = "onEncodedInputChanged", at = @At("HEAD"))
     private void nep$forgetRecipeOnInputChange(CallbackInfo ci) {
-        this.nep$recipe = null;
+        this.nep$origin = PatternOrigin.MANUAL;
         this.nep$version++;
     }
 
     @Inject(method = "onEncodedOutputChanged", at = @At("HEAD"))
     private void nep$forgetRecipeOnOutputChange(CallbackInfo ci) {
-        this.nep$recipe = null;
+        this.nep$origin = PatternOrigin.MANUAL;
         this.nep$version++;
     }
 
@@ -125,7 +127,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
                 PatternGrid.fill(getEncodedInputInv(), PatternContents.condenseInputs(details));
                 PatternGrid.fill(getEncodedOutputInv(), details.getOutputs());
             }
-            this.nep$recipe = nepPattern.nepRecipeId();
+            this.nep$origin = PatternOrigin.ofRecipe(nepPattern.nepRecipeId());
             this.nep$version++;
             return;
         }
@@ -134,19 +136,25 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
         }
         Identifier source = pattern.get(NepComponents.SOURCE_RECIPE.get());
         if (source != null) {
-            this.nep$recipe = source;
+            this.nep$origin = PatternOrigin.ofRecipe(source);
             this.nep$version++;
         }
     }
 
     @Inject(method = "writeToNBT", at = @At("RETURN"))
     private void nep$writeToNBT(ValueOutput output, CallbackInfo ci) {
-        output.storeNullable(NEP_RECIPE_TAG, Identifier.CODEC, nep$recipe);
+        output.storeNullable(NEP_RECIPE_TAG, Identifier.CODEC, nep$origin.recipe());
+        if (nep$origin.recipeViewer()) {
+            output.putBoolean(NEP_RECIPE_VIEWER_TAG, true);
+        }
     }
 
     @Inject(method = "readFromNBT", at = @At("RETURN"))
     private void nep$readFromNBT(ValueInput input, CallbackInfo ci) {
-        this.nep$recipe = input.read(NEP_RECIPE_TAG, Identifier.CODEC).orElse(null);
+        Identifier recipe = input.read(NEP_RECIPE_TAG, Identifier.CODEC).orElse(null);
+        this.nep$origin = input.getBooleanOr(NEP_RECIPE_VIEWER_TAG, false)
+                ? PatternOrigin.RECIPE_VIEWER
+                : PatternOrigin.ofRecipe(recipe);
         this.nep$version++;
     }
 }

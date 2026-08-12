@@ -6,12 +6,6 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
-/**
- * The face a hopper or pipe sees: staging slots followed by result slots that only give items up.
- * The controller passes no result handler at all, because its finished items owe themselves to the
- * pattern provider and must never be pullable from the side. A demand limited view takes only what
- * an outstanding job is still short of, so loose ingredients can never sit there naming no recipe.
- */
 public final class MachineItemView implements ResourceHandler<ItemResource> {
 
     private final ResourceHandler<ItemResource> input;

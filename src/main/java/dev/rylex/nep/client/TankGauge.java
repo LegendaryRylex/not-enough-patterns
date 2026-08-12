@@ -6,14 +6,6 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 
-/**
- * A tank fill drawn from a greyscale strip multiplied by the contents' own colour, the same way a mod
- * tints one texture per variant. The strip carries the shading and grain; nothing in it is specific to
- * what is being held, so repainting the texture restyles every tank without touching code, and nothing
- * in it stands for a quantity, since the well is a fixed height while capacity is configurable. The
- * bottom of the strip is sourced so the pattern stays fixed to the well as the level moves, and the
- * surface row is blitted over the fill line lightened, which reads as a meniscus.
- */
 public final class TankGauge {
 
     private static final Identifier TEXTURE = Nep.id("textures/gui/essence_tank.png");

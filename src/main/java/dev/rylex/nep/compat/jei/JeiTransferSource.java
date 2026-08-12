@@ -15,7 +15,6 @@ public interface JeiTransferSource {
         <R extends Recipe<?>> void add(
                 IRecipeType<RecipeHolder<R>> recipeType, PatternTransferHandler.Extractor<RecipeHolder<R>> extractor);
 
-        /** For categories JEI exposes as the bare recipe rather than its {@link RecipeHolder}. */
         <T> void addUnwrapped(
                 IRecipeType<T> recipeType,
                 PatternTransferHandler.Extractor<T> extractor,

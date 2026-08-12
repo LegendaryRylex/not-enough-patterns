@@ -7,15 +7,6 @@ import net.minecraft.world.item.crafting.RecipeMap;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * A value derived from a level's recipes, held per logical side.
- *
- * <p>A single-player client and its integrated server deserialize their own recipe instances, so one static field
- * shared by both sides hands whichever side asked second the other side's objects, and identity comparisons against
- * them silently fail. Each side therefore gets its own entry, tagged with the {@link RecipeMap} it was built from.
- * That tag is also the invalidation: a datapack reload builds the server a new map and pushes the client a new one,
- * so an entry from the previous generation can never be served.
- */
 public final class RecipeCache<T> {
 
     private static final List<RecipeCache<?>> ALL = new CopyOnWriteArrayList<>();

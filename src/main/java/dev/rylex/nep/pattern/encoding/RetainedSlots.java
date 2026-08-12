@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -20,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 public final class RetainedSlots {
     private RetainedSlots() {}
 
-    public static List<Integer> compute(PatternEncodingLogic logic, @Nullable Identifier recipe, Level level) {
+    public static List<Integer> compute(PatternEncodingLogic logic, PatternOrigin origin, Level level) {
         if (logic.getMode() != EncodingMode.PROCESSING) {
             return List.of();
         }
@@ -29,7 +28,7 @@ public final class RetainedSlots {
         if (encoded == null) {
             return List.of();
         }
-        ItemStack converted = PatternConverters.convertQuietly(recipe, encoded, level);
+        ItemStack converted = PatternConverters.convertQuietly(origin, encoded, level);
         if (converted == null || !(PatternDetailsHelper.decodePattern(converted, level) instanceof RecipePattern p)) {
             return List.of();
         }

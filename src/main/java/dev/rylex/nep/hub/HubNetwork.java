@@ -8,12 +8,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Finds the network a hub returns its results to. A hub is not itself a grid device, so it borrows
- * the grid of whatever it is standing against, which in practice is the Pattern Provider that feeds
- * it. An inactive node is remembered only so the screen can tell the difference between a network
- * that is switched off and no network at all.
- */
 public final class HubNetwork {
 
     private HubNetwork() {}

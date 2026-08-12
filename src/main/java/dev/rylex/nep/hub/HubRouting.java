@@ -11,12 +11,6 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
-/**
- * Spreads one ME key across the inventories a hub is linked to. The whole call runs inside a single
- * transaction, so every slot and tank is visited at most once and a simulation reports what the
- * linked machine can really take rather than counting the same empty slot again for every stack a
- * large request is cut into.
- */
 public final class HubRouting {
 
     private HubRouting() {}

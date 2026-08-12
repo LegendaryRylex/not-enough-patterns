@@ -13,17 +13,6 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Recipe lookup for both logical sides.
- *
- * <p>A client no longer holds the loaded recipes: only the types a mod asked for through {@code OnDatapackSyncEvent}
- * reach it, and they arrive as a standalone {@link RecipeMap} rather than through the level. The two sides therefore
- * resolve differently, and every nep lookup goes through here so a caller never has to know which side it is on. Every
- * type nep reads client-side must be requested from the server, or the client sees no candidates at all.
- *
- * <p>A sync replaces the client map wholesale and a datapack reload replaces the server's, so the map instance itself
- * identifies a generation of recipes: {@link RecipeCache} keys on it and needs no invalidation event.
- */
 public final class Recipes {
     private Recipes() {}
 

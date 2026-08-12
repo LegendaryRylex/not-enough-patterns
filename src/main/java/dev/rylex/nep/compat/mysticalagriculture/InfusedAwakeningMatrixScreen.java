@@ -24,12 +24,12 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
 
     private static final Identifier TEXTURE = Nep.id("textures/gui/infused_awakening_matrix.png");
 
-    private static final int TITLE_ON_PANEL = 0xFF22331C;
-    private static final int READOUT_TEXT = 0xFFE8F2D0;
-    private static final int READOUT_DIM = 0xFFA8C882;
+    private static final int TITLE_ON_PANEL = 0xFF3A2E1C;
+    private static final int READOUT_TEXT = 0xFFF2E8D0;
+    private static final int READOUT_DIM = 0xFFC8A882;
 
-    private static final int BAR_TRACK = 0x152A0C;
-    private static final int CRAFT_FILL = 0x8CC820;
+    private static final int BAR_TRACK = 0x3D0D0D;
+    private static final int CRAFT_FILL = 0xC74F14;
     private static final int TANK_FILL = 0x8CC820;
 
     @Nullable

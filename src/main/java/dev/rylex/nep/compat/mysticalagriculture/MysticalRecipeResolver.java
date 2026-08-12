@@ -99,10 +99,6 @@ final class MysticalRecipeResolver {
                 candidate -> resultOf(candidate.value()).getItem() == result ? candidate : null);
     }
 
-    /**
-     * Both altar recipes carry a fixed output template and short-circuit on an empty grid, so an empty input asks
-     * them what they produce without standing in a crafting inventory. {@code Recipe} itself no longer offers that.
-     */
     static ItemStack resultOf(Recipe<CraftingInput> recipe) {
         return recipe.assemble(CraftingInput.EMPTY);
     }

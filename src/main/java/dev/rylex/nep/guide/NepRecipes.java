@@ -40,9 +40,6 @@ public final class NepRecipes {
         NeoForge.EVENT_BUS.addListener(NepRecipes::onDatapackSync);
     }
 
-    /**
-     * The guide reads these banners on the client, which now holds only the recipe types a mod asks for.
-     */
     private static void onDatapackSync(OnDatapackSyncEvent event) {
         event.sendRecipes(MODULE_STATUS.get());
     }

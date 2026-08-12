@@ -5,10 +5,18 @@ import org.jetbrains.annotations.Nullable;
 
 public interface PatternRecipeHolder {
 
-    @Nullable
-    Identifier nep$recipeId();
+    PatternOrigin nep$origin();
 
-    void nep$setRecipeId(@Nullable Identifier recipe);
+    void nep$setOrigin(PatternOrigin origin);
+
+    @Nullable
+    default Identifier nep$recipeId() {
+        return nep$origin().recipe();
+    }
+
+    default void nep$setRecipeId(@Nullable Identifier recipe) {
+        nep$setOrigin(PatternOrigin.ofRecipe(recipe));
+    }
 
     default int nep$encodingVersion() {
         return 0;

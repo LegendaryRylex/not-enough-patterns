@@ -43,23 +43,27 @@ public final class PatternConverters {
     }
 
     @Nullable
-    public static ItemStack convert(@Nullable Identifier recipe, ItemStack encoded, Player player) {
-        return convert(recipe, encoded, player.level(), player);
+    public static ItemStack convert(PatternOrigin origin, ItemStack encoded, Player player) {
+        return convert(origin, encoded, player.level(), player);
     }
 
     @Nullable
-    public static ItemStack convertQuietly(@Nullable Identifier recipe, ItemStack encoded, Level level) {
-        return convert(recipe, encoded, level, null);
+    public static ItemStack convertQuietly(PatternOrigin origin, ItemStack encoded, Level level) {
+        return convert(origin, encoded, level, null);
     }
 
     @Nullable
     private static ItemStack convert(
-            @Nullable Identifier recipe, ItemStack encoded, Level level, @Nullable Player feedbackTo) {
+            PatternOrigin origin, ItemStack encoded, Level level, @Nullable Player feedbackTo) {
+        if (origin.recipeViewer()) {
+            return null;
+        }
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, level);
         if (details == null) {
             return null;
         }
 
+        Identifier recipe = origin.recipe();
         RecipeHolder<?> holder = recipe == null ? null : Recipes.byId(level, recipe);
         if (holder != null) {
             List<ItemStack> converterClaims = new ArrayList<>();

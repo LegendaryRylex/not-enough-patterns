@@ -473,11 +473,6 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         return start(result, taken, essences);
     }
 
-    /**
-     * An essence ingredient can list several acceptable items, so the tanks decide which one this craft uses. Amounts
-     * already promised to earlier vessels of the same craft are subtracted first, or two vessels wanting the same
-     * essence would both read the whole tank as available.
-     */
     @Nullable
     private AEItemKey stockedEssence(SizedIngredient essence, Map<AEItemKey, Long> claimed) {
         for (AEItemKey key : IngredientMatching.itemOptions(essence.ingredient(), level)) {

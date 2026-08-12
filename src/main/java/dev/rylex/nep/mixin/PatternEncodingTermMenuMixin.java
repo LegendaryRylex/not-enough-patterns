@@ -11,11 +11,11 @@ import dev.rylex.nep.net.RetainedSlotsPayload;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
 import dev.rylex.nep.pattern.encoding.PatternEncodeGuard;
 import dev.rylex.nep.pattern.encoding.PatternGrid;
+import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
 import dev.rylex.nep.pattern.encoding.RetainedSlotHolder;
 import dev.rylex.nep.pattern.encoding.RetainedSlots;
 import java.util.List;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -49,18 +49,17 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
     private int nep$syncedVersion = Integer.MIN_VALUE;
 
     @Override
-    @Nullable
-    public Identifier nep$recipeId() {
-        return ((PatternRecipeHolder) encodingLogic).nep$recipeId();
+    public PatternOrigin nep$origin() {
+        return ((PatternRecipeHolder) encodingLogic).nep$origin();
     }
 
     @Override
-    public void nep$setRecipeId(@Nullable Identifier recipe) {
+    public void nep$setOrigin(PatternOrigin origin) {
         PatternEncodingTermMenu menu = (PatternEncodingTermMenu) (Object) this;
         if (menu.getPlayer().level().isClientSide()) {
-            ClientPacketDistributor.sendToServer(PatternRecipePayload.of(recipe));
+            ClientPacketDistributor.sendToServer(new PatternRecipePayload(origin));
         } else {
-            ((PatternRecipeHolder) encodingLogic).nep$setRecipeId(recipe);
+            ((PatternRecipeHolder) encodingLogic).nep$setOrigin(origin);
         }
     }
 
@@ -93,7 +92,7 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
             return;
         }
         nep$syncedVersion = version;
-        List<Integer> slots = RetainedSlots.compute(encodingLogic, nep$recipeId(), player.level());
+        List<Integer> slots = RetainedSlots.compute(encodingLogic, nep$origin(), player.level());
         if (slots.equals(nep$retainedSlots)) {
             return;
         }
@@ -133,7 +132,7 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
         if (player.level().isClientSide()) {
             return encoded;
         }
-        ItemStack converted = PatternConverters.convert(nep$recipeId(), encoded, player);
+        ItemStack converted = PatternConverters.convert(nep$origin(), encoded, player);
         if (converted == null) {
             return encoded;
         }

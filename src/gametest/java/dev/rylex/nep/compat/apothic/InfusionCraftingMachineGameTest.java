@@ -13,6 +13,7 @@ import dev.rylex.nep.NepItems;
 import dev.rylex.nep.pattern.EnchantingPattern;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
+import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import dev.shadowsoffire.apothic_enchanting.Ench;
 import dev.shadowsoffire.apothic_enchanting.table.RavenTableStats;
 import dev.shadowsoffire.apothic_enchanting.table.infusion.InfusionRecipe;
@@ -74,6 +75,9 @@ public final class InfusionCraftingMachineGameTest {
                         "a_processing_pattern_carrying_an_infusion_is_upgraded",
                         InfusionCraftingMachineGameTest
                                 ::aProcessingPatternCarryingAnInfusionIsUpgradedToAnEnchantingPattern)
+                .add(
+                        "a_recipe_viewer_transfer_is_left_as_a_processing_pattern",
+                        InfusionCraftingMachineGameTest::aRecipeViewerTransferIsLeftAsAProcessingPattern)
                 .add(
                         "a_vanilla_enchanting_table_takes_no_patterns",
                         InfusionCraftingMachineGameTest::aVanillaEnchantingTableTakesNoPatterns);
@@ -376,7 +380,8 @@ public final class InfusionCraftingMachineGameTest {
                 List.of(new GenericStack(
                         AEItemKey.of(accepted(holder.value(), helper.getLevel()).get(0)), 1)),
                 List.of(GenericStack.fromItemStack(holder.value().getOutput().create())));
-        ItemStack converted = PatternConverters.convertQuietly(holder.id().identifier(), bare, helper.getLevel());
+        ItemStack converted = PatternConverters.convertQuietly(
+                PatternOrigin.ofRecipe(holder.id().identifier()), bare, helper.getLevel());
         helper.assertTrue(converted != null, "the infusion recipe encoded no pattern");
         helper.assertTrue(
                 converted.is(NepItems.ENCHANTING_PATTERN.get()),
@@ -397,7 +402,7 @@ public final class InfusionCraftingMachineGameTest {
         RecipeHolder<InfusionRecipe> holder = simpleRecipe(helper);
         IPatternDetails processing = patternFor(helper, holder);
         ItemStack converted = PatternConverters.convertQuietly(
-                null, processing.getDefinition().toStack(), helper.getLevel());
+                PatternOrigin.MANUAL, processing.getDefinition().toStack(), helper.getLevel());
         helper.assertTrue(
                 converted != null && converted.is(NepItems.ENCHANTING_PATTERN.get()),
                 "a processing pattern paying a whole infusion was not recognised as one: " + converted);
@@ -410,6 +415,20 @@ public final class InfusionCraftingMachineGameTest {
         helper.assertTrue(
                 machine.pushPattern(details, inputsOf(details), Direction.UP),
                 "the table refused the pattern it upgraded the processing pattern into");
+        helper.succeed();
+    }
+
+    public static void aRecipeViewerTransferIsLeftAsAProcessingPattern(GameTestHelper helper) {
+        placeTable(helper);
+
+        RecipeHolder<InfusionRecipe> holder = simpleRecipe(helper);
+        IPatternDetails processing = patternFor(helper, holder);
+        ItemStack converted = PatternConverters.convertQuietly(
+                PatternOrigin.RECIPE_VIEWER, processing.getDefinition().toStack(), helper.getLevel());
+        helper.assertTrue(
+                converted == null,
+                "a recipe viewer filled these slots for a machine NEP does not drive, and NEP still claimed them as "
+                        + converted + "; the pattern belongs to whichever machine the open category was for");
         helper.succeed();
     }
 
