@@ -81,6 +81,7 @@ public final class Nep {
             Upgrades.add(NepItems.IMPORT_CARD, AEBlocks.PATTERN_PROVIDER.block(), 1);
             registerProviderUpgrade("advanced_ae", "adv_pattern_provider", "small_adv_pattern_provider");
             registerProviderUpgrade("extendedae", "ex_pattern_provider");
+            registerProviderUpgrade("expandedae", "exp_pattern_provider");
             registerProviderUpgrade("megacells", "mega_pattern_provider");
             registerProviderUpgrade("appliedcreate", "andesite_pattern_provider", "brass_pattern_provider");
             registerProviderUpgrade("ae2_draconic_fusion_autocrafter", "me_draconic_pattern_provider");

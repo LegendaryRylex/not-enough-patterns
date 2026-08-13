@@ -55,6 +55,9 @@ public abstract class PatternProviderScreenMixin extends AEBaseScreen<PatternPro
         if (mods.isLoaded("ae2helpers")) {
             offset += ImportUpgradePanels.PANEL_SPACING;
         }
+        if (mods.isLoaded("expandedae") && !mods.isLoaded("appflux")) {
+            offset += ImportUpgradePanels.PANEL_SPACING;
+        }
         return offset;
     }
 }

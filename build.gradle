@@ -75,6 +75,7 @@ var skippableRuntimeMods = [
         eae    : [[group: 'curse.maven', module: 'ex-pattern-provider-892005'],
                   [group: 'curse.maven', module: 'glodium-957920']],
         appflux: [[group: 'curse.maven', module: 'applied-flux-965012']],
+        expae  : [[group: 'curse.maven', module: 'expanded-ae-1213351']],
         mega   : [[group: 'curse.maven', module: 'mega-cells-622112']],
         ac     : [[group: 'curse.maven', module: 'applied-create-1474758'],
                   [group: 'curse.maven', module: 'kotlin-for-forge-351264']],
@@ -82,7 +83,12 @@ var skippableRuntimeMods = [
         wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
 ]
 
-var impliedSkips = [create: ['sable', 'ac', 'cna'], de: ['dfa'], wtlib: ['aae', 'eae', 'appflux'], eae: ['appflux']]
+var impliedSkips = [
+        create: ['sable', 'ac', 'cna'],
+        de    : ['dfa'],
+        wtlib : ['aae', 'eae', 'appflux', 'expae'],
+        eae   : ['appflux'],
+]
 
 var skipModsLocal = file('skip_mods.local')
 var fullClasspathRequested = gradle.startParameter.taskNames.any {
@@ -233,6 +239,7 @@ dependencies {
     localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
     localRuntime "curse.maven:glodium-957920:${glodium_file}"
     localRuntime "curse.maven:applied-flux-965012:${appliedflux_file}"
+    localRuntime "curse.maven:expanded-ae-1213351:${expandedae_file}"
     localRuntime "curse.maven:mega-cells-622112:${megacells_file}"
     localRuntime "curse.maven:applied-create-1474758:${appliedcreate_file}"
     localRuntime "curse.maven:kotlin-for-forge-351264:${kotlinforforge_file}"
@@ -325,6 +332,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             ae2wtlib_version_range : ae2wtlib_version_range,
             advanced_ae_version_range: advanced_ae_version_range,
             extendedae_version_range: extendedae_version_range,
+            expandedae_version_range: expandedae_version_range,
             megacells_version_range: megacells_version_range,
             draconic_evolution_version_range: draconic_evolution_version_range,
             compact_crafting_version_range: compact_crafting_version_range,

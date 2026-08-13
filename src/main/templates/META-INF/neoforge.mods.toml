@@ -122,6 +122,13 @@ ordering="AFTER"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
+modId="expandedae"
+type="optional"
+versionRange="${expandedae_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
 modId="megacells"
 type="optional"
 versionRange="${megacells_version_range}"

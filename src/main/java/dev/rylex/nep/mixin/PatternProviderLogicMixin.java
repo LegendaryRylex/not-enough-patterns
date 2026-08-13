@@ -32,7 +32,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(PatternProviderLogic.class)
+@Mixin(value = PatternProviderLogic.class, priority = 1500)
 public abstract class PatternProviderLogicMixin implements ImportUpgradeHost, ImportTrackerHost {
 
     @Shadow

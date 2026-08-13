@@ -59,6 +59,12 @@ public final class AddonProviderImportCardGameTest {
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void theExpandedAeProviderTakesTheCard(GameTestHelper helper) {
+        assertProviderTakesTheCard(helper, "expandedae", "exp_pattern_provider");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
     public static void theMegaProviderTakesTheCard(GameTestHelper helper) {
         assertProviderTakesTheCard(helper, "megacells", "mega_pattern_provider");
         helper.succeed();
