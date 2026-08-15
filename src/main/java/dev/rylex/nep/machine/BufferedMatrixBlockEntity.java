@@ -15,7 +15,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.util.Mth;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
@@ -33,6 +32,8 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class BufferedMatrixBlockEntity extends BlockEntity implements MenuProvider, MatrixHost, Clearable {
 
+    private static final String CHANNEL_FAULT_KEY = "ChannelFault";
+
     protected final ItemStackHandler inputBuffer;
     protected final ItemStackHandler outputBuffer;
     protected final MatrixGridNode power;
@@ -46,12 +47,12 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
 
     protected ItemStack activeResult = ItemStack.EMPTY;
     protected boolean powerFault;
+    protected boolean channelFault;
     protected boolean outputBlocked;
     protected boolean scanNeeded = true;
     protected int lastComparator = -1;
     protected int syncedSignature = Integer.MIN_VALUE;
     protected int runningGrace;
-    protected RedstoneMode redstoneMode = RedstoneMode.OUTPUT;
 
     protected BufferedMatrixBlockEntity(
             BlockEntityType<?> type,
@@ -61,26 +62,29 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
             int outputSlots,
             Item nodeVisual,
             int idleMeDrain,
+            int channels,
             String nodeLabel) {
         super(type, pos, state);
-        this.inputBuffer = new ItemStackHandler(inputSlots) {
+        this.inputBuffer = new OverstackedItemHandler(inputSlots) {
             @Override
             protected void onContentsChanged(int slot) {
                 markScanNeeded();
                 setChanged();
             }
         };
-        this.outputBuffer = new ItemStackHandler(outputSlots) {
+        this.outputBuffer = new OverstackedItemHandler(outputSlots) {
             @Override
             protected void onContentsChanged(int slot) {
                 markScanNeeded();
                 setChanged();
             }
         };
-        this.power = new MatrixGridNode(this, nodeVisual, idleMeDrain, nodeLabel);
+        this.power = new MatrixGridNode(this, nodeVisual, idleMeDrain, channels, nodeLabel);
     }
 
-    protected abstract int comparatorOutput();
+    public int comparatorOutput() {
+        return ComparatorSignal.of(outputBuffer);
+    }
 
     protected abstract int readoutSignature();
 
@@ -115,6 +119,10 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         return powerFault;
     }
 
+    public boolean hasChannelFault() {
+        return channelFault;
+    }
+
     public boolean isOutputBlocked() {
         return outputBlocked;
     }
@@ -125,20 +133,6 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
 
     public List<GenericStack> missingInputs() {
         return List.copyOf(missingInputs);
-    }
-
-    public RedstoneMode redstoneMode() {
-        return redstoneMode;
-    }
-
-    public void cycleRedstoneMode() {
-        redstoneMode = redstoneMode.next();
-        setChanged();
-        Level level = getLevel();
-        if (level != null) {
-            refreshComparator(level);
-            syncIfChanged(level);
-        }
     }
 
     public IInWorldGridNodeHost gridNodeHost() {
@@ -154,10 +148,12 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
     }
 
     protected void setPowerFault(boolean fault) {
-        if (powerFault == fault) {
+        boolean missingChannel = fault && power.missingChannel();
+        if (powerFault == fault && channelFault == missingChannel) {
             return;
         }
         powerFault = fault;
+        channelFault = missingChannel;
         if (!fault) {
             markScanNeeded();
         }
@@ -173,21 +169,11 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
     }
 
     protected void syncIfChanged(Level level) {
-        int signature = readoutSignature();
+        int signature = 31 * readoutSignature() + Boolean.hashCode(channelFault);
         if (signature != syncedSignature) {
             syncedSignature = signature;
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
-    }
-
-    protected int statusSignal() {
-        if (runningGrace > 0) {
-            return Mth.clamp(1 + Mth.floor(craftProgress() * 13.0F), 1, 14);
-        }
-        if (!activeResult.isEmpty()) {
-            return 15;
-        }
-        return owed.isEmpty() ? 0 : 1;
     }
 
     protected void setMissingInputs(List<GenericStack> missing) {
@@ -199,7 +185,7 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
     }
 
     protected boolean fitsInOutput(ItemStack result) {
-        ItemStackHandler probe = new ItemStackHandler(outputBuffer.getSlots());
+        ItemStackHandler probe = new OverstackedItemHandler(outputBuffer.getSlots());
         for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
             probe.setStackInSlot(slot, outputBuffer.getStackInSlot(slot).copy());
         }
@@ -211,12 +197,12 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
             long count = entry.getValue();
             while (count > 0) {
-                int chunk = (int) Math.min(count, entry.getKey().toStack(1).getMaxStackSize());
+                int chunk = (int) Math.min(count, OverstackedItemHandler.SLOT_LIMIT);
                 stacks.add(entry.getKey().toStack(chunk));
                 count -= chunk;
             }
         }
-        ItemStackHandler probe = new ItemStackHandler(inputBuffer.getSlots());
+        ItemStackHandler probe = new OverstackedItemHandler(inputBuffer.getSlots());
         for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
             probe.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
         }
@@ -258,12 +244,12 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         boolean simulate = mode == Actionable.SIMULATE;
         ItemStackHandler target = inputBuffer;
         if (simulate) {
-            target = new ItemStackHandler(inputBuffer.getSlots());
+            target = new OverstackedItemHandler(inputBuffer.getSlots());
             for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
                 target.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
             }
         }
-        int maxStack = key.toStack(1).getMaxStackSize();
+        int maxStack = OverstackedItemHandler.SLOT_LIMIT;
         long remaining = amount;
         while (remaining > 0) {
             int chunk = (int) Math.min(remaining, maxStack);
@@ -337,6 +323,18 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         } else {
             map.remove(item);
         }
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putBoolean(CHANNEL_FAULT_KEY, channelFault);
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        channelFault = tag.getBoolean(CHANNEL_FAULT_KEY);
     }
 
     @Override

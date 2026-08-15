@@ -12,7 +12,6 @@ import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.ConfigOverrides;
 import dev.rylex.nep.Nep;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -106,53 +105,16 @@ public final class SequencedAssemblyControllerGameTest {
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void comparatorReadsTheOutputBufferByDefault(GameTestHelper helper) {
+    public static void comparatorReadsTheOutputBufferAndNothingElse(GameTestHelper helper) {
         SequencedAssemblyControllerBlockEntity controller = place(helper);
 
-        helper.assertTrue(
-                controller.redstoneMode() == RedstoneMode.OUTPUT, "a fresh controller did not default to Output");
         helper.assertTrue(comparator(helper) == 0, "an empty controller emitted a signal");
+
+        controller.getBuffer().insertItem(0, new ItemStack(Items.COBBLESTONE, 64), false);
+        helper.assertTrue(comparator(helper) == 0, "the staged input buffer reached the comparator");
 
         controller.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 64), false);
         helper.assertTrue(comparator(helper) > 0, "a stocked output buffer emitted no signal");
-        helper.succeed();
-    }
-
-    @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void inputModeReadsTheStagedBufferInstead(GameTestHelper helper) {
-        SequencedAssemblyControllerBlockEntity controller = place(helper);
-        controller.getBuffer().insertItem(0, new ItemStack(Items.COBBLESTONE, 64), false);
-
-        helper.assertTrue(comparator(helper) == 0, "Output mode reported the staged input");
-
-        controller.cycleRedstoneMode();
-        controller.cycleRedstoneMode();
-        helper.assertTrue(controller.redstoneMode() == RedstoneMode.INPUT, "cycling twice did not reach Input mode");
-        helper.assertTrue(comparator(helper) > 0, "Input mode ignored the staged input");
-        helper.succeed();
-    }
-
-    @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void statusModeIsSilentWhileNothingIsPending(GameTestHelper helper) {
-        SequencedAssemblyControllerBlockEntity controller = place(helper);
-        controller.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 64), false);
-
-        controller.cycleRedstoneMode();
-        helper.assertTrue(controller.redstoneMode() == RedstoneMode.STATUS, "cycling once did not reach Status mode");
-        helper.assertTrue(comparator(helper) == 0, "an idle controller reported a status signal");
-        helper.succeed();
-    }
-
-    @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void cyclingTheModeReturnsToWhereItStarted(GameTestHelper helper) {
-        SequencedAssemblyControllerBlockEntity controller = place(helper);
-        RedstoneMode start = controller.redstoneMode();
-
-        controller.cycleRedstoneMode();
-        controller.cycleRedstoneMode();
-        controller.cycleRedstoneMode();
-
-        helper.assertTrue(controller.redstoneMode() == start, "cycling through every mode did not return to the start");
         helper.succeed();
     }
 

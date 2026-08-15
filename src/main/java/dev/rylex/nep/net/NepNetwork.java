@@ -1,6 +1,7 @@
 package dev.rylex.nep.net;
 
 import dev.rylex.nep.client.MachineHubStateClient;
+import dev.rylex.nep.hub.MachineHubMenu;
 import dev.rylex.nep.hub.MachineHubState;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
 import dev.rylex.nep.pattern.encoding.RetainedSlotHolder;
@@ -17,6 +18,10 @@ public final class NepNetwork {
                         PatternRecipePayload.TYPE,
                         PatternRecipePayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() -> handleRecipe(payload, context)))
+                .playToServer(
+                        HubLinkEditPayload.TYPE,
+                        HubLinkEditPayload.STREAM_CODEC,
+                        (payload, context) -> context.enqueueWork(() -> handleHubLinkEdit(payload, context)))
                 .playToClient(
                         RetainedSlotsPayload.TYPE,
                         RetainedSlotsPayload.STREAM_CODEC,
@@ -31,6 +36,13 @@ public final class NepNetwork {
         Player player = context.player();
         if (player.containerMenu instanceof PatternRecipeHolder holder) {
             holder.nep$setOrigin(payload.origin());
+        }
+    }
+
+    private static void handleHubLinkEdit(HubLinkEditPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (player.containerMenu instanceof MachineHubMenu menu) {
+            menu.applyEdit(player, payload);
         }
     }
 

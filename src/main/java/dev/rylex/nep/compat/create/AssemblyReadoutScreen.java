@@ -1,7 +1,9 @@
 package dev.rylex.nep.compat.create;
 
+import dev.rylex.nep.NepIcons;
+import dev.rylex.nep.client.MatrixScreen;
+import dev.rylex.nep.client.NepGuide;
 import dev.rylex.nep.client.ReadoutButton;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.menu.MachineMenu;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +11,6 @@ import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -37,12 +38,6 @@ abstract class AssemblyReadoutScreen<T extends MachineMenu> extends AbstractCont
 
     @Nullable
     protected ReadoutButton clearPending;
-
-    @Nullable
-    protected ReadoutButton redstoneModeButton;
-
-    @Nullable
-    private RedstoneMode lastTooltipMode;
 
     protected AssemblyReadoutScreen(
             T menu,
@@ -81,10 +76,11 @@ abstract class AssemblyReadoutScreen<T extends MachineMenu> extends AbstractCont
         }
     }
 
-    protected ReadoutButton addRightButton(int index, String glyph, String nameKey, String hintKey, Runnable action) {
+    protected ReadoutButton addRightButton(
+            int index, Component glyph, String nameKey, String hintKey, Runnable action) {
         ReadoutButton button = addRenderableWidget(new ReadoutButton(
                 leftPos + imageWidth - index * ReadoutButton.SIZE - 4 - 4 * index,
-                topPos + 3,
+                topPos + 4,
                 glyph,
                 Component.translatable(nameKey),
                 Component.translatable(hintKey).withStyle(ChatFormatting.GRAY),
@@ -93,18 +89,13 @@ abstract class AssemblyReadoutScreen<T extends MachineMenu> extends AbstractCont
         return button;
     }
 
-    protected void updateRedstoneButton(RedstoneMode mode) {
-        if (redstoneModeButton == null || mode == lastTooltipMode) {
-            return;
-        }
-        lastTooltipMode = mode;
-        redstoneModeButton.setGlyph(mode.glyph());
-        redstoneModeButton.setTooltip(Tooltip.create(Component.empty()
-                .append(Component.translatable("gui.nep.redstone_mode"))
-                .append("\n")
-                .append(Component.translatable(mode.key()).withStyle(ChatFormatting.YELLOW))
-                .append("\n")
-                .append(Component.translatable("gui.nep.redstone_mode.hint").withStyle(ChatFormatting.GRAY))));
+    protected ReadoutButton addHelpButton(String page) {
+        return addRightButton(
+                MatrixScreen.HELP_BUTTON_INDEX,
+                NepIcons.HELP,
+                "gui.nep.help",
+                "gui.nep.help.hint",
+                () -> NepGuide.open(page));
     }
 
     protected void clearHotspots() {

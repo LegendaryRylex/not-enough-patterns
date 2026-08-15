@@ -13,7 +13,7 @@ import com.brandon3055.draconicevolution.init.DEContent;
 import com.brandon3055.draconicevolution.init.ItemData;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
-import dev.rylex.nep.machine.RedstoneMode;
+import dev.rylex.nep.machine.ComparatorSignal;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
@@ -50,7 +50,8 @@ public final class FusionMatrixGameTest {
     private static final String BATCH = "nep_fusion_matrix";
 
     private static final BlockPos MATRIX = new BlockPos(2, 1, 2);
-    private static final BlockPos ENERGY_CELL = new BlockPos(2, 1, 3);
+    private static final BlockPos ME_CONTROLLER = new BlockPos(2, 1, 3);
+    private static final BlockPos ENERGY_CELL = ME_CONTROLLER.above();
 
     private static final int CHARGE_SLACK_TICKS = 20;
 
@@ -64,6 +65,7 @@ public final class FusionMatrixGameTest {
     }
 
     private static void powerUp(GameTestHelper helper) {
+        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
         helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
     }
 
@@ -1268,40 +1270,20 @@ public final class FusionMatrixGameTest {
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
-    public static void everyComparatorModeReadsItsOwnSource(GameTestHelper helper) {
+    public static void theComparatorReadsTheOutputBufferAndNothingElse(GameTestHelper helper) {
         FusionMatrixBlockEntity matrix = place(helper);
-        helper.assertTrue(
-                matrix.redstoneMode() == RedstoneMode.OUTPUT,
-                "a fresh matrix starts on " + matrix.redstoneMode() + " rather than the output buffer");
-        helper.assertTrue(matrix.comparatorOutput() == 0, "an empty matrix emitted a signal on output mode");
+        helper.assertTrue(matrix.comparatorOutput() == 0, "an empty matrix emitted a signal");
 
-        matrix.getOutputBuffer().insertItem(0, new ItemStack(Items.NETHERITE_BLOCK, 32), false);
         matrix.getInputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 64), false);
         helper.assertTrue(
-                matrix.comparatorOutput() == RedstoneMode.fullness(matrix.getOutputBuffer()),
-                "output mode emitted " + matrix.comparatorOutput() + " instead of the output buffer's fullness of "
-                        + RedstoneMode.fullness(matrix.getOutputBuffer()));
-
-        matrix.cycleRedstoneMode();
-        helper.assertTrue(
-                matrix.redstoneMode() == RedstoneMode.STATUS,
-                "one click moved the mode to " + matrix.redstoneMode() + " rather than status");
-        helper.assertTrue(
                 matrix.comparatorOutput() == 0,
-                "status mode emitted " + matrix.comparatorOutput() + " on a matrix that owes nothing and is idle");
+                "a stocked input buffer emitted " + matrix.comparatorOutput() + " rather than nothing");
 
-        matrix.cycleRedstoneMode();
+        matrix.getOutputBuffer().insertItem(0, new ItemStack(Items.NETHERITE_BLOCK, 32), false);
         helper.assertTrue(
-                matrix.redstoneMode() == RedstoneMode.INPUT,
-                "two clicks moved the mode to " + matrix.redstoneMode() + " rather than input");
-        helper.assertTrue(
-                matrix.comparatorOutput() == RedstoneMode.fullness(matrix.getInputBuffer()),
-                "input mode emitted " + matrix.comparatorOutput() + " instead of the input buffer's fullness of "
-                        + RedstoneMode.fullness(matrix.getInputBuffer()));
-
-        matrix.cycleRedstoneMode();
-        helper.assertTrue(
-                matrix.redstoneMode() == RedstoneMode.OUTPUT, "the mode did not cycle back round to the output buffer");
+                matrix.comparatorOutput() == ComparatorSignal.of(matrix.getOutputBuffer()),
+                "the comparator emitted " + matrix.comparatorOutput() + " instead of the output buffer's fullness of "
+                        + ComparatorSignal.of(matrix.getOutputBuffer()));
 
         RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
                 helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
@@ -1311,10 +1293,9 @@ public final class FusionMatrixGameTest {
         IPatternDetails details = patternFor(helper, holder);
         helper.assertTrue(
                 matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP), "a fusion pattern was rejected");
-        matrix.cycleRedstoneMode();
         helper.assertTrue(
-                matrix.comparatorOutput() > 0,
-                "status mode emitted nothing on a matrix that owes a craft; the block is not idle");
+                matrix.comparatorOutput() == 0,
+                "an owed craft emitted " + matrix.comparatorOutput() + " before anything reached the output buffer");
         helper.succeed();
     }
 }

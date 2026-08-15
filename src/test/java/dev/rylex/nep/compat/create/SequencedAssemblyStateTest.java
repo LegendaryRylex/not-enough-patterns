@@ -32,8 +32,7 @@ class SequencedAssemblyStateTest {
                         StationKind.UNKNOWN)),
                 List.of(new SequencedAssemblyState.Making(new ItemStack(Items.DIAMOND), 4)),
                 List.of(new GenericStack(AEItemKey.of(Items.OBSIDIAN), 2)),
-                List.of(new FluidStack(Fluids.WATER, 500)),
-                2);
+                List.of(new FluidStack(Fluids.WATER, 500)));
     }
 
     private static SequencedAssemblyState roundTrip(SequencedAssemblyState state) {
@@ -53,7 +52,6 @@ class SequencedAssemblyStateTest {
         assertEquals(state.outputBlocked(), decoded.outputBlocked());
         assertEquals(state.stations(), decoded.stations());
         assertEquals(state.missing(), decoded.missing());
-        assertEquals(state.redstoneMode(), decoded.redstoneMode());
         assertTrue(state.matches(decoded), "a decoded state must compare equal to what was sent");
     }
 
@@ -70,8 +68,7 @@ class SequencedAssemblyStateTest {
                 state.stations(),
                 List.of(new SequencedAssemblyState.Making(new ItemStack(Items.DIAMOND), 5)),
                 state.missing(),
-                state.fluids(),
-                state.redstoneMode())));
+                state.fluids())));
         assertFalse(state.matches(new SequencedAssemblyState(
                 state.status(),
                 state.halted(),
@@ -79,7 +76,6 @@ class SequencedAssemblyStateTest {
                 state.stations(),
                 state.making(),
                 state.missing(),
-                List.of(new FluidStack(Fluids.WATER, 501)),
-                state.redstoneMode())));
+                List.of(new FluidStack(Fluids.WATER, 501)))));
     }
 }

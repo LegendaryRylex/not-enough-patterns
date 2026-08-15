@@ -1,8 +1,9 @@
 package dev.rylex.nep.hub;
 
 import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
+import appeng.api.networking.IInWorldGridNodeHost;
 import appeng.api.networking.security.IActionSource;
+import appeng.api.stacks.AEKey;
 import com.mojang.serialization.Codec;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
@@ -13,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -40,16 +42,24 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
 
     private static final int RETURN_INTERVAL = 10;
 
+    private record Side(BlockPos pos, @Nullable Direction face) {}
+
     private final List<HubLink> links = new ArrayList<>();
-    private final Map<BlockPos, BlockCapabilityCache<IItemHandler, Direction>> itemCaches = new HashMap<>();
-    private final Map<BlockPos, BlockCapabilityCache<IFluidHandler, Direction>> fluidCaches = new HashMap<>();
+    private final Map<Side, BlockCapabilityCache<IItemHandler, Direction>> itemCaches = new HashMap<>();
+    private final Map<Side, BlockCapabilityCache<IFluidHandler, Direction>> fluidCaches = new HashMap<>();
     private final MachineHubStorage storage = new MachineHubStorage(this);
+
+    private HubGridNode node = new HubGridNode(this);
 
     private HubStatus status = HubStatus.OK;
     private int returnCooldown;
 
     public MachineHubBlockEntity(BlockPos pos, BlockState state) {
         super(NepContent.MACHINE_HUB_BLOCK_ENTITY.get(), pos, state);
+    }
+
+    public IInWorldGridNodeHost gridNodeHost() {
+        return node;
     }
 
     public MachineHubStorage storage() {
@@ -65,11 +75,11 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public boolean routing() {
-        return NepConfig.machineHubEnabled() && !links.isEmpty();
+        return NepConfig.machineHubEnabled() && !links.isEmpty() && node.isActive();
     }
 
     public List<HubTarget> targets() {
-        if (!NepConfig.machineHubEnabled() || !(level instanceof ServerLevel)) {
+        if (!routing() || !(level instanceof ServerLevel)) {
             return List.of();
         }
         List<HubTarget> resolved = new ArrayList<>(links.size());
@@ -83,30 +93,33 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public void serverTick(ServerLevel level) {
+        node.create(level, worldPosition);
         if (returnCooldown > 0) {
             returnCooldown--;
             return;
         }
         returnCooldown = RETURN_INTERVAL - 1;
-        status = returnOutputs(level);
+        status = returnOutputs();
     }
 
-    private HubStatus returnOutputs(ServerLevel level) {
+    private HubStatus returnOutputs() {
+        IGrid grid = node.grid();
+        if (grid == null || !node.connected()) {
+            return HubStatus.NO_NETWORK;
+        }
+        if (node.missingChannel()) {
+            return HubStatus.NO_CHANNEL;
+        }
+        if (!node.isActive()) {
+            return HubStatus.OFFLINE;
+        }
         List<HubTarget> targets = targets();
         boolean returns = false;
         for (HubTarget target : targets) {
-            returns |= !target.accepts();
+            returns |= target.provides();
         }
         if (!returns) {
             return HubStatus.OK;
-        }
-        IGridNode node = HubNetwork.adjacentNode(level, worldPosition);
-        if (node == null) {
-            return HubStatus.NO_NETWORK;
-        }
-        IGrid grid = node.getGrid();
-        if (!node.isActive() || grid == null) {
-            return HubStatus.OFFLINE;
         }
         HubReturn.Outcome outcome =
                 HubReturn.push(targets, grid.getStorageService().getInventory(), IActionSource.empty());
@@ -114,32 +127,43 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public HubTarget resolve(HubLink link) {
-        return new HubTarget(link.pos(), link.role(), itemHandler(link.pos()), fluidHandler(link.pos()));
+        Side side = new Side(link.pos(), link.face());
+        return new HubTarget(link, itemHandler(side), fluidHandler(side));
     }
 
     @Nullable
-    private IItemHandler itemHandler(BlockPos pos) {
+    private IItemHandler itemHandler(Side side) {
         if (!(level instanceof ServerLevel serverLevel)) {
             return null;
         }
         return itemCaches
                 .computeIfAbsent(
-                        pos,
+                        side,
                         at -> BlockCapabilityCache.create(
-                                Capabilities.ItemHandler.BLOCK, serverLevel, at, null, this::stillLinked, () -> {}))
+                                Capabilities.ItemHandler.BLOCK,
+                                serverLevel,
+                                at.pos(),
+                                at.face(),
+                                this::stillLinked,
+                                () -> {}))
                 .getCapability();
     }
 
     @Nullable
-    private IFluidHandler fluidHandler(BlockPos pos) {
+    private IFluidHandler fluidHandler(Side side) {
         if (!(level instanceof ServerLevel serverLevel)) {
             return null;
         }
         return fluidCaches
                 .computeIfAbsent(
-                        pos,
+                        side,
                         at -> BlockCapabilityCache.create(
-                                Capabilities.FluidHandler.BLOCK, serverLevel, at, null, this::stillLinked, () -> {}))
+                                Capabilities.FluidHandler.BLOCK,
+                                serverLevel,
+                                at.pos(),
+                                at.face(),
+                                this::stillLinked,
+                                () -> {}))
                 .getCapability();
     }
 
@@ -148,6 +172,9 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
             return false;
         }
         if (level.getBlockEntity(pos) instanceof MachineHubBlockEntity || HubScan.networkBlock(level, pos)) {
+            return false;
+        }
+        if (HubRules.load().unlinkable(level.getBlockState(pos))) {
             return false;
         }
         return SubLevels.sameSubLevel(level, worldPosition, pos) && withinRange(pos);
@@ -162,6 +189,10 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public int applyPlan(List<HubLink> plan) {
+        Map<BlockPos, HubLink> existing = new HashMap<>();
+        for (HubLink link : links) {
+            existing.put(link.pos(), link);
+        }
         List<HubLink> accepted = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();
         int limit = NepConfig.machineHubMaximumLinks();
@@ -169,10 +200,20 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
             if (accepted.size() >= limit || !seen.add(link.pos()) || !canLink(link.pos())) {
                 continue;
             }
-            accepted.add(link);
+            accepted.add(carryOver(existing.get(link.pos()), link));
         }
         setLinks(accepted);
         return accepted.size();
+    }
+
+    private static HubLink carryOver(@Nullable HubLink previous, HubLink proposed) {
+        if (previous == null) {
+            return proposed;
+        }
+        return proposed.withFace(previous.face())
+                .withPriority(previous.priority())
+                .withInsertFilter(previous.insertFilter())
+                .withReturnFilter(previous.returnFilter());
     }
 
     public List<HubLink> scan() {
@@ -193,11 +234,39 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public void cycleRole(int index) {
+        editLink(index, link -> link.withRole(link.role().next()));
+    }
+
+    public void setFace(int index, @Nullable Direction face) {
+        editLink(index, link -> link.withFace(face));
+    }
+
+    public void setPriority(int index, int priority) {
+        editLink(index, link -> link.withPriority(priority));
+    }
+
+    public void setInsertFilter(int index, int slot, @Nullable AEKey key) {
+        editLink(index, link -> link.withInsertFilter(link.insertFilter().withKey(slot, key)));
+    }
+
+    public void setReturnFilter(int index, int slot, @Nullable AEKey key) {
+        editLink(index, link -> link.withReturnFilter(link.returnFilter().withKey(slot, key)));
+    }
+
+    public void toggleInsertFilterMode(int index) {
+        editLink(index, link -> link.withInsertFilter(link.insertFilter().toggled()));
+    }
+
+    public void toggleReturnFilterMode(int index) {
+        editLink(index, link -> link.withReturnFilter(link.returnFilter().toggled()));
+    }
+
+    private void editLink(int index, UnaryOperator<HubLink> edit) {
         if (index < 0 || index >= links.size()) {
             return;
         }
         List<HubLink> updated = new ArrayList<>(links);
-        updated.set(index, updated.get(index).withRole(updated.get(index).role().next()));
+        updated.set(index, edit.apply(updated.get(index)));
         setLinks(updated);
     }
 
@@ -215,16 +284,37 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     private void setLinks(List<HubLink> updated) {
+        int before = node.channelDemand();
         links.clear();
         links.addAll(updated);
         forgetUnlinkedCaches();
         setChanged();
+        int after = node.channelDemand();
+        if (before == after) {
+            return;
+        }
+        if (before == 0 || after == 0) {
+            rebuildNode();
+        } else {
+            node.repath();
+        }
+    }
+
+    private void rebuildNode() {
+        CompoundTag carried = new CompoundTag();
+        node.save(carried);
+        node.destroy();
+        node = new HubGridNode(this);
+        node.load(carried);
+        if (level != null) {
+            node.create(level, worldPosition);
+        }
     }
 
     private void forgetUnlinkedCaches() {
-        Set<BlockPos> linked = new HashSet<>();
+        Set<Side> linked = new HashSet<>();
         for (HubLink link : links) {
-            linked.add(link.pos());
+            linked.add(new Side(link.pos(), link.face()));
         }
         itemCaches.keySet().retainAll(linked);
         fluidCaches.keySet().retainAll(linked);
@@ -233,13 +323,21 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
     @Override
     public void setRemoved() {
         super.setRemoved();
+        node.destroy();
         itemCaches.clear();
         fluidCaches.clear();
     }
 
     @Override
+    public void onChunkUnloaded() {
+        super.onChunkUnloaded();
+        node.destroy();
+    }
+
+    @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        node.save(tag);
         LINKS_CODEC
                 .encodeStart(
                         registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), List.copyOf(links))
@@ -250,6 +348,7 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        node.load(tag);
         links.clear();
         itemCaches.clear();
         fluidCaches.clear();
@@ -260,6 +359,15 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
                 .parse(registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), tag.get(LINKS_KEY))
                 .resultOrPartial(error -> Nep.LOGGER.warn("Machine Hub links could not be read: {}", error))
                 .ifPresent(links::addAll);
+    }
+
+    @Override
+    protected void applyImplicitComponents(DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        List<HubLink> plan = input.getOrDefault(NepContent.HUB_PLAN.get(), List.<HubLink>of());
+        if (!plan.isEmpty() && level instanceof ServerLevel) {
+            applyPlan(plan);
+        }
     }
 
     @Override

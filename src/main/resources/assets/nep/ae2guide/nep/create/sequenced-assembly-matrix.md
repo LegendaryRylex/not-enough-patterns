@@ -16,7 +16,7 @@ item_ids:
 
   <ItemImage id="nep:sequenced_assembly_matrix" scale="2"/>
 
-  One block that replaces an entire sequenced assembly line. No belt, no Deployers, no Depot. It runs the whole recipe internally and, out of the box, <Color id="green">always</Color> yields the primary result, because the chance roll never happens.
+  One block that replaces an entire sequenced assembly line. No belt, no Deployers, no Depot. It runs the whole recipe internally, and a config option can even skip the chance roll so a craft <Color id="green">always</Color> yields the primary result.
 </Column>
 
 <Recipe id="nep:module_status/sequenced_assembly_matrix"/>
@@ -49,7 +49,7 @@ item_ids:
 * A connection to your ME network for power. It idles at <Color id="aqua">10 AE/t</Color> and draws <Color id="aqua">500 AE/t</Color> while assembling. The readout shows which it is doing.
 * With Create: New Age installed, recipes with an energising step also cost Forge Energy. The Matrix grows an internal FE buffer for exactly that case; wire any FE source to any face and it charges at up to 100,000 FE/t. Recipes without an energising step never touch it.
 * A Pattern Provider on any face. Every craft begins with a pattern pushed to the Matrix, so without one it sits idle no matter what you put inside it.
-* A Comparator beside it can read the output buffer, the staged input, or the machine's own status. See Comparator below.
+* A Comparator beside it reads how full the output buffer is. See Comparator below.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -85,7 +85,7 @@ The Matrix draws more stress the faster its shaft turns, and the more stress it 
 
 A recipe runs the moment everything it consumes is sitting inside the Matrix at once. There are no steps to schedule and no part travelling between stations, so it needs the whole shopping list up front: the base item once, plus every deployed item and fluid multiplied by the number of loops.
 
-A Precision Mechanism, which loops five times over three deploying steps, needs one Golden Sheet, five Cogwheels, five Large Cogwheels, and five Iron Nuggets. Put those in and one Precision Mechanism comes out, every time.
+A Precision Mechanism, which loops five times over three deploying steps, needs one Golden Sheet, five Cogwheels, five Large Cogwheels, and five Iron Nuggets. Put those in and the Matrix runs one attempt at the recipe; Chance Recipes below covers what an attempt hands back.
 
 Every sequenced assembly job starts with a <ItemLink id="nep:sequenced_assembly_pattern"/>. A Matrix that owes the network nothing refuses items at every face and in its own interface, so it can never sit on loose ingredients wondering what they were for. Obsidian Dust alone could be headed for a Sturdy Sheet or a <ItemLink id="hardened_obsidian_plate"/>, and a pattern is what settles the question. Encode one by looking the recipe up in JEI and clicking the **+** on it in a <ItemLink id="ae2:pattern_encoding_terminal"/>; the pattern names the recipe outright, so it settles that question even when two recipes end in the same item. Encoding the ingredients by hand in processing mode works too, and comes back as a Sequenced Assembly Pattern whenever they fit exactly one recipe.
 
@@ -129,17 +129,17 @@ Once a job is underway you can help it along. The Matrix accepts hoppers, pipes 
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
-On a physical line, a recipe like the Precision Mechanism rolls its result pool at the end and often hands you junk instead. The Matrix skips that roll entirely, which is the point of building one. Those ingredient counts above are the true cost per item, not per attempt.
+On a physical line, a recipe like the Precision Mechanism rolls its result pool at the end and often hands you junk instead. The Matrix rolls that pool exactly as a line does: every attempt costs a full set of ingredients whether it succeeds or not.
 
-Packs that consider this too generous can turn <Color id="aqua">Guaranteed Results</Color> off. The Matrix then rolls exactly as a line does, and every attempt costs a full set of ingredients whether it succeeds or not.
-
-With the roll switched on:
+While the roll is in play:
 
 * Junk goes <Color id="aqua">straight into network storage</Color> as ordinary stock, so the output buffer never clogs with it. Only the item you actually asked for is handed back to the Pattern Provider.
 * An attempt that misses leaves the network still waiting, so the Matrix requests a fresh set of ingredients and tries again. It keeps going until the real result appears.
 * Turn <Color id="aqua">Auto-Request Recipes</Color> off and it will not do that. An unlucky roll then leaves the craft sitting there until you restock the Matrix yourself.
 
-> <Color id="yellow">Leave Guaranteed Results on if you are unsure.</Color> It is what makes the Matrix worth its recipe, and it is the only mode where the ingredient cost of a craft is predictable.
+Packs that find the roll too punishing can turn <Color id="aqua">Guaranteed Results</Color> on. The roll then never happens, every craft yields the recipe's primary result, and the ingredient counts above become the true cost per item rather than per attempt.
+
+> <Color id="yellow">Guaranteed Results is a server config option, off by default.</Color> It is the only mode where the ingredient cost of a craft is predictable.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -165,13 +165,7 @@ Four internal tanks sit beside the input grid, so a recipe may use up to four di
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
-A Comparator beside the Matrix reads one of three things. The signal button at the top of the interface cycles between them, and its letter shows which is active.
-
-| Mode | What it reads |
-|---|---|
-| Output | How full the output buffer is |
-| Status | Zero when idle, climbing as the current craft progresses, and a full 15 when it has stalled for want of speed, stress, or power |
-| Input | How full the input grid and the tanks are together |
+A Comparator beside the Matrix reads how full its output buffer is: nothing while the buffer is empty, one as soon as a single item lands, and a full 15 once every slot is full. Neither the input grid nor the tanks reach it.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -189,7 +183,7 @@ A Comparator beside the Matrix reads one of three things. The signal button at t
 * The input grid stages the items a pending craft needs, and the output buffer holds what is finished. Neither accepts items a pending craft does not use.
 * The four tanks sit beside the grid. Hover one to see what it holds against its capacity, or click it holding a filled bucket or tank to pour that fluid in by hand.
 * <Color id="red">✗</Color> **Clear Pending Recipes** drops every craft the Matrix still owes, cancels ingredients it has on request, and cancels the crafting jobs waiting on it. Items already made are still returned. It greys out when nothing is pending.
-* **Comparator Signal** cycles what the comparator beside the Matrix emits, and its letter shows which mode is live.
+* <Color id="aqua">?</Color> **Guide** opens this page. It is always the rightmost button, on every machine in the mod.
 * <Color id="aqua">↓</Color> **Empty Buffers** returns staged ingredients and finished items to your inventory, and sends staged fluids back to the network.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
@@ -250,6 +244,7 @@ Open the Matrix. Its status line names the problem directly.
 * <Color id="red">Too slow</Color> means the shaft is turning below the minimum speed.
 * <Color id="red">Overstressed</Color> means the kinetic network cannot carry it. Add capacity.
 * <Color id="red">No network power</Color> means the ME network cannot supply the 500 AE/t an assembling Matrix needs.
+* <Color id="red">Not enough free network channels</Color> means the Matrix could not claim the 15 channels it takes up by default, which need an ME Controller and a dense cable running to it.
 * <Color id="gray">Idle</Color> with items inside means no recipe is fully satisfied yet. Check the count of every deployed ingredient against the loop count. It also means no pattern has been pushed, since the Matrix never starts a craft it was not asked for.
 * <Color id="red">Missing materials</Color> means a craft is still owed but the network is not supplying what it needs. Hover the status line to see exactly which materials are short and by how much. Those are precisely the items the Matrix will accept from you, so you can drop them in yourself rather than wait for the network. This is what you see after an attempt rolls junk and takes its ingredients with it, only possible with Guaranteed Results off: the Matrix asks for a fresh set and reports anything the network has neither in stock nor a pattern for. With Auto-Request Recipes off it lists whatever the recipe still needs, for you to restock by hand.
 * <Color id="red">Needs energy</Color> means the next craft has an energising step (Create: New Age) and the FE buffer holds less than it costs. The craft starts, and charges the whole cost, only once the buffer covers it; hover the status line to see stored against needed. Feed the Matrix Forge Energy through any face.

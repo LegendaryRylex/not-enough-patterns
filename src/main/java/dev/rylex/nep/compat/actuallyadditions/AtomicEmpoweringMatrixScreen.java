@@ -2,10 +2,10 @@ package dev.rylex.nep.compat.actuallyadditions;
 
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.client.EnergyGauge;
 import dev.rylex.nep.client.MatrixScreen;
 import dev.rylex.nep.client.ReadoutButton;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,29 +49,19 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
     protected void init() {
         super.init();
         resetButtons();
+        addHelpButton("nep/actuallyadditions/atomic-empowering-matrix.md");
         clearPending = addRightButton(
-                1,
-                "✗",
+                2,
+                NepIcons.REMOVE,
                 "gui.nep.clear_pending",
                 "gui.nep.clear_pending.hint",
                 () -> sendButton(AtomicEmpoweringMatrixMenu.BUTTON_CLEAR_PENDING));
-        redstoneModeButton = addRightButton(
-                2,
-                currentMode().glyph(),
-                "gui.nep.redstone_mode",
-                "gui.nep.redstone_mode.hint",
-                () -> sendButton(AtomicEmpoweringMatrixMenu.BUTTON_REDSTONE_MODE));
         addRightButton(
                 3,
-                "↓",
+                NepIcons.DOWN,
                 "gui.nep.clear_buffer",
                 "gui.nep.clear_buffer.hint",
                 () -> sendButton(AtomicEmpoweringMatrixMenu.BUTTON_CLEAR_BUFFER));
-    }
-
-    private RedstoneMode currentMode() {
-        AtomicEmpoweringMatrixBlockEntity matrix = menu.matrix();
-        return matrix != null ? matrix.redstoneMode() : RedstoneMode.OUTPUT;
     }
 
     @Override
@@ -82,7 +72,6 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
             clearPending.active = matrix != null
                     && (matrix.hasPending() || matrix.refusal() != AtomicEmpoweringMatrixBlockEntity.Refusal.NONE);
         }
-        updateRedstoneButton(currentMode());
         tickButtons();
     }
 
@@ -214,6 +203,9 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
     }
 
     private static Component statusLine(AtomicEmpoweringMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return Component.translatable("gui.nep.atomic_empowering_matrix.no_network_channels");
+        }
         if (matrix.hasPowerFault()) {
             return Component.translatable("gui.nep.atomic_empowering_matrix.no_network_power");
         }

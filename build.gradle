@@ -59,6 +59,7 @@ var skippableRuntimeMods = [
         cna    : [[group: 'curse.maven', module: 'create-new-age-905861']],
         jei    : [[group: 'mezz.jei'],
                   [group: 'curse.maven', module: 'ae2-jei-integration-1074338']],
+        emi    : [[group: 'curse.maven', module: 'emi-580555']],
         jade   : [[group: 'curse.maven', module: 'jade-324717']],
         apothic: [[group: 'dev.shadowsoffire']],
         cc     : [[group: 'curse.maven', module: 'compact-crafting-updated-1355698']],
@@ -81,6 +82,7 @@ var skippableRuntimeMods = [
                   [group: 'curse.maven', module: 'kotlin-for-forge-351264']],
         dfa    : [[group: 'curse.maven', module: 'ae2-draconic-fusion-autocrafter-1521464']],
         wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
+        tb     : [[group: 'curse.maven', module: 'thunderbolt-1631756']],
 ]
 
 var impliedSkips = [
@@ -230,6 +232,9 @@ dependencies {
     compileOnly "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
     localRuntime "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
 
+    compileOnly "curse.maven:thunderbolt-1631756:${thunderbolt_file}"
+    localRuntime "curse.maven:thunderbolt-1631756:${thunderbolt_file}"
+
     compileOnly "curse.maven:advancedae-1084104:${advanced_ae_file}"
     localRuntime "curse.maven:advancedae-1084104:${advanced_ae_file}"
     localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
@@ -285,6 +290,9 @@ dependencies {
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
     runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
+    compileOnly "curse.maven:emi-580555:${emi_file}"
+    localRuntime "curse.maven:emi-580555:${emi_file}"
+
     compileOnly "curse.maven:jade-324717:7545219"
     localRuntime "curse.maven:jade-324717:7545219"
 
@@ -329,6 +337,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             create_version_range   : create_version_range,
             create_new_age_version_range: create_new_age_version_range,
             jei_version_range      : jei_version_range,
+            emi_version_range      : emi_version_range,
             ae2wtlib_version_range : ae2wtlib_version_range,
             advanced_ae_version_range: advanced_ae_version_range,
             extendedae_version_range: extendedae_version_range,

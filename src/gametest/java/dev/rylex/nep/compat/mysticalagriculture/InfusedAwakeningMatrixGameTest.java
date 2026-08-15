@@ -40,7 +40,8 @@ public final class InfusedAwakeningMatrixGameTest {
     private static final String BATCH = "nep_infused_awakening_matrix";
 
     private static final BlockPos MATRIX = new BlockPos(2, 1, 2);
-    private static final BlockPos ENERGY_CELL = new BlockPos(2, 1, 3);
+    private static final BlockPos ME_CONTROLLER = new BlockPos(2, 1, 3);
+    private static final BlockPos ENERGY_CELL = ME_CONTROLLER.above();
 
     private InfusedAwakeningMatrixGameTest() {}
 
@@ -54,6 +55,7 @@ public final class InfusedAwakeningMatrixGameTest {
     }
 
     private static void powerUp(GameTestHelper helper) {
+        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
         helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
     }
 

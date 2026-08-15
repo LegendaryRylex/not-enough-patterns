@@ -3,9 +3,9 @@ package dev.rylex.nep.compat.create;
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.client.EnergyGauge;
 import dev.rylex.nep.machine.MachineFluidInput;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,29 +45,19 @@ public class SequencedAssemblyMatrixScreen extends AssemblyReadoutScreen<Sequenc
     @Override
     protected void init() {
         super.init();
+        addHelpButton("nep/create/sequenced-assembly-matrix.md");
         clearPending = addRightButton(
-                1,
-                "✗",
+                2,
+                NepIcons.REMOVE,
                 "gui.nep.clear_pending",
                 "gui.nep.clear_pending.hint",
                 () -> sendButton(SequencedAssemblyMatrixMenu.BUTTON_CLEAR_PENDING));
-        redstoneModeButton = addRightButton(
-                2,
-                currentMode().glyph(),
-                "gui.nep.redstone_mode",
-                "gui.nep.redstone_mode.hint",
-                () -> sendButton(SequencedAssemblyMatrixMenu.BUTTON_REDSTONE_MODE));
         addRightButton(
                 3,
-                "↓",
+                NepIcons.DOWN,
                 "gui.nep.clear_buffer",
                 "gui.nep.clear_buffer.hint",
                 () -> sendButton(SequencedAssemblyMatrixMenu.BUTTON_CLEAR_BUFFER));
-    }
-
-    private RedstoneMode currentMode() {
-        SequencedAssemblyMatrixBlockEntity matrix = menu.matrix();
-        return matrix != null ? matrix.redstoneMode() : RedstoneMode.OUTPUT;
     }
 
     @Override
@@ -77,7 +67,6 @@ public class SequencedAssemblyMatrixScreen extends AssemblyReadoutScreen<Sequenc
         if (clearPending != null) {
             clearPending.active = matrix != null && matrix.hasPending();
         }
-        updateRedstoneButton(currentMode());
         List<ItemStack> making = matrix == null ? List.of() : matrix.makingNow();
         List<MakingEntry> entries = new ArrayList<>(making.size());
         for (ItemStack stack : making) {

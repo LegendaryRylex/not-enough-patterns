@@ -30,11 +30,13 @@ public final class AtomicEmpoweringMatrixGameTest {
     private static final String BATCH = "nep_atomic_empowering_matrix";
 
     private static final BlockPos MATRIX = new BlockPos(2, 1, 2);
-    private static final BlockPos ENERGY_CELL = new BlockPos(2, 1, 3);
+    private static final BlockPos ME_CONTROLLER = new BlockPos(2, 1, 3);
+    private static final BlockPos ENERGY_CELL = ME_CONTROLLER.above();
 
     private AtomicEmpoweringMatrixGameTest() {}
 
     private static AtomicEmpoweringMatrixBlockEntity placeMatrix(GameTestHelper helper) {
+        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
         helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
         helper.setBlock(MATRIX, NepActuallyAdditionsContent.MATRIX.get().defaultBlockState());
         AtomicEmpoweringMatrixBlockEntity matrix =

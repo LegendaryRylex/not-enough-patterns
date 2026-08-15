@@ -1,0 +1,11 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "dev.rylex.nep.compat.thunderbolt.mixin",
+  "plugin": "dev.rylex.nep.compat.thunderbolt.mixin.ThunderboltMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

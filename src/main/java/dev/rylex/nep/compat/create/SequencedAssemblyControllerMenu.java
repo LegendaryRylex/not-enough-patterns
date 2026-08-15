@@ -17,7 +17,6 @@ public class SequencedAssemblyControllerMenu extends MachineMenu {
     static final int BUTTON_CLEAR_BUFFER = 1;
     static final int BUTTON_CLEAR_PENDING = 2;
     static final int BUTTON_FILL_TANK = 3;
-    static final int BUTTON_REDSTONE_MODE = 4;
 
     static final int WIDTH = 200;
     static final int HEIGHT = 266;
@@ -121,10 +120,6 @@ public class SequencedAssemblyControllerMenu extends MachineMenu {
         }
         if (id == BUTTON_FILL_TANK) {
             return MachineFluidInput.fillFromCarried(this, player, controller.fluidHandler());
-        }
-        if (id == BUTTON_REDSTONE_MODE) {
-            controller.cycleRedstoneMode();
-            return true;
         }
         return false;
     }

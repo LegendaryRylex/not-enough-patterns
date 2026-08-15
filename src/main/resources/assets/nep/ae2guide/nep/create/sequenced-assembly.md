@@ -121,7 +121,7 @@ The Controller does not have to be driven by a pattern. Open it and place the ba
 
 Many sequenced assembly recipes can roll junk instead of the item you wanted. The Controller absorbs that for you. It keeps the line running until the real result appears, so the network only ever sees the one item it asked for. Junk is placed into network storage as ordinary stock, and fresh ingredients are requested to replace the wasted attempt.
 
-If the network runs dry, the Controller halts and its face turns <Color id="red">red</Color>. Hover the status line in its interface to see exactly which material is missing, items and Spout fluids alike, with the amount each step needs. A Controller reading <Color id="red">Output blocked</Color> has finished an item that fits neither its output buffer nor network storage, so the line is jammed on the output Depot until you free space. Set its Comparator to Status mode and it emits a full signal while halted or blocked, so an alarm can be wired to it.
+If the network runs dry, the Controller halts and its face turns <Color id="red">red</Color>. Hover the status line in its interface to see exactly which material is missing, items and Spout fluids alike, with the amount each step needs. A Controller reading <Color id="red">Output blocked</Color> has finished an item that fits neither its output buffer nor network storage, so the line is jammed on the output Depot until you free space. A Comparator beside it runs full at the same time, since the buffer it reads is the one that filled up, so an alarm can be wired to it.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -135,10 +135,11 @@ If the network runs dry, the Controller halts and its face turns <Color id="red"
 
 * Hold the finished item and use it on the Controller. It prints a full report of what the recipe needs against what your line actually has.
 * Every Deployer must face down, and every station needs rotational power.
+* The Controller takes up 7 channels by default, which is nearly a whole normal cable's worth. A network that cannot spare them leaves it offline and nothing on the line moves.
 * A Create: New Age Energiser also needs Forge Energy. The Controller only checks its rotation, so a wired-but-empty Energiser holds the part on the belt until its buffer fills.
 * The output must be a <ItemLink id="create:depot"/>. Nothing else is accepted.
 * Open the Controller to see its station strip. A red bar under a station means that station is the problem.
-* A job that can never finish, because you cancelled it in the terminal or the recipe changed, can be dropped with the <Color id="red">✗</Color> button at the top right of the interface. It forgets every craft the Controller still owes and cancels the ingredients it has on request. Anything already finished is still handed back.
+* A job that can never finish, because you cancelled it in the terminal or the recipe changed, can be dropped with the <Color id="red">✗</Color> button at the top of the interface, next to the <Color id="aqua">?</Color> that opens this page. It forgets every craft the Controller still owes and cancels the ingredients it has on request. Anything already finished is still handed back.
 * Dropping a job, or emptying the buffers into your hands, leaves the parts already travelling down the belt with nowhere to go. The Controller keeps clearing its Depot for ten seconds afterwards and places whatever arrives into network storage, and the clock restarts with each part it collects, so a whole line's worth still comes home. Tune the window with `reclaimGrace`.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
@@ -165,10 +166,4 @@ You can also fill the tanks by hand. Use a filled bucket or fluid container on t
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
-A Comparator beside the Controller can read one of three things. The signal button at the top of the interface cycles between them, and its letter shows which is active.
-
-| Mode | What it reads |
-|---|---|
-| Output | How full the output buffer is |
-| Status | Zero when idle, rising with the number of crafts still owed, and a full 15 while the line is halted for want of materials |
-| Input | How full the ingredient grid and the staging tanks are together |
+A Comparator beside the Controller reads how full its output buffer is: nothing while the buffer is empty, one as soon as a single item lands, and a full 15 once every slot is full. Neither the ingredient grid nor the staging tanks reach it.

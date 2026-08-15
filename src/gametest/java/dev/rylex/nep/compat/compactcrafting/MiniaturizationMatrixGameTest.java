@@ -40,7 +40,8 @@ public final class MiniaturizationMatrixGameTest {
     private static final String BATCH = "nep_miniaturization_matrix";
 
     private static final BlockPos MATRIX = new BlockPos(2, 1, 2);
-    private static final BlockPos ENERGY_CELL = new BlockPos(2, 1, 3);
+    private static final BlockPos ME_CONTROLLER = new BlockPos(2, 1, 3);
+    private static final BlockPos ENERGY_CELL = ME_CONTROLLER.above();
 
     private MiniaturizationMatrixGameTest() {}
 
@@ -52,6 +53,7 @@ public final class MiniaturizationMatrixGameTest {
     }
 
     private static void powerUp(GameTestHelper helper) {
+        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
         helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
     }
 
@@ -132,17 +134,18 @@ public final class MiniaturizationMatrixGameTest {
         EncodedIngredients encoded = MiniaturizationRecipeIngredients.miniaturization(holder, helper.getLevel());
         helper.assertTrue(encoded != null, "the Matrix's own recipe did not encode");
 
-        long obsidian = 0;
+        long quartzGlass = 0;
         for (List<GenericStack> slot : encoded.inputs()) {
             GenericStack option = slot.get(0);
-            if (option.what() instanceof AEItemKey key && key.getItem() == Items.OBSIDIAN) {
-                obsidian = option.amount();
+            if (option.what() instanceof AEItemKey key
+                    && key.getItem() == AEBlocks.QUARTZ_GLASS.block().asItem()) {
+                quartzGlass = option.amount();
             }
         }
         helper.assertTrue(
-                obsidian == 73,
-                "a solid 49-block floor plus the 24-block ring above it should cost 73 obsidian, not " + obsidian
-                        + "; the layer totals are not being counted");
+                quartzGlass == 73,
+                "a solid 25-block floor plus the three 16-block rings above it should cost 73 quartz glass, not "
+                        + quartzGlass + "; the layer totals are not being counted");
         helper.succeed();
     }
 

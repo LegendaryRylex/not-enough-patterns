@@ -74,7 +74,8 @@ If the field refuses the layout, the blocks are taken back out and the ingredien
 * The input buffer only accepts items a pending craft still needs, so loose items cannot clog it.
 * **Clear Pending Recipes** drops every craft the Controller still owes, cancels ingredients it has on request, and cancels the crafting jobs on the network that were waiting on it.
 * **Empty Buffers** returns everything staged to your inventory.
-* **Comparator Signal** cycles what the comparator reads: output buffer, input buffer, or machine status.
+* **Guide** opens this page, and is always the rightmost button.
+* A Comparator beside the block reads the output buffer, empty for nothing staged up to a full 15.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -91,4 +92,5 @@ If the field refuses the layout, the blocks are taken back out and the ingredien
 * **Field switched off** or **Field already crafting.** A redstone signal on any projector disables the field; a match the field found on its own has to finish first.
 * **Field too small.** Move the projectors further apart until the field is large enough for the recipe.
 * The Controller must be on a powered ME network, not just connected to one.
+* The Controller takes up 7 channels by default, which is nearly a whole normal cable's worth. A network that cannot spare them leaves it offline.
 * Turn on Verbose Logging under Debug to have the Controller log every layout it builds, abandons, or loses.

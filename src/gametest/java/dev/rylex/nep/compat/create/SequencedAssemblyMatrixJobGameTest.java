@@ -38,7 +38,8 @@ public final class SequencedAssemblyMatrixJobGameTest {
 
     private static final BlockPos MATRIX = new BlockPos(4, 1, 4);
     private static final BlockPos MOTOR = new BlockPos(4, 1, 3);
-    private static final BlockPos ENERGY = new BlockPos(5, 1, 4);
+    private static final BlockPos ME_CONTROLLER = new BlockPos(5, 1, 4);
+    private static final BlockPos ENERGY = ME_CONTROLLER.above();
 
     private static final Direction EJECTION = Direction.WEST;
     private static final int WATER_PER_CRAFT = 250;
@@ -72,6 +73,7 @@ public final class SequencedAssemblyMatrixJobGameTest {
         ((CreativeMotorBlockEntity) motor)
                 .generatedSpeed.setValue(Math.round(SequencedAssemblyMatrixBlockEntity.peakSpeed()));
 
+        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
         helper.setBlock(ENERGY, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
         return (SequencedAssemblyMatrixBlockEntity) be;
     }

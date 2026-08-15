@@ -26,6 +26,7 @@ class GuideStructureTest {
     private static final Path RESOURCES = locate("src/main/resources", "nep/src/main/resources");
     private static final Path PAGES = RESOURCES.resolve("assets/nep/ae2guide/nep");
     private static final Path FILTERS = RESOURCES.resolve("guide_filters");
+    private static final Path SOURCE = RESOURCES.resolveSibling("java");
 
     private static final Set<String> ALWAYS_PRESENT =
             Set.of("nep-index.md", "getting-started.md", "import-card.md", "pattern-conversion.md", "machine-hub.md");
@@ -33,6 +34,7 @@ class GuideStructureTest {
 
     private static final Pattern PARENT = Pattern.compile("(?m)^\\s*parent:\\s*(\\S+)\\s*$");
     private static final Pattern LINK = Pattern.compile("\\]\\(([^)\\s]+)\\)");
+    private static final Pattern HELP_BUTTON = Pattern.compile("addHelpButton\\(\"([^\"]+)\"\\)");
 
     @Test
     void onlyTheAlwaysPresentPagesLiveInTheGuideRoot() {
@@ -136,6 +138,51 @@ class GuideStructureTest {
         assertTrue(
                 violations.isEmpty(),
                 "guide filter packs do not line up with the page folders:\n  " + String.join("\n  ", violations));
+    }
+
+    @Test
+    void everyMachineScreenOpensAPageThatExists() {
+        List<String> violations = new ArrayList<>();
+        List<Path> screens = javaFiles("Screen.java");
+        assertTrue(screens.size() >= 8, "no machine screens were found to check, so this test proves nothing");
+
+        for (Path screen : screens) {
+            String name = screen.getFileName().toString();
+            String source = read(screen);
+            if (source.contains("abstract class")) {
+                continue;
+            }
+            Matcher matcher = HELP_BUTTON.matcher(source);
+            if (!matcher.find()) {
+                if (source.contains("addRightButton(")) {
+                    violations.add(name + " places buttons but never calls addHelpButton");
+                }
+                continue;
+            }
+            String page = matcher.group(1);
+            if (!page.startsWith("nep/")) {
+                violations.add(name + " opens '" + page + "'; page ids are absolute and start with 'nep/'");
+            } else if (!Files.isRegularFile(PAGES.resolve(page.substring("nep/".length())))) {
+                violations.add(name + " opens '" + page + "', which is not a page");
+            }
+            if (matcher.find()) {
+                violations.add(name + " adds more than one help button");
+            }
+        }
+        assertTrue(
+                violations.isEmpty(),
+                "the help button is the one control every machine carries, and a page id it cannot resolve leaves the "
+                        + "player staring at a guide error:\n  " + String.join("\n  ", violations));
+    }
+
+    private static List<Path> javaFiles(String suffix) {
+        try (Stream<Path> files = Files.walk(SOURCE)) {
+            return files.filter(path -> path.getFileName().toString().endsWith(suffix))
+                    .sorted()
+                    .toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static List<Pattern> blockedPaths(Path meta) {

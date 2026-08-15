@@ -15,7 +15,7 @@ import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.MatrixEnergyBuffer;
 import dev.rylex.nep.machine.MatrixGridNode;
-import dev.rylex.nep.machine.RedstoneMode;
+import dev.rylex.nep.machine.OverstackedItemHandler;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
@@ -78,7 +78,6 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
     private static final String CHARGED_KEY = "Charged";
     private static final String COST_KEY = "Cost";
     private static final String PROGRESS_KEY = "Progress";
-    private static final String REDSTONE_MODE_KEY = "RedstoneMode";
     private static final String MISSING_KEY = "Missing";
     private static final String BLOCKED_KEY = "Blocked";
     private static final String POWER_FAULT_KEY = "PowerFault";
@@ -173,6 +172,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
                 OUTPUT_SLOTS,
                 NepDraconicContent.MATRIX_ITEM.get(),
                 NepConfig.draconicFusionMatrixIdleMeDrain(),
+                NepConfig.draconicFusionMatrixChannels(),
                 "Fusion matrix");
     }
 
@@ -259,7 +259,6 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
         hash = 31 * hash + energyLevel();
         hash = 31 * hash + Long.hashCode(energy.capacity());
         hash = 31 * hash + Long.hashCode(pendingJobs());
-        hash = 31 * hash + redstoneMode.ordinal();
         return hash;
     }
 
@@ -535,7 +534,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
     }
 
     private boolean fitsInOutput(List<ItemStack> stacks) {
-        ItemStackHandler probe = new ItemStackHandler(outputBuffer.getSlots());
+        ItemStackHandler probe = new OverstackedItemHandler(outputBuffer.getSlots());
         for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
             probe.setStackInSlot(slot, outputBuffer.getStackInSlot(slot).copy());
         }
@@ -805,15 +804,6 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
         refusalTicks = 0;
     }
 
-    @Override
-    protected int comparatorOutput() {
-        return switch (redstoneMode) {
-            case OUTPUT -> RedstoneMode.fullness(outputBuffer);
-            case INPUT -> RedstoneMode.fullness(inputBuffer);
-            case STATUS -> statusSignal();
-        };
-    }
-
     private void refreshVisualState(Level level) {
         BlockState state = getBlockState();
         if (!state.hasProperty(FusionMatrixBlock.STATUS)) {
@@ -1017,7 +1007,6 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
         tag.putLong(CHARGED_KEY, charged);
         tag.putLong(COST_KEY, chargeCost);
         tag.putInt(PROGRESS_KEY, progress);
-        tag.putString(REDSTONE_MODE_KEY, redstoneMode.name());
         tag.putBoolean(BLOCKED_KEY, outputBlocked);
         tag.putBoolean(POWER_FAULT_KEY, powerFault);
         tag.putBoolean(ENERGY_FAULT_KEY, energyFault);
@@ -1058,7 +1047,6 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
         charged = tag.getLong(CHARGED_KEY);
         chargeCost = tag.getLong(COST_KEY);
         progress = tag.getInt(PROGRESS_KEY);
-        redstoneMode = RedstoneMode.byName(tag.getString(REDSTONE_MODE_KEY));
         outputBlocked = tag.getBoolean(BLOCKED_KEY);
         powerFault = tag.getBoolean(POWER_FAULT_KEY);
         energyFault = tag.getBoolean(ENERGY_FAULT_KEY);

@@ -109,7 +109,8 @@ Wyvern Cores fill the buffer in a straight line, while Draconic and Chaotic Core
 * The upgrade slot on the right holds the cores. The gauge beside it is the energy buffer, and it grows as cores go in.
 * **Clear Pending Recipes** drops every craft the Matrix still owes, cancels ingredients it has on request, and cancels the crafting jobs on the network that were waiting on it.
 * **Empty Buffers** returns everything staged to your inventory.
-* **Comparator Signal** cycles what the comparator reads: output buffer, input buffer, or machine status.
+* **Guide** opens this page, and is always the rightmost button.
+* A Comparator beside the block reads the output buffer, empty for nothing staged up to a full 15.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -122,6 +123,7 @@ Wyvern Cores fill the buffer in a straight line, while Draconic and Chaotic Core
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 * The Matrix must be on a powered ME network, not just connected to one.
+* The Matrix takes up 15 channels by default, so it needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
 * Check the recipe's tier is at or below the configured maximum. Above it, patterns are refused outright.
 * A red *Missing ingredients* line means auto-request could not source something. Hover it for the list.
 * Turn on Verbose Logging under Debug to have the Matrix log every pattern it refuses and why.

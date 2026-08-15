@@ -2,6 +2,7 @@ package dev.rylex.nep.compat.jei;
 
 import appeng.menu.me.items.PatternEncodingTermMenu;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.client.MachineHubScreen;
 import dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsJeiCompat;
 import dev.rylex.nep.compat.ae2wtlib.Ae2WtLibJeiCompat;
 import dev.rylex.nep.compat.apothic.ApothicJeiCompat;
@@ -9,12 +10,14 @@ import dev.rylex.nep.compat.compactcrafting.CompactCraftingJeiCompat;
 import dev.rylex.nep.compat.create.CreateJeiCompat;
 import dev.rylex.nep.compat.draconic.DraconicJeiCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalJeiCompat;
+import dev.rylex.nep.compat.viewer.EncodableCategories;
 import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
+import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IIngredientAliasRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
@@ -62,6 +65,7 @@ public final class NepJeiPlugin implements IModPlugin {
                                 new PatternTransferHandler<>(
                                         menuClass, menuType, recipeType, helper, extractor, identifier),
                                 recipeType);
+                        EncodableCategories.add(recipeType.getUid());
                     }
                 };
                 for (JeiTransferSource source : sources) {
@@ -73,6 +77,11 @@ public final class NepJeiPlugin implements IModPlugin {
         if (ModList.get().isLoaded("ae2wtlib")) {
             Ae2WtLibJeiCompat.bindPatternMenus(binder);
         }
+    }
+
+    @Override
+    public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        registration.addGhostIngredientHandler(MachineHubScreen.class, new HubGhostIngredientHandler());
     }
 
     @Override

@@ -16,12 +16,13 @@ import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.create.SequencedAssemblyMatrixBlock.MatrixStatus;
 import dev.rylex.nep.compat.create.newage.CreateNewAgeCompat;
+import dev.rylex.nep.machine.ComparatorSignal;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.MatrixEnergyBuffer;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.machine.MatrixHost;
+import dev.rylex.nep.machine.OverstackedItemHandler;
 import dev.rylex.nep.machine.PushingCpus;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.machine.ReturnDirections;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.util.ItemCounts;
@@ -42,7 +43,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.Containers;
@@ -78,6 +78,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     static final int FLAG_STARVED = 16;
     static final int FLAG_OUTPUT_BLOCKED = 32;
     static final int FLAG_NO_ENERGY = 64;
+    static final int FLAG_NO_CHANNEL = 128;
 
     static final boolean NEW_AGE_LOADED = ModList.get().isLoaded(CreateNewAgeCompat.MOD_ID);
 
@@ -105,12 +106,11 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private static final String CLAIMED_FLUIDS_KEY = "ClaimedFluids";
     private static final String PROGRESS_KEY = "Progress";
     private static final String STRESS_KEY = "Stress";
-    private static final String REDSTONE_MODE_KEY = "RedstoneMode";
     private static final String ENERGY_KEY = "Energy";
     private static final String ENERGY_STORED_KEY = "EnergyStored";
     private static final String ENERGY_PENDING_KEY = "EnergyPending";
 
-    private final ItemStackHandler inputBuffer = new ItemStackHandler(INPUT_SLOTS) {
+    private final ItemStackHandler inputBuffer = new OverstackedItemHandler(INPUT_SLOTS) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -118,7 +118,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         }
     };
 
-    private final ItemStackHandler outputBuffer = new ItemStackHandler(OUTPUT_SLOTS) {
+    private final ItemStackHandler outputBuffer = new OverstackedItemHandler(OUTPUT_SLOTS) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -144,6 +144,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             this,
             NepCreateContent.MATRIX_ITEM.get(),
             NepConfig.createSequencedAssemblyMatrixIdleMeDrain(),
+            NepConfig.createSequencedAssemblyMatrixChannels(),
             "SA matrix");
     private final IItemHandler outputView = new OutputView();
     private final IItemHandler machineView =
@@ -179,7 +180,6 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private int lastComparator = -1;
     private int runningGrace;
     private int starveGrace;
-    private RedstoneMode redstoneMode = RedstoneMode.OUTPUT;
     private int clientFlags;
     private int clientStress;
     private float clientProgress;
@@ -313,35 +313,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     int comparatorOutput() {
-        return switch (redstoneMode) {
-            case OUTPUT -> RedstoneMode.fullness(outputBuffer);
-            case INPUT -> RedstoneMode.inputFullness(inputBuffer, fluids);
-            case STATUS -> statusSignal();
-        };
-    }
-
-    private int statusSignal() {
-        if (runningGrace > 0) {
-            return Mth.clamp(1 + Mth.floor(craftProgress() * 13.0F), 1, 14);
-        }
-        if (!activeResult.isEmpty()) {
-            return 15;
-        }
-        return owed.isEmpty() ? 0 : 1;
-    }
-
-    RedstoneMode redstoneMode() {
-        return redstoneMode;
-    }
-
-    void cycleRedstoneMode() {
-        redstoneMode = redstoneMode.next();
-        setChanged();
-        Level level = getLevel();
-        if (level != null) {
-            refreshComparator(level);
-        }
-        sendData();
+        return ComparatorSignal.of(outputBuffer);
     }
 
     private void refreshComparator(Level level) {
@@ -580,7 +552,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     private boolean fitsInOutput(List<ItemStack> results) {
-        ItemStackHandler probe = new ItemStackHandler(outputBuffer.getSlots());
+        ItemStackHandler probe = new OverstackedItemHandler(outputBuffer.getSlots());
         for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
             probe.setStackInSlot(slot, outputBuffer.getStackInSlot(slot).copy());
         }
@@ -952,12 +924,12 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private long insertCraftedItem(AEItemKey key, long amount, boolean simulate) {
         ItemStackHandler target = inputBuffer;
         if (simulate) {
-            target = new ItemStackHandler(inputBuffer.getSlots());
+            target = new OverstackedItemHandler(inputBuffer.getSlots());
             for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
                 target.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
             }
         }
-        int maxStack = key.toStack(1).getMaxStackSize();
+        int maxStack = OverstackedItemHandler.SLOT_LIMIT;
         long remaining = amount;
         while (remaining > 0) {
             int chunk = (int) Math.min(remaining, maxStack);
@@ -1042,12 +1014,12 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
             long count = entry.getValue();
             while (count > 0) {
-                int chunk = (int) Math.min(count, entry.getKey().toStack(1).getMaxStackSize());
+                int chunk = (int) Math.min(count, OverstackedItemHandler.SLOT_LIMIT);
                 stacks.add(entry.getKey().toStack(chunk));
                 count -= chunk;
             }
         }
-        ItemStackHandler probe = new ItemStackHandler(inputBuffer.getSlots());
+        ItemStackHandler probe = new OverstackedItemHandler(inputBuffer.getSlots());
         for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
             probe.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
         }
@@ -1230,6 +1202,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         if (power.hasUsablePower()) {
             flags |= FLAG_POWERED;
         }
+        if (power.missingChannel()) {
+            flags |= FLAG_NO_CHANNEL;
+        }
         if (getSpeed() != 0) {
             flags |= FLAG_ROTATING;
         }
@@ -1256,6 +1231,11 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         dropHandler(level, pos, outputBuffer);
         if (!rolledResult.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), rolledResult.copy());
+            if (activeJob != null) {
+                for (ItemStack stack : activeJob.retainedStacks()) {
+                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack.copy());
+                }
+            }
         } else {
             for (ItemStack stack : claimedItems) {
                 Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack.copy());
@@ -1365,7 +1345,6 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     @Override
     protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.write(tag, registries, clientPacket);
-        tag.putString(REDSTONE_MODE_KEY, redstoneMode.name());
         tag.put(FLUIDS_KEY, fluids.save(registries));
         tag.put(OWED_KEY, ItemCounts.save(owed));
         if (!activeResult.isEmpty()) {
@@ -1450,9 +1429,6 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     @Override
     protected void read(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.read(tag, registries, clientPacket);
-        redstoneMode = tag.contains(REDSTONE_MODE_KEY)
-                ? RedstoneMode.byName(tag.getString(REDSTONE_MODE_KEY))
-                : RedstoneMode.OUTPUT;
         if (tag.contains(FLUIDS_KEY, Tag.TAG_LIST)) {
             fluids.load(registries, tag.getList(FLUIDS_KEY, Tag.TAG_COMPOUND));
         }

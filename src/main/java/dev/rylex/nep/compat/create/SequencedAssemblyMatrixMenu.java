@@ -15,7 +15,6 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu {
 
     static final int BUTTON_CLEAR_PENDING = 1;
     static final int BUTTON_FILL_TANK = 2;
-    static final int BUTTON_REDSTONE_MODE = 3;
     static final int BUTTON_CLEAR_BUFFER = 4;
 
     static final int WIDTH = 204;
@@ -109,10 +108,6 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu {
         }
         if (id == BUTTON_FILL_TANK) {
             return MachineFluidInput.fillFromCarried(this, player, matrix.fluidHandler());
-        }
-        if (id == BUTTON_REDSTONE_MODE) {
-            matrix.cycleRedstoneMode();
-            return true;
         }
         if (id == BUTTON_CLEAR_BUFFER) {
             matrix.clearBufferTo(player);

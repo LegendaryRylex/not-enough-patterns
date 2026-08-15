@@ -18,8 +18,7 @@ public record SequencedAssemblyState(
         List<Station> stations,
         List<Making> making,
         List<GenericStack> missing,
-        List<FluidStack> fluids,
-        int redstoneMode)
+        List<FluidStack> fluids)
         implements CustomPacketPayload {
 
     public static final Type<SequencedAssemblyState> TYPE = new Type<>(Nep.id("sequenced_assembly_state"));
@@ -48,14 +47,13 @@ public record SequencedAssemblyState(
     }
 
     static SequencedAssemblyState empty() {
-        return new SequencedAssemblyState(0, false, false, List.of(), List.of(), List.of(), List.of(), 0);
+        return new SequencedAssemblyState(0, false, false, List.of(), List.of(), List.of(), List.of());
     }
 
     boolean matches(SequencedAssemblyState other) {
         if (status != other.status
                 || halted != other.halted
                 || outputBlocked != other.outputBlocked
-                || redstoneMode != other.redstoneMode
                 || making.size() != other.making.size()
                 || fluids.size() != other.fluids.size()
                 || !stations.equals(other.stations)
@@ -105,7 +103,6 @@ public record SequencedAssemblyState(
         for (FluidStack stack : state.fluids) {
             FluidStack.OPTIONAL_STREAM_CODEC.encode(buf, stack);
         }
-        buf.writeVarInt(state.redstoneMode);
     }
 
     private static SequencedAssemblyState decode(RegistryFriendlyByteBuf buf) {
@@ -140,9 +137,7 @@ public record SequencedAssemblyState(
         for (int i = 0; i < fluidCount; i++) {
             fluids.add(FluidStack.OPTIONAL_STREAM_CODEC.decode(buf));
         }
-        int redstoneMode = buf.readVarInt();
-        return new SequencedAssemblyState(
-                status, halted, outputBlocked, stations, making, missing, fluids, redstoneMode);
+        return new SequencedAssemblyState(status, halted, outputBlocked, stations, making, missing, fluids);
     }
 
     private static StationKind kind(int ordinal) {

@@ -13,10 +13,13 @@ Pattern providers only cope with machines shaped like a furnace: items in, items
 | Compact Crafting     |   ✅   |   ❌   | Miniaturization                                             |
 | Create               |   ✅   |   ❌   | Mechanical Crafting, Deploying, Filling, Sequenced Assembly |
 | Draconic Evolution   |   ✅   |   ❌   | Fusion Crafting                                             |
-| Malum                |   ✅   |   ❌   | Spirit Infusion                                             |
 | Mystical Agriculture |   ✅   |   ✅   | Infusion, Awakening                                         |
 
 Look a recipe up in JEI, hit the **+** button at a Pattern Encoding Terminal, and the right pattern comes back with the ingredients already worked out.
+
+### JEI vs EMI
+
+Full EMI support is postponed until NEP's full 1.0 release, until then I'll be adding "JEMI" support, meaning you'll still need to have JEI installed even if you're using EMI to view items and recipes.
 
 ## Added Content
 

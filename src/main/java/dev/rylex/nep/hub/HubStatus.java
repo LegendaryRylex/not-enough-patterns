@@ -10,7 +10,8 @@ public enum HubStatus {
     OK(null),
     NO_NETWORK("gui.nep.machine_hub.status.no_network"),
     OFFLINE("gui.nep.machine_hub.status.offline"),
-    FULL("gui.nep.machine_hub.status.full");
+    FULL("gui.nep.machine_hub.status.full"),
+    NO_CHANNEL("gui.nep.machine_hub.status.no_channel");
 
     public static final StreamCodec<ByteBuf, HubStatus> STREAM_CODEC =
             ByteBufCodecs.idMapper(HubStatus::byOrdinal, HubStatus::ordinal);

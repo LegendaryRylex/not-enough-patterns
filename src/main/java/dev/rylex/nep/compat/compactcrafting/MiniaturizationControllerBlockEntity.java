@@ -16,7 +16,6 @@ import dev.rylex.nep.compat.compactcrafting.MiniaturizationControllerBlock.Contr
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.MatrixGridNode;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
@@ -84,7 +83,6 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
     private static final String CLAIMED_KEY = "Claimed";
     private static final String PROGRESS_KEY = "Progress";
     private static final String CRAFT_TICKS_KEY = "CraftTicks";
-    private static final String REDSTONE_MODE_KEY = "RedstoneMode";
     private static final String MISSING_KEY = "Missing";
     private static final String BLOCKED_KEY = "Blocked";
     private static final String POWER_FAULT_KEY = "PowerFault";
@@ -187,6 +185,7 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
                 OUTPUT_SLOTS,
                 NepCompactCraftingContent.CONTROLLER_ITEM.get(),
                 NepConfig.compactCraftingControllerIdleMeDrain(),
+                NepConfig.compactCraftingControllerChannels(),
                 "Miniaturization controller");
     }
 
@@ -908,15 +907,6 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
     }
 
     @Override
-    protected int comparatorOutput() {
-        return switch (redstoneMode) {
-            case OUTPUT -> RedstoneMode.fullness(outputBuffer);
-            case INPUT -> RedstoneMode.fullness(inputBuffer);
-            case STATUS -> statusSignal();
-        };
-    }
-
-    @Override
     protected int readoutSignature() {
         int hash = activeResult.isEmpty() ? 0 : activeResult.getItem().hashCode();
         hash = 31 * hash + Math.round(craftProgress() * 128.0F);
@@ -928,7 +918,6 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         hash = 31 * hash + phase.ordinal();
         hash = 31 * hash + craftTicks;
         hash = 31 * hash + Long.hashCode(pendingJobs());
-        hash = 31 * hash + redstoneMode.ordinal();
         hash = 31 * hash + (fieldSize == null ? 0 : fieldSize.ordinal());
         return hash;
     }
@@ -1085,7 +1074,6 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         tag.put(CLAIMED_KEY, claimed);
         tag.putInt(PROGRESS_KEY, progress);
         tag.putInt(CRAFT_TICKS_KEY, craftTicks);
-        tag.putString(REDSTONE_MODE_KEY, redstoneMode.name());
         tag.putBoolean(BLOCKED_KEY, outputBlocked);
         tag.putBoolean(POWER_FAULT_KEY, powerFault);
         tag.putString(STALL_KEY, stall.name());
@@ -1140,7 +1128,6 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         }
         progress = tag.getInt(PROGRESS_KEY);
         craftTicks = tag.getInt(CRAFT_TICKS_KEY);
-        redstoneMode = RedstoneMode.byName(tag.getString(REDSTONE_MODE_KEY));
         outputBlocked = tag.getBoolean(BLOCKED_KEY);
         powerFault = tag.getBoolean(POWER_FAULT_KEY);
         missingInputs.clear();

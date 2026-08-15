@@ -47,22 +47,3 @@ Below is a list of all current Matrices available in the mod:
 * <ItemImage id="nep:sequenced_assembly_matrix" scale="0.5"/> [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) (Create)
 * <ItemImage id="nep:fusion_matrix" scale="0.5"/> [Injector Fusion Matrix](/nep/draconicevolution/fusion-matrix.md) (Draconic Evolution)
 * <ItemImage id="nep:infused_awakening_matrix" scale="0.5"/> [Infused Awakening Matrix](/nep/mysticalagriculture/infused-awakening-matrix.md) (Mystical Agriculture)
-
-<ItemImage id="minecraft:air" scale="0.5"/>
-
-
-***
-
-<Column alignItems="center" fullWidth={true}>
-  ## <Color id="gold">Configs for Pack Devs</Color>
-</Column>
-
-<ItemImage id="minecraft:air" scale="0.25"/>
-
-Integration settings live in `config/nep-server.toml`, or open Mods → Not Enough Patterns → Config. To vary them per world, drop a copy in that world's `serverconfig` folder and it overrides the shared file.
-
-Every integration and Matrix have their own toggle. Disabling an integration stops it encoding patterns and stops Pattern Providers pushing to those machines. Patterns already in the world are left alone and resume working when the module is turned back on.
-
-Each machine page lists the settings that belong to it, and a page whose module is switched off says so in red at the top. Turn on `Debug → Verbose Logging` to print every push and why it was accepted or rejected.
-
-<Color id="green">Each mod has a Module Override master switch.</Color> Turn off Modules → Create → Module Override and every Create integration stops regardless of its own toggle; the same goes for Modules → Draconic Evolution → Module Override.

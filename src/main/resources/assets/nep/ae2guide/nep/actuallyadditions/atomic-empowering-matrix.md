@@ -63,7 +63,8 @@ item_ids:
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 * The readout names what is being made, how many jobs are queued, and how much of the craft's energy has been paid.
-* The three buttons clear the pending jobs, cycle what the comparator reads, and empty the buffers into your inventory.
+* The three buttons clear the pending jobs, empty the buffers into your inventory, and open this page. **Guide** is always the rightmost of them.
+* A Comparator beside the Matrix reads the output buffer, empty for nothing staged up to a full 15.
 * Input slots only accept what the Matrix is actually short of, so a hopper can top it up without stuffing it.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
@@ -77,6 +78,7 @@ item_ids:
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 * **No network power.** The Matrix needs a powered ME network before it starts anything, on top of its FE.
+* **Not enough free network channels.** The Matrix takes up 15 channels by default, so it needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
 * **No energy.** The FE buffer is empty. The craft resumes by itself once power returns.
 * **Output buffer full.** A finished craft with nowhere to go holds the machine at full progress until the buffer is cleared.
 * **Two recipes for one item.** Only one recipe per result item can be queued at a time; a second pattern making the same item a different way is refused until the first finishes.

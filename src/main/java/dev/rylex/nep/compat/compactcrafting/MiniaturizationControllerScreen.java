@@ -3,9 +3,9 @@ package dev.rylex.nep.compat.compactcrafting;
 import appeng.api.stacks.GenericStack;
 import dev.compactmods.crafting.api.field.MiniaturizationFieldSize;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.client.MatrixScreen;
 import dev.rylex.nep.client.ReadoutButton;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,29 +46,19 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
     protected void init() {
         super.init();
         resetButtons();
+        addHelpButton("nep/compactcrafting/miniaturization-controller.md");
         clearPending = addRightButton(
-                1,
-                "✗",
+                2,
+                NepIcons.REMOVE,
                 "gui.nep.clear_pending",
                 "gui.nep.clear_pending.hint",
                 () -> sendButton(MiniaturizationControllerMenu.BUTTON_CLEAR_PENDING));
-        redstoneModeButton = addRightButton(
-                2,
-                currentMode().glyph(),
-                "gui.nep.redstone_mode",
-                "gui.nep.redstone_mode.hint",
-                () -> sendButton(MiniaturizationControllerMenu.BUTTON_REDSTONE_MODE));
         addRightButton(
                 3,
-                "↓",
+                NepIcons.DOWN,
                 "gui.nep.clear_buffer",
                 "gui.nep.clear_buffer.hint",
                 () -> sendButton(MiniaturizationControllerMenu.BUTTON_CLEAR_BUFFER));
-    }
-
-    private RedstoneMode currentMode() {
-        MiniaturizationControllerBlockEntity controller = menu.controller();
-        return controller != null ? controller.redstoneMode() : RedstoneMode.OUTPUT;
     }
 
     @Override
@@ -80,7 +70,6 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
                     && (controller.hasPending()
                             || controller.refusal() != MiniaturizationControllerBlockEntity.Refusal.NONE);
         }
-        updateRedstoneButton(currentMode());
         tickButtons();
     }
 
@@ -159,6 +148,9 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
     }
 
     private static Component statusLine(MiniaturizationControllerBlockEntity controller) {
+        if (controller.hasChannelFault()) {
+            return Component.translatable("gui.nep.miniaturization_controller.no_network_channels");
+        }
         if (controller.hasPowerFault()) {
             return Component.translatable("gui.nep.miniaturization_controller.no_network_power");
         }

@@ -3,8 +3,8 @@ package dev.rylex.nep.compat.create;
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.machine.MachineFluidInput;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,21 +57,16 @@ public class SequencedAssemblyControllerScreen extends AssemblyReadoutScreen<Seq
     @Override
     protected void init() {
         super.init();
+        addHelpButton("nep/create/sequenced-assembly.md");
         clearPending = addRightButton(
-                1,
-                "✗",
+                2,
+                NepIcons.REMOVE,
                 "gui.nep.clear_pending",
                 "gui.nep.clear_pending.hint",
                 () -> sendButton(SequencedAssemblyControllerMenu.BUTTON_CLEAR_PENDING));
-        redstoneModeButton = addRightButton(
-                2,
-                RedstoneMode.byOrdinal(state.redstoneMode()).glyph(),
-                "gui.nep.redstone_mode",
-                "gui.nep.redstone_mode.hint",
-                () -> sendButton(SequencedAssemblyControllerMenu.BUTTON_REDSTONE_MODE));
         addRightButton(
                 3,
-                "↓",
+                NepIcons.DOWN,
                 "gui.nep.clear_buffer",
                 "gui.nep.clear_buffer.hint",
                 () -> sendButton(SequencedAssemblyControllerMenu.BUTTON_CLEAR_BUFFER));
@@ -83,7 +78,6 @@ public class SequencedAssemblyControllerScreen extends AssemblyReadoutScreen<Seq
         if (clearPending != null) {
             clearPending.active = !state.making().isEmpty();
         }
-        updateRedstoneButton(RedstoneMode.byOrdinal(state.redstoneMode()));
     }
 
     @Override

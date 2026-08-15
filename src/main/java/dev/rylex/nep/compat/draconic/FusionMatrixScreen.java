@@ -5,11 +5,11 @@ import appeng.api.stacks.GenericStack;
 import com.brandon3055.brandonscore.api.TechLevel;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.client.EnergyGauge;
 import dev.rylex.nep.client.MatrixScreen;
 import dev.rylex.nep.client.ReadoutButton;
 import dev.rylex.nep.client.RetainedHighlight;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.pattern.RetainedInputs;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
@@ -63,29 +63,19 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
     protected void init() {
         super.init();
         resetButtons();
+        addHelpButton("nep/draconicevolution/fusion-matrix.md");
         clearPending = addRightButton(
-                1,
-                "✗",
+                2,
+                NepIcons.REMOVE,
                 "gui.nep.clear_pending",
                 "gui.nep.clear_pending.hint",
                 () -> sendButton(FusionMatrixMenu.BUTTON_CLEAR_PENDING));
-        redstoneModeButton = addRightButton(
-                2,
-                currentMode().glyph(),
-                "gui.nep.redstone_mode",
-                "gui.nep.redstone_mode.hint",
-                () -> sendButton(FusionMatrixMenu.BUTTON_REDSTONE_MODE));
         addRightButton(
                 3,
-                "↓",
+                NepIcons.DOWN,
                 "gui.nep.clear_buffer",
                 "gui.nep.clear_buffer.hint",
                 () -> sendButton(FusionMatrixMenu.BUTTON_CLEAR_BUFFER));
-    }
-
-    private RedstoneMode currentMode() {
-        FusionMatrixBlockEntity matrix = menu.matrix();
-        return matrix != null ? matrix.redstoneMode() : RedstoneMode.OUTPUT;
     }
 
     @Override
@@ -97,7 +87,6 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
             clearPending.active =
                     matrix != null && (matrix.hasPending() || matrix.refusal() != FusionMatrixBlockEntity.Refusal.NONE);
         }
-        updateRedstoneButton(currentMode());
         tickButtons();
     }
 
@@ -278,6 +267,9 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
     }
 
     private static Component statusLine(FusionMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return Component.translatable("gui.nep.fusion_matrix.no_network_channels");
+        }
         if (matrix.hasPowerFault()) {
             return Component.translatable("gui.nep.fusion_matrix.no_network_power");
         }

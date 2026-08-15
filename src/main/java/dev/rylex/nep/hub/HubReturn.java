@@ -23,13 +23,13 @@ public final class HubReturn {
         long moved = 0;
         boolean refused = false;
         for (HubTarget target : targets) {
-            if (target.accepts()) {
+            if (!target.provides()) {
                 continue;
             }
             IItemHandler items = target.items();
             if (items != null) {
                 for (int slot = 0; slot < items.getSlots(); slot++) {
-                    Outcome slotOutcome = pushSlot(items, slot, network, source);
+                    Outcome slotOutcome = pushSlot(target, items, slot, network, source);
                     moved += slotOutcome.moved();
                     refused |= slotOutcome.refused();
                 }
@@ -37,7 +37,7 @@ public final class HubReturn {
             IFluidHandler fluids = target.fluids();
             if (fluids != null) {
                 for (int tank = 0; tank < fluids.getTanks(); tank++) {
-                    Outcome tankOutcome = pushTank(fluids, tank, network, source);
+                    Outcome tankOutcome = pushTank(target, fluids, tank, network, source);
                     moved += tankOutcome.moved();
                     refused |= tankOutcome.refused();
                 }
@@ -46,7 +46,8 @@ public final class HubReturn {
         return new Outcome(moved, refused);
     }
 
-    private static Outcome pushSlot(IItemHandler handler, int slot, MEStorage network, IActionSource source) {
+    private static Outcome pushSlot(
+            HubTarget target, IItemHandler handler, int slot, MEStorage network, IActionSource source) {
         ItemStack held = handler.getStackInSlot(slot);
         if (held.isEmpty()) {
             return new Outcome(0, false);
@@ -56,6 +57,9 @@ public final class HubReturn {
             return new Outcome(0, false);
         }
         AEItemKey key = AEItemKey.of(offered);
+        if (!target.returnsKey(key)) {
+            return new Outcome(0, false);
+        }
         long room = network.insert(key, offered.getCount(), Actionable.SIMULATE, source);
         if (room <= 0) {
             return new Outcome(0, true);
@@ -79,7 +83,8 @@ public final class HubReturn {
         return new Outcome(accepted, partial);
     }
 
-    private static Outcome pushTank(IFluidHandler handler, int tank, MEStorage network, IActionSource source) {
+    private static Outcome pushTank(
+            HubTarget target, IFluidHandler handler, int tank, MEStorage network, IActionSource source) {
         FluidStack held = handler.getFluidInTank(tank);
         if (held.isEmpty()) {
             return new Outcome(0, false);
@@ -89,6 +94,9 @@ public final class HubReturn {
             return new Outcome(0, false);
         }
         AEFluidKey key = AEFluidKey.of(offered);
+        if (!target.returnsKey(key)) {
+            return new Outcome(0, false);
+        }
         long room = network.insert(key, offered.getAmount(), Actionable.SIMULATE, source);
         if (room <= 0) {
             return new Outcome(0, true);

@@ -1,5 +1,7 @@
 package dev.rylex.nep;
 
+import dev.rylex.nep.hub.HubRules;
+import java.util.List;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -17,6 +19,11 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue MACHINE_HUB_MAXIMUM_LINKS;
     private static final ModConfigSpec.IntValue MACHINE_HUB_SCAN_BUDGET;
     private static final ModConfigSpec.IntValue MACHINE_HUB_CASING_DEPTH;
+    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_SCAN_WHITELIST;
+    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_SCAN_BLACKLIST;
+    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_LINK_BLACKLIST;
+    private static final ModConfigSpec.IntValue MACHINE_HUB_CHANNELS;
+    private static final ModConfigSpec.IntValue MACHINE_HUB_CHANNELS_PER_LINK;
     private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_OVERRIDE;
     private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_EMPOWERING;
     private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_ATOMIC_RECONSTRUCTION;
@@ -29,6 +36,7 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_RECONSTRUCTION_CRAFT_TICKS;
     private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_ME_DRAIN;
     private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_CHANNELS;
     private static final ModConfigSpec.BooleanValue APOTHIC_OVERRIDE;
     private static final ModConfigSpec.BooleanValue APOTHIC_INFUSION;
     private static final ModConfigSpec.IntValue APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE;
@@ -41,11 +49,13 @@ public final class NepConfig {
     private static final ModConfigSpec.ConfigValue<String> COMPACT_CRAFTING_MATRIX_MAXIMUM_FIELD_SIZE;
     private static final ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_ME_DRAIN;
     private static final ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_CHANNELS;
     private static final ModConfigSpec.BooleanValue COMPACT_CRAFTING_CONTROLLER;
     private static final ModConfigSpec.BooleanValue COMPACT_CRAFTING_CONTROLLER_AUTO_REQUEST;
     private static final ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_BLOCKS_PER_TICK;
     private static final ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_ME_DRAIN;
     private static final ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_CHANNELS;
     private static final ModConfigSpec.BooleanValue CREATE_OVERRIDE;
     private static final ModConfigSpec.BooleanValue CREATE_FILLING;
     private static final ModConfigSpec.BooleanValue CREATE_MECHANICAL_CRAFTING;
@@ -58,6 +68,7 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_TANK_CAPACITY;
     private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_HALT_GRACE;
     private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_RECLAIM_GRACE;
+    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_CHANNELS;
     private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX;
     private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_GUARANTEED_RESULTS;
     private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_AUTO_REQUEST;
@@ -70,6 +81,7 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_TANK_CAPACITY;
     private static final ModConfigSpec.LongValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY;
     private static final ModConfigSpec.LongValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE;
+    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHANNELS;
     private static final ModConfigSpec.BooleanValue DRACONIC_OVERRIDE;
     private static final ModConfigSpec.BooleanValue DRACONIC_FUSION_CRAFTING;
     private static final ModConfigSpec.BooleanValue DRACONIC_FUSION_MATRIX;
@@ -80,6 +92,7 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CRAFT_TICKS;
     private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_ME_DRAIN;
     private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CHANNELS;
     private static final ModConfigSpec.ConfigValue<String> DRACONIC_FUSION_MATRIX_MAXIMUM_TIER;
     private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_MAX_CORES;
     private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CORE_SWAP_GRACE;
@@ -98,6 +111,7 @@ public final class NepConfig {
     private static final ModConfigSpec.LongValue MYSTICAL_MATRIX_TANK_CAPACITY;
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_ME_DRAIN;
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_CHANNELS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -171,6 +185,11 @@ public final class NepConfig {
                         "Energy the Matrix draws from its ME network while idle, in AE per tick. This standing cost is read once when the Matrix joins a network, so changing it needs a world reload.")
                 .translation("nep.configuration.modules.actuallyadditions.atomicEmpoweringMatrix.idleMeNetworkDrain")
                 .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        ACTUALLY_ADDITIONS_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.actuallyadditions.atomicEmpoweringMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
         builder.pop();
 
         builder.pop();
@@ -245,6 +264,11 @@ public final class NepConfig {
                         "Energy the Controller draws from its ME network while idle, in AE per tick. This standing cost is read once when the Controller joins a network, so changing it needs a world reload.")
                 .translation("nep.configuration.modules.compactcrafting.miniaturizationController.idleMeNetworkDrain")
                 .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        COMPACT_CRAFTING_CONTROLLER_CHANNELS = builder.comment(
+                        "Channels the Controller takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Controller joins a network, so changing it needs a world reload. Set to 0 for a Controller that takes up no channels at all.")
+                .translation("nep.configuration.modules.compactcrafting.miniaturizationController.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 7, 0, 128);
         builder.pop();
 
         builder.comment("Miniaturization Matrix:")
@@ -278,6 +302,11 @@ public final class NepConfig {
                         "Energy the Matrix draws from its ME network while idle, in AE per tick. This standing cost is read once when the Matrix joins a network, so changing it needs a world reload.")
                 .translation("nep.configuration.modules.compactcrafting.miniaturizationMatrix.idleMeNetworkDrain")
                 .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        COMPACT_CRAFTING_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.compactcrafting.miniaturizationMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
         builder.pop();
 
         builder.pop();
@@ -361,6 +390,11 @@ public final class NepConfig {
                         "The clock restarts every time something is reclaimed. 20 ticks is one second.")
                 .translation("nep.configuration.modules.create.sequencedAssembly.reclaimGrace")
                 .defineInRange("reclaimGrace", 200, 0, 24_000);
+        CREATE_SEQUENCED_ASSEMBLY_CHANNELS = builder.comment(
+                        "Channels the Controller takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Controller joins a network, so changing it needs a world reload. Set to 0 for a Controller that takes up no channels at all.")
+                .translation("nep.configuration.modules.create.sequencedAssembly.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 7, 0, 128);
         builder.pop();
 
         builder.comment("Assembly Matrix:")
@@ -374,7 +408,7 @@ public final class NepConfig {
                         "Bypasses the output chances of sequenced assembly recipes, so the Matrix craft always yields the recipe's primary result.",
                         "When disabled, the Matrix rolls the recipe's result pool exactly as a physical line does: unlucky rolls produce junk, which is placed into network storage, and the ingredients for that attempt are lost.")
                 .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.guaranteedResults")
-                .define("guaranteedResults", true);
+                .define("guaranteedResults", false);
         CREATE_SEQUENCED_ASSEMBLY_MATRIX_AUTO_REQUEST = builder.comment(
                         "Treats the Assembly Matrix as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a craft it owes is left without materials.",
                         "This lets a Matrix with guaranteedResults disabled retry after a chance recipe rolls junk. When disabled, an unlucky streak stalls the crafting network until manually fixed.")
@@ -419,6 +453,11 @@ public final class NepConfig {
                         "Maximum energy the Matrix accepts per tick, in FE.")
                 .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.chargeRate")
                 .defineInRange("chargeRate", 100_000L, 1L, Integer.MAX_VALUE);
+        CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Anything above 8 has to connect via a dense cable, and a network with no ME Controller cannot carry more than 8 channels in total.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
         builder.pop();
 
         builder.pop();
@@ -475,6 +514,11 @@ public final class NepConfig {
                         "Energy the Matrix draws from its ME network while idle, in AE per tick. This standing cost is read once when the Matrix joins a network, so changing it needs a world reload.")
                 .translation("nep.configuration.modules.draconicevolution.fusionMatrix.idleMeNetworkDrain")
                 .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        DRACONIC_FUSION_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.draconicevolution.fusionMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
         DRACONIC_FUSION_MATRIX_MAXIMUM_TIER = builder.comment(
                         "Highest fusion recipe tier the Matrix will run: 'draconium', 'wyvern', 'draconic', or 'chaotic'.")
                 .translation("nep.configuration.modules.draconicevolution.fusionMatrix.maximumTier")
@@ -582,6 +626,11 @@ public final class NepConfig {
                         "Energy the Matrix draws from its ME network while idle, in AE per tick. This standing cost is read once when the Matrix joins a network, so changing it needs a world reload.")
                 .translation("nep.configuration.modules.mysticalagriculture.infusedAwakeningMatrix.idleMeNetworkDrain")
                 .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        MYSTICAL_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.mysticalagriculture.infusedAwakeningMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
         builder.pop();
 
         builder.pop();
@@ -620,12 +669,38 @@ public final class NepConfig {
                         "How many blocks the Machine Hub's scan may walk through before it stops, which is what bounds the cost of pressing the button.",
                         "The scan spreads from the blocks touching the Hub through anything that looks like part of the same machine, so it never walks off into the terrain and rarely gets near this ceiling. Raise it for a machine larger than the budget can cover.")
                 .translation("nep.configuration.machineHub.scanBudget")
-                .defineInRange("scanBudget", 16, 4, 128);
+                .defineInRange("scanBudget", 128, 4, 1024);
         MACHINE_HUB_CASING_DEPTH = builder.comment(
                         "How many plain blocks in a row the Machine Hub's scan may step through between one machine part and the next.",
                         "The scan travels freely through blocks carrying a block entity, which is every hatch, port and controller. Everything else is casing, and casing is only crossed for this many blocks at a time, and only when it belongs to a mod that already owns a machine part nearby. Raise it for a multiblock with thick walls between its hatches; set it to zero to have the scan follow machine parts alone.")
                 .translation("nep.configuration.machineHub.casingDepth")
                 .defineInRange("casingDepth", 3, 0, 8);
+        MACHINE_HUB_SCAN_WHITELIST = builder.comment(
+                        "Blocks the Machine Hub's scan always treats as machine parts, written as block ids (modid:block) or mod id regex (modid:*).",
+                        "Whatever stands against a whitelisted block is trusted the way blocks touching the Hub are, and a whitelisted casing is crossed without counting against casingDepth.",
+                        "The block tag nep:machine_hub/parts does the same thing in a datapack.")
+                .translation("nep.configuration.machineHub.scanWhitelist")
+                .defineListAllowEmpty("scanWhitelist", List.of(), () -> "minecraft:stone", HubRules::configEntry);
+        MACHINE_HUB_SCAN_BLACKLIST = builder.comment(
+                        "Blocks the Machine Hub's scan never walks through and never proposes, written as block ids (modid:block) or mod id regex (modid:*). The blacklist wins over the whitelist.",
+                        "The block tag nep:machine_hub/blocked does the same thing in a datapack, and ships with common player storage (chests, barrels, shulker boxes) and general terrain and building blocks (dirt, stone, sand, wood, wool, concrete) already in it.")
+                .translation("nep.configuration.machineHub.scanBlacklist")
+                .defineListAllowEmpty("scanBlacklist", List.of(), () -> "minecraft:stone", HubRules::configEntry);
+        MACHINE_HUB_LINK_BLACKLIST = builder.comment(
+                        "Blocks a Machine Hub refuses to link at all, even from a Hub Linker plan, written as block ids (modid:block) or a mod id regex (modid:*).",
+                        "The scan can still go through them to whatever lies beyond. The block tag nep:machine_hub/unlinkable does the same thing in a datapack.")
+                .translation("nep.configuration.machineHub.linkBlacklist")
+                .defineListAllowEmpty("linkBlacklist", List.of(), () -> "minecraft:stone", HubRules::configEntry);
+        MACHINE_HUB_CHANNELS = builder.comment(
+                        "Channels the Machine Hub takes up on its ME network before its links are counted. Each linked inventory adds meNetworkChannelsPerLink on top, and anything above 8 has to pass through dense cables.",
+                        "This is read once when the Hub joins a network, so changing it needs a world reload. Set both this and meNetworkChannelsPerLink to 0 for a Hub that takes up no channels at all.")
+                .translation("nep.configuration.machineHub.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 11, 0, 128);
+        MACHINE_HUB_CHANNELS_PER_LINK = builder.comment(
+                        "Channels each inventory linked to the Machine Hub adds to what the Hub takes up, standing in for a bus each hatch would otherwise need.",
+                        "A Hub can take up to the channel limit at most depending on your AE2 config. Set to 0 to have links cost nothing.")
+                .translation("nep.configuration.machineHub.meNetworkChannelsPerLink")
+                .defineInRange("meNetworkChannelsPerLink", 1, 0, 128);
         builder.pop();
 
         builder.comment("Pattern Provider behaviour.")
@@ -707,11 +782,31 @@ public final class NepConfig {
     }
 
     public static int machineHubScanBudget() {
-        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : 16;
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : 128;
     }
 
     public static int machineHubCasingDepth() {
         return SPEC.isLoaded() ? MACHINE_HUB_CASING_DEPTH.get() : 3;
+    }
+
+    public static List<? extends String> machineHubScanWhitelist() {
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_WHITELIST.get() : List.of();
+    }
+
+    public static List<? extends String> machineHubScanBlacklist() {
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BLACKLIST.get() : List.of();
+    }
+
+    public static List<? extends String> machineHubLinkBlacklist() {
+        return SPEC.isLoaded() ? MACHINE_HUB_LINK_BLACKLIST.get() : List.of();
+    }
+
+    public static int machineHubChannels() {
+        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS.get() : 11;
+    }
+
+    public static int machineHubChannelsPerLink() {
+        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS_PER_LINK.get() : 1;
     }
 
     public static boolean actuallyAdditionsOverride() {
@@ -763,6 +858,10 @@ public final class NepConfig {
         return Math.min(idle, actuallyAdditionsMatrixMeDrain());
     }
 
+    public static int actuallyAdditionsMatrixChannels() {
+        return SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_CHANNELS.get() : 15;
+    }
+
     public static boolean apothicOverride() {
         return SPEC.isLoaded() && APOTHIC_OVERRIDE.get();
     }
@@ -812,6 +911,10 @@ public final class NepConfig {
         return Math.min(idle, compactCraftingMatrixMeDrain());
     }
 
+    public static int compactCraftingMatrixChannels() {
+        return SPEC.isLoaded() ? COMPACT_CRAFTING_MATRIX_CHANNELS.get() : 15;
+    }
+
     public static boolean compactCraftingMiniaturizationController() {
         return compactCraftingOverride() && COMPACT_CRAFTING_CONTROLLER.get();
     }
@@ -831,6 +934,10 @@ public final class NepConfig {
     public static int compactCraftingControllerIdleMeDrain() {
         int idle = SPEC.isLoaded() ? COMPACT_CRAFTING_CONTROLLER_IDLE_ME_DRAIN.get() : 10;
         return Math.min(idle, compactCraftingControllerMeDrain());
+    }
+
+    public static int compactCraftingControllerChannels() {
+        return SPEC.isLoaded() ? COMPACT_CRAFTING_CONTROLLER_CHANNELS.get() : 7;
     }
 
     public static boolean createOverride() {
@@ -886,7 +993,7 @@ public final class NepConfig {
     }
 
     public static boolean createSequencedAssemblyMatrixGuaranteedResults() {
-        return !SPEC.isLoaded() || CREATE_SEQUENCED_ASSEMBLY_MATRIX_GUARANTEED_RESULTS.get();
+        return SPEC.isLoaded() && CREATE_SEQUENCED_ASSEMBLY_MATRIX_GUARANTEED_RESULTS.get();
     }
 
     public static boolean createSequencedAssemblyMatrixAutoRequest() {
@@ -904,6 +1011,14 @@ public final class NepConfig {
     public static int createSequencedAssemblyMatrixIdleMeDrain() {
         int idle = SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_IDLE_ME_DRAIN.get() : 10;
         return Math.min(idle, createSequencedAssemblyMatrixMeDrain());
+    }
+
+    public static int createSequencedAssemblyMatrixChannels() {
+        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHANNELS.get() : 15;
+    }
+
+    public static int createSequencedAssemblyChannels() {
+        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_CHANNELS.get() : 7;
     }
 
     public static int createSequencedAssemblyMatrixStressMinimum() {
@@ -970,6 +1085,10 @@ public final class NepConfig {
     public static int draconicFusionMatrixIdleMeDrain() {
         int idle = SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_IDLE_ME_DRAIN.get() : 10;
         return Math.min(idle, draconicFusionMatrixMeDrain());
+    }
+
+    public static int draconicFusionMatrixChannels() {
+        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CHANNELS.get() : 15;
     }
 
     public static int draconicFusionMatrixMaxCores() {
@@ -1044,5 +1163,9 @@ public final class NepConfig {
     public static int mysticalInfusedAwakeningMatrixIdleMeDrain() {
         int idle = SPEC.isLoaded() ? MYSTICAL_MATRIX_IDLE_ME_DRAIN.get() : 10;
         return Math.min(idle, mysticalInfusedAwakeningMatrixMeDrain());
+    }
+
+    public static int mysticalInfusedAwakeningMatrixChannels() {
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CHANNELS.get() : 15;
     }
 }

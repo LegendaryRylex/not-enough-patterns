@@ -1,7 +1,6 @@
 package dev.rylex.nep.compat.create;
 
 import dev.rylex.nep.Nep;
-import dev.rylex.nep.machine.RedstoneMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -144,52 +143,16 @@ public final class SequencedAssemblyMatrixGameTest {
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void comparatorReadsTheOutputBufferByDefault(GameTestHelper helper) {
+    public static void comparatorReadsTheOutputBufferAndNothingElse(GameTestHelper helper) {
         SequencedAssemblyMatrixBlockEntity matrix = place(helper);
 
-        helper.assertTrue(matrix.redstoneMode() == RedstoneMode.OUTPUT, "a fresh matrix did not default to Output");
         helper.assertTrue(comparator(helper) == 0, "an empty matrix emitted a signal");
+
+        matrix.getInputBuffer().insertItem(0, new ItemStack(Items.OBSIDIAN, 64), false);
+        helper.assertTrue(comparator(helper) == 0, "the input buffer reached the comparator");
 
         matrix.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 64), false);
         helper.assertTrue(comparator(helper) > 0, "a stocked output buffer emitted no signal");
-        helper.succeed();
-    }
-
-    @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void inputModeReadsTheInputBufferInstead(GameTestHelper helper) {
-        SequencedAssemblyMatrixBlockEntity matrix = place(helper);
-        matrix.getInputBuffer().insertItem(0, new ItemStack(Items.OBSIDIAN, 64), false);
-
-        helper.assertTrue(comparator(helper) == 0, "Output mode reported the input buffer");
-
-        matrix.cycleRedstoneMode();
-        matrix.cycleRedstoneMode();
-        helper.assertTrue(matrix.redstoneMode() == RedstoneMode.INPUT, "cycling twice did not reach Input mode");
-        helper.assertTrue(comparator(helper) > 0, "Input mode ignored the staged input");
-        helper.succeed();
-    }
-
-    @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void statusModeReadsZeroWhileIdle(GameTestHelper helper) {
-        SequencedAssemblyMatrixBlockEntity matrix = place(helper);
-        matrix.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 64), false);
-
-        matrix.cycleRedstoneMode();
-        helper.assertTrue(matrix.redstoneMode() == RedstoneMode.STATUS, "cycling once did not reach Status mode");
-        helper.assertTrue(comparator(helper) == 0, "an idle matrix reported a status signal");
-        helper.succeed();
-    }
-
-    @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void cyclingTheModeReturnsToWhereItStarted(GameTestHelper helper) {
-        SequencedAssemblyMatrixBlockEntity matrix = place(helper);
-        RedstoneMode start = matrix.redstoneMode();
-
-        matrix.cycleRedstoneMode();
-        matrix.cycleRedstoneMode();
-        matrix.cycleRedstoneMode();
-
-        helper.assertTrue(matrix.redstoneMode() == start, "cycling through every mode did not return to the start");
         helper.succeed();
     }
 

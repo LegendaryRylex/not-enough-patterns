@@ -15,7 +15,7 @@ import dev.rylex.nep.compat.mysticalagriculture.InfusedAwakeningMatrixBlock.Matr
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.MatrixGridNode;
-import dev.rylex.nep.machine.RedstoneMode;
+import dev.rylex.nep.machine.OverstackedItemHandler;
 import dev.rylex.nep.pattern.AwakeningPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.util.ItemCounts;
@@ -77,7 +77,6 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     private static final String CLAIMED_KEY = "Claimed";
     private static final String CLAIMED_ESSENCE_KEY = "ClaimedEssence";
     private static final String PROGRESS_KEY = "Progress";
-    private static final String REDSTONE_MODE_KEY = "RedstoneMode";
     private static final String MISSING_KEY = "Missing";
     private static final String BLOCKED_KEY = "Blocked";
     private static final String POWER_FAULT_KEY = "PowerFault";
@@ -147,6 +146,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
                 OUTPUT_SLOTS,
                 NepMysticalContent.MATRIX_ITEM.get(),
                 NepConfig.mysticalInfusedAwakeningMatrixIdleMeDrain(),
+                NepConfig.mysticalInfusedAwakeningMatrixChannels(),
                 "Infused awakening matrix");
         for (int tank = 0; tank < TANKS; tank++) {
             tanks[tank] = new EssenceTank();
@@ -724,7 +724,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
             long count = entry.getValue();
             while (count > 0) {
-                int chunk = (int) Math.min(count, entry.getKey().toStack(1).getMaxStackSize());
+                int chunk = (int) Math.min(count, OverstackedItemHandler.SLOT_LIMIT);
                 stacks.add(entry.getKey().toStack(chunk));
                 count -= chunk;
             }
@@ -733,7 +733,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     }
 
     private boolean fitsInBuffer(Map<AEItemKey, Long> items) {
-        ItemStackHandler probe = new ItemStackHandler(inputBuffer.getSlots());
+        ItemStackHandler probe = new OverstackedItemHandler(inputBuffer.getSlots());
         for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
             probe.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
         }
@@ -899,12 +899,12 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         ItemStackHandler target = inputBuffer;
         if (simulate) {
-            target = new ItemStackHandler(inputBuffer.getSlots());
+            target = new OverstackedItemHandler(inputBuffer.getSlots());
             for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
                 target.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
             }
         }
-        int maxStack = key.toStack(1).getMaxStackSize();
+        int maxStack = OverstackedItemHandler.SLOT_LIMIT;
         while (remaining > 0) {
             int chunk = (int) Math.min(remaining, maxStack);
             ItemStack leftover = ItemHandlerHelper.insertItem(target, key.toStack(chunk), false);
@@ -947,15 +947,6 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         refusalTicks = 0;
     }
 
-    @Override
-    protected int comparatorOutput() {
-        return switch (redstoneMode) {
-            case OUTPUT -> RedstoneMode.fullness(outputBuffer);
-            case INPUT -> RedstoneMode.fullness(inputBuffer);
-            case STATUS -> statusSignal();
-        };
-    }
-
     private void refreshVisualState(Level level) {
         BlockState state = getBlockState();
         if (!state.hasProperty(InfusedAwakeningMatrixBlock.STATUS)) {
@@ -988,7 +979,6 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         hash = 31 * hash + stall.ordinal();
         hash = 31 * hash + refusal.ordinal();
         hash = 31 * hash + Long.hashCode(pendingJobs());
-        hash = 31 * hash + redstoneMode.ordinal();
         for (EssenceTank tank : tanks) {
             hash = 31 * hash + (tank.isEmpty() ? 0 : tank.essence().hashCode());
             hash = 31 * hash + Long.hashCode(tank.amount());
@@ -1150,7 +1140,6 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         tag.put(CLAIMED_ESSENCE_KEY, claimedEssence);
         tag.putInt(PROGRESS_KEY, progress);
-        tag.putString(REDSTONE_MODE_KEY, redstoneMode.name());
         tag.putBoolean(BLOCKED_KEY, outputBlocked);
         tag.putBoolean(POWER_FAULT_KEY, powerFault);
         tag.putString(STALL_KEY, stall.name());
@@ -1197,7 +1186,6 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             }
         }
         progress = tag.getInt(PROGRESS_KEY);
-        redstoneMode = RedstoneMode.byName(tag.getString(REDSTONE_MODE_KEY));
         outputBlocked = tag.getBoolean(BLOCKED_KEY);
         powerFault = tag.getBoolean(POWER_FAULT_KEY);
         missingInputs.clear();

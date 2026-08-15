@@ -47,7 +47,8 @@ public final class MiniaturizationControllerGameTest {
     private static final BlockPos SOUTH_PROJECTOR = new BlockPos(4, 2, 8);
 
     private static final BlockPos CONTROLLER = new BlockPos(0, 3, 4);
-    private static final BlockPos ENERGY_CELL = new BlockPos(0, 4, 4);
+    private static final BlockPos ME_CONTROLLER = new BlockPos(0, 4, 4);
+    private static final BlockPos ENERGY_CELL = ME_CONTROLLER.above();
 
     private MiniaturizationControllerGameTest() {}
 
@@ -85,6 +86,7 @@ public final class MiniaturizationControllerGameTest {
     }
 
     private static void powerUp(GameTestHelper helper) {
+        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
         helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
     }
 

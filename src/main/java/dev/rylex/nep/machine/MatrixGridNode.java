@@ -2,6 +2,7 @@ package dev.rylex.nep.machine;
 
 import appeng.api.config.Actionable;
 import appeng.api.config.PowerMultiplier;
+import appeng.api.networking.GridFlags;
 import appeng.api.networking.GridHelper;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
@@ -28,7 +29,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequester {
+public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequester, ChannelDemand {
 
     public static final int TRACKER_SIZE = 18;
 
@@ -42,22 +43,33 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
     private final IActionSource source;
 
     private final int idleMeDrain;
+    private final int channels;
 
     private MultiCraftingTracker tracker;
 
     private boolean starved;
 
-    public MatrixGridNode(MatrixHost owner, Item visual, int idleMeDrain, String label) {
+    public MatrixGridNode(MatrixHost owner, Item visual, int idleMeDrain, int channels, String label) {
         this.owner = owner;
         this.label = label;
         this.idleMeDrain = idleMeDrain;
-        this.mainNode = GridHelper.createManagedNode(this, LISTENER)
+        this.channels = channels;
+        IManagedGridNode node = GridHelper.createManagedNode(this, LISTENER)
                 .setInWorldNode(true)
                 .setTagName("proxy")
                 .setVisualRepresentation(visual)
                 .addService(ICraftingRequester.class, this);
+        if (channels > 0) {
+            node.setFlags(GridFlags.REQUIRE_CHANNEL, GridFlags.DENSE_CAPACITY);
+        }
+        this.mainNode = node;
         this.tracker = new MultiCraftingTracker(this, TRACKER_SIZE);
         this.source = IActionSource.ofMachine(this);
+    }
+
+    @Override
+    public int channelDemand() {
+        return channels;
     }
 
     public void create(Level level, BlockPos pos) {
@@ -173,6 +185,11 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
         return mainNode.isActive();
     }
 
+    public boolean missingChannel() {
+        IGridNode node = mainNode.getNode();
+        return node != null && !node.meetsChannelRequirements();
+    }
+
     public boolean isStarved() {
         return starved;
     }
@@ -212,7 +229,7 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
             Nep.LOGGER.info(
                     "{} {} received crafted {} x{} ({} rejected)", label, owner.getBlockPos(), what, amount, leftover);
         }
-        return leftover;
+        return amount - leftover;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package dev.rylex.nep.compat.create;
 
 import appeng.api.config.Actionable;
+import appeng.api.networking.GridFlags;
 import appeng.api.networking.GridHelper;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
@@ -17,6 +18,7 @@ import appeng.helpers.MultiCraftingTracker;
 import com.google.common.collect.ImmutableSet;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.machine.ChannelDemand;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,7 +26,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGridNodeHost {
+final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGridNodeHost, ChannelDemand {
 
     static final int TRACKER_SIZE = 18;
 
@@ -35,19 +37,30 @@ final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGr
     private final SequencedAssemblyControllerBlockEntity owner;
     private final IManagedGridNode mainNode;
     private final IActionSource source;
+    private final int channels;
 
     private MultiCraftingTracker tracker;
 
     SequencedAssemblyRequester(SequencedAssemblyControllerBlockEntity owner) {
         this.owner = owner;
-        this.mainNode = GridHelper.createManagedNode(this, LISTENER)
+        this.channels = NepConfig.createSequencedAssemblyChannels();
+        IManagedGridNode node = GridHelper.createManagedNode(this, LISTENER)
                 .setInWorldNode(true)
                 .setTagName("proxy")
                 .setIdlePowerUsage(IDLE_ME_DRAIN)
                 .setVisualRepresentation(NepCreateContent.CONTROLLER_ITEM.get())
                 .addService(ICraftingRequester.class, this);
+        if (channels > 0) {
+            node.setFlags(GridFlags.REQUIRE_CHANNEL, GridFlags.DENSE_CAPACITY);
+        }
+        this.mainNode = node;
         this.tracker = new MultiCraftingTracker(this, TRACKER_SIZE);
         this.source = IActionSource.ofMachine(this);
+    }
+
+    @Override
+    public int channelDemand() {
+        return channels;
     }
 
     void create(Level level, BlockPos pos) {
@@ -159,7 +172,7 @@ final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGr
                     amount,
                     leftover);
         }
-        return leftover;
+        return amount - leftover;
     }
 
     @Override

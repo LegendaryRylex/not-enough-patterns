@@ -37,6 +37,9 @@ class CompatIsolationTest {
                     List.of("com.blakebr0.mysticalagriculture", "com.blakebr0.cucumber")),
             new ForeignRule(
                     Paths.get("dev", "rylex", "nep", "compat", "advancedae"), List.of("net.pedroksl.advanced_ae")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "emi"), List.of("dev.emi")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "thunderbolt"), List.of("com.moakiee.thunderbolt")),
             new ForeignRule(COMPAT_DIR, List.of("mezz.jei")));
 
     private static final List<String> COMPAT_ENTRY_POINTS = List.of(

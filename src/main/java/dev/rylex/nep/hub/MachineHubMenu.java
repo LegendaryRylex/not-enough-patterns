@@ -2,6 +2,7 @@ package dev.rylex.nep.hub;
 
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.menu.MachineMenu;
+import dev.rylex.nep.net.HubLinkEditPayload;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -20,14 +21,19 @@ public class MachineHubMenu extends MachineMenu {
     public static final int BUTTON_ROLE = 100;
     public static final int BUTTON_REMOVE = 200;
 
-    public static final int WIDTH = 200;
-    public static final int HEIGHT = 214;
-    public static final int ROW_X = 8;
+    public static final int WIDTH = 216;
+    public static final int HEIGHT = 306;
+    public static final int SHEET_HEIGHT = 320;
+    public static final int PLAYER_INVENTORY_X = 27;
+    public static final int PLAYER_INVENTORY_Y = 223;
+    public static final int PLAYER_SLOT_X = PLAYER_INVENTORY_X + 1;
+    public static final int PLAYER_SLOT_Y = PLAYER_INVENTORY_Y + 1;
+    public static final int ROW_X = 9;
     public static final int ROW_Y = 34;
     public static final int ROW_HEIGHT = 14;
-    public static final int ROW_WIDTH = 176;
+    public static final int ROW_WIDTH = 190;
     public static final int VISIBLE_ROWS = 12;
-    public static final int SCROLL_X = 186;
+    public static final int SCROLL_X = 201;
     public static final int SCROLL_WIDTH = 6;
     public static final int SCROLL_HEIGHT = VISIBLE_ROWS * ROW_HEIGHT;
 
@@ -48,6 +54,7 @@ public class MachineHubMenu extends MachineMenu {
         this.pos = pos;
         this.player = playerInv.player;
         this.hub = MachineHubBlockEntity.at(playerInv.player.level(), pos);
+        addPlayerInventory(playerInv, PLAYER_SLOT_X, PLAYER_SLOT_Y);
     }
 
     public BlockPos hubPos() {
@@ -72,8 +79,17 @@ public class MachineHubMenu extends MachineMenu {
             } else {
                 issue = MachineHubState.Issue.OK;
             }
-            entries.add(
-                    new MachineHubState.Entry(link.pos(), link.role(), icon(level, link.pos()), issue, items, fluids));
+            entries.add(new MachineHubState.Entry(
+                    link.pos(),
+                    link.role(),
+                    icon(level, link.pos()),
+                    issue,
+                    items,
+                    fluids,
+                    link.face(),
+                    link.priority(),
+                    link.insertFilter(),
+                    link.returnFilter()));
         }
         return new MachineHubState(entries, NepConfig.machineHubEnabled(), hub.status());
     }
@@ -130,6 +146,22 @@ public class MachineHubMenu extends MachineMenu {
             return true;
         }
         return false;
+    }
+
+    public void applyEdit(Player editor, HubLinkEditPayload payload) {
+        if (hub == null || !stillValid(editor)) {
+            return;
+        }
+        int index = payload.index();
+        switch (payload.action()) {
+            case SET_FACE -> hub.setFace(index, HubLink.faceByOrdinal(payload.value()));
+            case SET_PRIORITY -> hub.setPriority(index, payload.value());
+            case SET_INSERT_FILTER -> hub.setInsertFilter(index, payload.value(), payload.key());
+            case SET_RETURN_FILTER -> hub.setReturnFilter(index, payload.value(), payload.key());
+            case TOGGLE_INSERT_MODE -> hub.toggleInsertFilterMode(index);
+            case TOGGLE_RETURN_MODE -> hub.toggleReturnFilterMode(index);
+        }
+        resend();
     }
 
     private void resend() {

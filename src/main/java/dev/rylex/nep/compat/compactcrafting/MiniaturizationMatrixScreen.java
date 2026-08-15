@@ -2,9 +2,9 @@ package dev.rylex.nep.compat.compactcrafting;
 
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.client.MatrixScreen;
 import dev.rylex.nep.client.ReadoutButton;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,29 +45,19 @@ public class MiniaturizationMatrixScreen extends MatrixScreen<MiniaturizationMat
     protected void init() {
         super.init();
         resetButtons();
+        addHelpButton("nep/compactcrafting/miniaturization-matrix.md");
         clearPending = addRightButton(
-                1,
-                "✗",
+                2,
+                NepIcons.REMOVE,
                 "gui.nep.clear_pending",
                 "gui.nep.clear_pending.hint",
                 () -> sendButton(MiniaturizationMatrixMenu.BUTTON_CLEAR_PENDING));
-        redstoneModeButton = addRightButton(
-                2,
-                currentMode().glyph(),
-                "gui.nep.redstone_mode",
-                "gui.nep.redstone_mode.hint",
-                () -> sendButton(MiniaturizationMatrixMenu.BUTTON_REDSTONE_MODE));
         addRightButton(
                 3,
-                "↓",
+                NepIcons.DOWN,
                 "gui.nep.clear_buffer",
                 "gui.nep.clear_buffer.hint",
                 () -> sendButton(MiniaturizationMatrixMenu.BUTTON_CLEAR_BUFFER));
-    }
-
-    private RedstoneMode currentMode() {
-        MiniaturizationMatrixBlockEntity matrix = menu.matrix();
-        return matrix != null ? matrix.redstoneMode() : RedstoneMode.OUTPUT;
     }
 
     @Override
@@ -78,7 +68,6 @@ public class MiniaturizationMatrixScreen extends MatrixScreen<MiniaturizationMat
             clearPending.active = matrix != null
                     && (matrix.hasPending() || matrix.refusal() != MiniaturizationMatrixBlockEntity.Refusal.NONE);
         }
-        updateRedstoneButton(currentMode());
         tickButtons();
     }
 
@@ -218,6 +207,9 @@ public class MiniaturizationMatrixScreen extends MatrixScreen<MiniaturizationMat
     }
 
     private static Component statusLine(MiniaturizationMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return Component.translatable("gui.nep.miniaturization_matrix.no_network_channels");
+        }
         if (matrix.hasPowerFault()) {
             return Component.translatable("gui.nep.miniaturization_matrix.no_network_power");
         }

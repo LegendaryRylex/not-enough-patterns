@@ -23,6 +23,12 @@ config="${mod_id}.draconic.mixins.json"
 [[mixins]]
 config="${mod_id}.advancedae.mixins.json"
 
+[[mixins]]
+config="${mod_id}.emi.mixins.json"
+
+[[mixins]]
+config="${mod_id}.thunderbolt.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId="ae2"
 type="required"
@@ -90,6 +96,13 @@ side="BOTH"
 modId="jei"
 type="optional"
 versionRange="${jei_version_range}"
+ordering="AFTER"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="emi"
+type="optional"
+versionRange="${emi_version_range}"
 ordering="AFTER"
 side="CLIENT"
 

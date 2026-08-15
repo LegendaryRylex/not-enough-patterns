@@ -220,6 +220,25 @@ class ConfigDocumentationTest {
         fallbacks.put("machineHub.casingDepth", NepConfig.machineHubCasingDepth());
         fallbacks.put("modules.create.sequencedAssembly.haltGrace", NepConfig.createSequencedAssemblyHaltGrace());
         fallbacks.put("modules.create.sequencedAssembly.reclaimGrace", NepConfig.createSequencedAssemblyReclaimGrace());
+        fallbacks.put("machineHub.meNetworkChannels", NepConfig.machineHubChannels());
+        fallbacks.put("machineHub.meNetworkChannelsPerLink", NepConfig.machineHubChannelsPerLink());
+        fallbacks.put(MATRIX + ".meNetworkChannels", NepConfig.actuallyAdditionsMatrixChannels());
+        fallbacks.put(
+                "modules.draconicevolution.fusionMatrix.meNetworkChannels", NepConfig.draconicFusionMatrixChannels());
+        fallbacks.put(
+                "modules.create.sequencedAssembly.meNetworkChannels", NepConfig.createSequencedAssemblyChannels());
+        fallbacks.put(
+                "modules.create.sequencedAssemblyMatrix.meNetworkChannels",
+                NepConfig.createSequencedAssemblyMatrixChannels());
+        fallbacks.put(
+                "modules.compactcrafting.miniaturizationMatrix.meNetworkChannels",
+                NepConfig.compactCraftingMatrixChannels());
+        fallbacks.put(
+                "modules.compactcrafting.miniaturizationController.meNetworkChannels",
+                NepConfig.compactCraftingControllerChannels());
+        fallbacks.put(
+                "modules.mysticalagriculture.infusedAwakeningMatrix.meNetworkChannels",
+                NepConfig.mysticalInfusedAwakeningMatrixChannels());
 
         List<String> drift = new ArrayList<>();
         fallbacks.forEach((path, fallback) -> {

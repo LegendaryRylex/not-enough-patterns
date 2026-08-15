@@ -88,13 +88,76 @@ class HubRoutingTest {
     }
 
     @Test
-    void extractionReachesEveryLinkedInventoryWhateverRoleItCarries() {
+    void extractionReachesInventoriesThatProvide() {
         ItemStackHandler outputHatch = new ItemStackHandler(1);
         outputHatch.setStackInSlot(0, new ItemStack(Items.OBSIDIAN, 5));
         HubTarget out = target(HubRole.OUTPUT, outputHatch);
 
         assertEquals(3, HubRouting.extract(List.of(out), OBSIDIAN, 3, Actionable.MODULATE));
         assertEquals(2, outputHatch.getStackInSlot(0).getCount());
+    }
+
+    @Test
+    void extractionNeverTakesIngredientsBackOutOfAnInput() {
+        ItemStackHandler staged = new ItemStackHandler(1);
+        staged.setStackInSlot(0, new ItemStack(Items.OBSIDIAN, 5));
+
+        assertEquals(
+                0,
+                HubRouting.extract(List.of(target(HubRole.INPUT, staged)), OBSIDIAN, 5, Actionable.MODULATE),
+                "pulling an ingredient back out of a machine mid-craft is what the role gate exists to stop");
+        assertEquals(5, staged.getStackInSlot(0).getCount());
+    }
+
+    @Test
+    void aCombinedInventoryMarkedBothTakesIngredientsAndGivesResultsBack() {
+        ItemStackHandler combined = new ItemStackHandler(2);
+        combined.setStackInSlot(1, new ItemStack(Items.DIAMOND, 3));
+        HubTarget both = target(HubRole.BOTH, combined);
+
+        assertEquals(4, HubRouting.insert(List.of(both), OBSIDIAN, 4, Actionable.MODULATE));
+        assertEquals(3, HubRouting.extract(List.of(both), AEItemKey.of(Items.DIAMOND), 3, Actionable.MODULATE));
+    }
+
+    @Test
+    void anInsertFilterKeepsAnIngredientOutOfTheWrongMachine() {
+        HubTarget filtered = new HubTarget(
+                new HubLink(BlockPos.ZERO, HubRole.INPUT)
+                        .withInsertFilter(HubFilter.EMPTY.withKey(0, AEItemKey.of(Items.DIAMOND))),
+                new ItemStackHandler(1),
+                null);
+        HubTarget open = input(1);
+
+        assertEquals(4, HubRouting.insert(List.of(filtered, open), OBSIDIAN, 4, Actionable.MODULATE));
+        assertTrue(filtered.items().getStackInSlot(0).isEmpty(), "obsidian is not on the whitelist");
+        assertEquals(4, open.items().getStackInSlot(0).getCount());
+    }
+
+    @Test
+    void aDenyFilterRefusesOnlyWhatItNames() {
+        HubFilter deny = HubFilter.EMPTY.withKey(0, OBSIDIAN).toggled();
+        HubTarget filtered = new HubTarget(
+                new HubLink(BlockPos.ZERO, HubRole.INPUT).withInsertFilter(deny), new ItemStackHandler(2), null);
+
+        assertEquals(0, HubRouting.insert(List.of(filtered), OBSIDIAN, 4, Actionable.MODULATE));
+        assertEquals(4, HubRouting.insert(List.of(filtered), AEItemKey.of(Items.DIAMOND), 4, Actionable.MODULATE));
+    }
+
+    @Test
+    void anEmptyFilterAllowsEverything() {
+        assertTrue(HubFilter.EMPTY.permits(OBSIDIAN));
+        assertTrue(HubFilter.EMPTY.toggled().permits(OBSIDIAN), "a deny list naming nothing still denies nothing");
+    }
+
+    @Test
+    void higherPriorityIsFilledFirstWhateverOrderTheLinksAreIn() {
+        HubTarget low = input(1);
+        HubTarget high = new HubTarget(
+                new HubLink(new BlockPos(1, 0, 0), HubRole.INPUT).withPriority(5), new ItemStackHandler(1), null);
+
+        assertEquals(64, HubRouting.insert(List.of(low, high), OBSIDIAN, 64, Actionable.MODULATE));
+        assertEquals(64, high.items().getStackInSlot(0).getCount());
+        assertTrue(low.items().getStackInSlot(0).isEmpty(), "the lower-priority link only sees the overflow");
     }
 
     @Test
@@ -108,7 +171,7 @@ class HubRoutingTest {
     }
 
     @Test
-    void everythingLinkedIsReportedSoBlockingModeAndImportCardsCanSeeIt() {
+    void everythingLinkedIsReportedWhateverItsRoleSoBlockingModeCanSeeIt() {
         ItemStackHandler staged = new ItemStackHandler(1);
         staged.setStackInSlot(0, new ItemStack(Items.OBSIDIAN, 7));
         FluidTank tank = new FluidTank(4_000);

@@ -14,9 +14,9 @@ import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.create.SequencedAssemblyControllerBlock.ControllerStatus;
+import dev.rylex.nep.machine.ComparatorSignal;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.PushingCpus;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.machine.ReturnDirections;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.util.ItemCounts;
@@ -77,7 +77,6 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private static final String FLUID_BUFFER_KEY = "FluidBuffer";
     private static final String OWED_KEY = "Owed";
     private static final String TO_RETURN_KEY = "ToReturn";
-    private static final String REDSTONE_MODE_KEY = "RedstoneMode";
     private static final String RETURN_DIR_KEY = "ReturnDir";
     private static final String RETURN_DIRS_KEY = "ReturnDirs";
     private static final String TEMPLATE_KEY = "Template";
@@ -139,7 +138,6 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private boolean outputBlocked;
     private boolean starved;
     private int lastComparator = -1;
-    private RedstoneMode redstoneMode = RedstoneMode.OUTPUT;
 
     private final ReturnDirections returnDirections = new ReturnDirections();
 
@@ -1078,32 +1076,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     }
 
     int comparatorOutput() {
-        return switch (redstoneMode) {
-            case OUTPUT -> RedstoneMode.fullness(outputBuffer);
-            case INPUT -> RedstoneMode.inputFullness(buffer, fluids);
-            case STATUS -> statusSignal();
-        };
-    }
-
-    private int statusSignal() {
-        if (halted || outputBlocked) {
-            return 15;
-        }
-        long pending = pending();
-        return pending <= 0 ? 0 : (int) Math.min(14, pending);
-    }
-
-    RedstoneMode redstoneMode() {
-        return redstoneMode;
-    }
-
-    void cycleRedstoneMode() {
-        redstoneMode = redstoneMode.next();
-        setChanged();
-        Level level = getLevel();
-        if (level != null) {
-            refreshComparator(level);
-        }
+        return ComparatorSignal.of(outputBuffer);
     }
 
     private List<SequencedAssemblyRecipe> lineRecipes(Level level) {
@@ -1609,14 +1582,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         makingList.sort((a, b) -> Long.compare(b.count(), a.count()));
         List<GenericStack> missing = halted && level != null ? collectMissing(level) : List.of();
         return new SequencedAssemblyState(
-                statusCode(),
-                halted,
-                outputBlocked,
-                stationList,
-                makingList,
-                missing,
-                stagedFluids(),
-                redstoneMode.ordinal());
+                statusCode(), halted, outputBlocked, stationList, makingList, missing, stagedFluids());
     }
 
     private List<SequencedAssemblyRecipe> queuedRecipes(Level level) {
@@ -1858,7 +1824,6 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             }
             tag.put(STATION_KINDS_KEY, kinds);
         }
-        tag.putString(REDSTONE_MODE_KEY, redstoneMode.name());
         tag.put(BUFFER_KEY, buffer.serializeNBT(registries));
         tag.put(OUTPUT_BUFFER_KEY, outputBuffer.serializeNBT(registries));
         tag.put(BYPRODUCT_BUFFER_KEY, byproductBuffer.serializeNBT(registries));
@@ -1984,9 +1949,6 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                 stationKinds.set(slot, StationKind.byName(kinds.getString(slot)));
             }
         }
-        redstoneMode = tag.contains(REDSTONE_MODE_KEY)
-                ? RedstoneMode.byName(tag.getString(REDSTONE_MODE_KEY))
-                : RedstoneMode.OUTPUT;
         if (tag.contains(BUFFER_KEY)) {
             buffer.deserializeNBT(registries, tag.getCompound(BUFFER_KEY));
         }

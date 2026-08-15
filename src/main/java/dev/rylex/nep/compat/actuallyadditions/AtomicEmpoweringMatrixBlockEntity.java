@@ -15,7 +15,6 @@ import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.MatrixEnergyBuffer;
 import dev.rylex.nep.machine.MatrixGridNode;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.pattern.AtomicReconstructionPattern;
 import dev.rylex.nep.pattern.EmpoweringPattern;
 import dev.rylex.nep.pattern.RecipePattern;
@@ -75,7 +74,6 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
     private static final String PAID_KEY = "Paid";
     private static final String COST_KEY = "Cost";
     private static final String PROGRESS_KEY = "Progress";
-    private static final String REDSTONE_MODE_KEY = "RedstoneMode";
     private static final String MISSING_KEY = "Missing";
     private static final String BLOCKED_KEY = "Blocked";
     private static final String POWER_FAULT_KEY = "PowerFault";
@@ -142,6 +140,7 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
                 OUTPUT_SLOTS,
                 NepActuallyAdditionsContent.MATRIX_ITEM.get(),
                 NepConfig.actuallyAdditionsMatrixIdleMeDrain(),
+                NepConfig.actuallyAdditionsMatrixChannels(),
                 "Atomic empowering matrix");
     }
 
@@ -223,7 +222,6 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         hash = 31 * hash + energyLevel();
         hash = 31 * hash + Long.hashCode(craftCost);
         hash = 31 * hash + Long.hashCode(pendingJobs());
-        hash = 31 * hash + redstoneMode.ordinal();
         return hash;
     }
 
@@ -638,15 +636,6 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         refusalTicks = 0;
     }
 
-    @Override
-    protected int comparatorOutput() {
-        return switch (redstoneMode) {
-            case OUTPUT -> RedstoneMode.fullness(outputBuffer);
-            case INPUT -> RedstoneMode.fullness(inputBuffer);
-            case STATUS -> statusSignal();
-        };
-    }
-
     private void refreshVisualState(Level level) {
         BlockState state = getBlockState();
         if (!state.hasProperty(AtomicEmpoweringMatrixBlock.STATUS)) {
@@ -786,7 +775,6 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         tag.putLong(PAID_KEY, paid);
         tag.putLong(COST_KEY, craftCost);
         tag.putInt(PROGRESS_KEY, progress);
-        tag.putString(REDSTONE_MODE_KEY, redstoneMode.name());
         tag.putBoolean(BLOCKED_KEY, outputBlocked);
         tag.putBoolean(POWER_FAULT_KEY, powerFault);
         tag.putBoolean(ENERGY_FAULT_KEY, energyFault);
@@ -826,7 +814,6 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         paid = tag.getLong(PAID_KEY);
         craftCost = tag.getLong(COST_KEY);
         progress = tag.getInt(PROGRESS_KEY);
-        redstoneMode = RedstoneMode.byName(tag.getString(REDSTONE_MODE_KEY));
         outputBlocked = tag.getBoolean(BLOCKED_KEY);
         powerFault = tag.getBoolean(POWER_FAULT_KEY);
         energyFault = tag.getBoolean(ENERGY_FAULT_KEY);

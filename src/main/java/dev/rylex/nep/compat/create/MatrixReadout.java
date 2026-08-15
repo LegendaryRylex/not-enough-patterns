@@ -18,6 +18,9 @@ final class MatrixReadout {
                     "gui.nep.sequenced_assembly_matrix.status.too_slow",
                     Math.round(SequencedAssemblyMatrixBlockEntity.minimumSpeed()));
         }
+        if ((flags & SequencedAssemblyMatrixBlockEntity.FLAG_NO_CHANNEL) != 0) {
+            return Component.translatable("gui.nep.sequenced_assembly_matrix.status.no_channel");
+        }
         if ((flags & SequencedAssemblyMatrixBlockEntity.FLAG_POWERED) == 0) {
             return Component.translatable("gui.nep.sequenced_assembly_matrix.status.no_power");
         }
@@ -36,7 +39,8 @@ final class MatrixReadout {
     }
 
     static boolean faulted(int flags) {
-        return (flags & SequencedAssemblyMatrixBlockEntity.FLAG_POWERED) == 0
+        return (flags & SequencedAssemblyMatrixBlockEntity.FLAG_NO_CHANNEL) != 0
+                || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_POWERED) == 0
                 || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_FAST_ENOUGH) == 0
                 || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_OVERSTRESSED) != 0
                 || (flags & SequencedAssemblyMatrixBlockEntity.FLAG_OUTPUT_BLOCKED) != 0
