@@ -86,7 +86,8 @@ A tank holds sixty-four by default, more than the forty a vessel takes for one c
 * Hover a tank for the essence it holds and how full it is.
 * **Clear Pending Recipes** drops every craft the Matrix still owes, cancels ingredients it has on request, and cancels the crafting jobs on the network that were waiting on it.
 * **Empty Buffers** returns everything staged, tanks included, to your inventory.
-* **Comparator Signal** cycles what the comparator reads: output buffer, input buffer, or machine status.
+* **Guide** opens this page, and is always the rightmost button.
+* A Comparator beside the block reads the output buffer, empty for nothing staged up to a full 15.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -99,6 +100,7 @@ A tank holds sixty-four by default, more than the forty a vessel takes for one c
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 * The Matrix must be on a powered ME network, not just connected to one.
+* The Matrix takes up 15 channels by default, so it needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
 * *Waiting on essence* means an awakening craft is staged but a tank is short. Feed that essence in through the input buffer; if it is already sitting there, the tanks are full and it moves across as soon as a queued craft drains one.
 * A red *Missing ingredients* line means auto-request could not source something. Hover it for the list.
 * Turn on Verbose Logging under Debug to have the Matrix log every pattern it refuses and why.

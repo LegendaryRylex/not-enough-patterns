@@ -60,15 +60,3 @@ It does quietly remember which recipe it came from, which is how you get the NEP
 <Color id="red">A pattern that keeps one of its ingredients will not convert.</Color> Deploying and Filling patterns hold a tool that the machine gives back once the craft is done, and a Processing Pattern has no way to say so. Converting one would ask your network for a fresh tool on every single craft, so the recipe simply does not match and nothing appears in the output slot.
 
 Everything else converts, including Mechanical Crafting patterns and every Matrix pattern.
-
-<ItemImage id="minecraft:air" scale="0.25"/>
-
-***
-
-<Column alignItems="center" fullWidth={true}>
-  ## <Color id="gold">Configs for Pack Devs</Color>
-</Column>
-
-<ItemImage id="minecraft:air" scale="0.25"/>
-
-`Patterns → Convert Patterns To Processing Patterns` turns the recipe off. Leave it on unless your pack depends on a process being reachable only through its NEP pattern, since it is what keeps a player from being stranded when a recipe has been moved somewhere NEP does not drive.

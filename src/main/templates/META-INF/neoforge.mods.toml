@@ -17,6 +17,9 @@ config="${mod_id}.mixins.json"
 [[mixins]]
 config="${mod_id}.advancedae.mixins.json"
 
+[[mixins]]
+config="${mod_id}.thunderbolt.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId="ae2"
 type="required"

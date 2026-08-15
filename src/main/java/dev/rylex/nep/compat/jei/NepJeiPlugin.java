@@ -2,6 +2,7 @@ package dev.rylex.nep.compat.jei;
 
 import appeng.menu.me.items.PatternEncodingTermMenu;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.client.MachineHubScreen;
 import dev.rylex.nep.compat.ae2wtlib.Ae2WtLibJeiCompat;
 import dev.rylex.nep.compat.apothic.ApothicJeiCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalJeiCompat;
@@ -12,6 +13,7 @@ import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.recipe.types.IRecipeType;
+import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.resources.Identifier;
@@ -66,6 +68,11 @@ public final class NepJeiPlugin implements IModPlugin {
         if (ModList.get().isLoaded("ae2wtlib")) {
             Ae2WtLibJeiCompat.bindPatternMenus(binder);
         }
+    }
+
+    @Override
+    public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        registration.addGhostIngredientHandler(MachineHubScreen.class, new HubGhostIngredientHandler());
     }
 
     @Override

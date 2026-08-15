@@ -8,22 +8,23 @@ Pattern providers only cope with machines shaped like a furnace: items in, items
 
 | Mod                  | 1.21.1 | 26.1.2 | Processes                                                   |
 | -------------------- | :----: | :----: | ----------------------------------------------------------- |
-| Actually Additions   |   ✅   |   ⏳   | Empowering, Atomic Reconstruction                           |
+| Actually Additions   |   ✅   |   ❌   | Empowering, Atomic Reconstruction                           |
 | Apothic Enchanting   |   ✅   |   ✅   | Enchantment Infusion                                        |
-| Compact Crafting     |   ✅   |   ⏳   | Miniaturization                                             |
-| Create               |   ✅   |   ⏳   | Mechanical Crafting, Deploying, Filling, Sequenced Assembly |
-| Draconic Evolution   |   ✅   |   ⏳   | Fusion Crafting                                             |
+| Compact Crafting     |   ✅   |   ❌   | Miniaturization                                             |
+| Create               |   ✅   |   ❌   | Mechanical Crafting, Deploying, Filling, Sequenced Assembly |
+| Draconic Evolution   |   ✅   |   ❌   | Fusion Crafting                                             |
 | Mystical Agriculture |   ✅   |   ✅   | Infusion, Awakening                                         |
 
-✅ supported &nbsp;·&nbsp; ⏳ that mod has no build for this Minecraft version yet &nbsp;·&nbsp; 🔜 that mod is out for this version and support is on the way
-
-Every Minecraft version NEP builds for gets a column, and a mod keeps its row on all of them, so a ⏳ is a gap waiting to be filled rather than support being dropped. Where a row is supported it runs the same processes on every version.
-
 Look a recipe up in JEI, hit the **+** button at a Pattern Encoding Terminal, and the right pattern comes back with the ingredients already worked out.
+
+### JEI vs EMI
+
+Full EMI support is postponed until NEP's full 1.0 release, until then I'll be adding "JEMI" support, meaning you'll still need to have JEI installed even if you're using EMI to view items and recipes.
 
 ## Added Content
 
 *   **Import Card** — Allows a pattern provider to collect its own results, tracked per pattern and per side, so it never takes anything that it shouldn't. Also fits the pattern providers from Advanced AE, ExtendedAE, and MEGA Cells.
+*   **Machine Hub** — Presents several separate inventories to a pattern provider as one so a multiblock machine can push items and fluids to individual blocks at once. Targets can be linked with the Hub Linker or found by the Hub's own scan.
 *   **Controllers** — Manages a whole multi-step or multi-block process under one single block, moving items to where they need to go, then back into your system once the craft is finished.
 *   **Matrices** — One-block late-game solutions that replace an entire multiblock process line, like Create's Sequenced Assembly.
 
@@ -35,7 +36,7 @@ Sable is optional. NEP carries the small companion library it needs, so nothing 
 
 ## Modpack Permission
 
-You are free to include this mod in any Modpack on CurseForge or Modrinth.
+You are free to include this mod in any Modpack on CurseForge or Modrinth (once the mod is on there).
 
 ## Documentation
 

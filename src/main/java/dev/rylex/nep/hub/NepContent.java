@@ -68,6 +68,10 @@ public final class NepContent {
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(
                 AECapabilities.ME_STORAGE, MACHINE_HUB_BLOCK_ENTITY.get(), (be, side) -> be.storage());
+        event.registerBlockEntity(
+                AECapabilities.IN_WORLD_GRID_NODE_HOST,
+                MACHINE_HUB_BLOCK_ENTITY.get(),
+                (be, side) -> be.gridNodeHost());
     }
 
     private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {

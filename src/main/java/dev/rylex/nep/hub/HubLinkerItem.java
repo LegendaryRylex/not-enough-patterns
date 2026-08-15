@@ -79,6 +79,10 @@ public class HubLinkerItem extends Item {
                     ChatFormatting.RED);
             return InteractionResult.SUCCESS;
         }
+        if (HubRules.load().unlinkable(level.getBlockState(pos))) {
+            message(player, Component.translatable("chat.nep.hub_linker.unlinkable", format(pos)), ChatFormatting.RED);
+            return InteractionResult.SUCCESS;
+        }
         if (!HubScan.linkable(level, pos)) {
             message(
                     player,

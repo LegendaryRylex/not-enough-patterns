@@ -26,13 +26,13 @@ public final class HubReturn {
         long moved = 0;
         boolean refused = false;
         for (HubTarget target : targets) {
-            if (target.accepts()) {
+            if (!target.provides()) {
                 continue;
             }
             ResourceHandler<ItemResource> items = target.items();
             if (items != null) {
                 for (int slot = 0; slot < items.size(); slot++) {
-                    Outcome slotOutcome = pushIndex(items, slot, network, source, AEItemKey::of);
+                    Outcome slotOutcome = pushIndex(target, items, slot, network, source, AEItemKey::of);
                     moved += slotOutcome.moved();
                     refused |= slotOutcome.refused();
                 }
@@ -40,7 +40,7 @@ public final class HubReturn {
             ResourceHandler<FluidResource> fluids = target.fluids();
             if (fluids != null) {
                 for (int tank = 0; tank < fluids.size(); tank++) {
-                    Outcome tankOutcome = pushIndex(fluids, tank, network, source, AEFluidKey::of);
+                    Outcome tankOutcome = pushIndex(target, fluids, tank, network, source, AEFluidKey::of);
                     moved += tankOutcome.moved();
                     refused |= tankOutcome.refused();
                 }
@@ -50,10 +50,19 @@ public final class HubReturn {
     }
 
     private static <T extends Resource> Outcome pushIndex(
-            ResourceHandler<T> handler, int index, MEStorage network, IActionSource source, Function<T, AEKey> keyOf) {
+            HubTarget target,
+            ResourceHandler<T> handler,
+            int index,
+            MEStorage network,
+            IActionSource source,
+            Function<T, AEKey> keyOf) {
         T resource = handler.getResource(index);
         int held = handler.getAmountAsInt(index);
         if (resource.isEmpty() || held <= 0) {
+            return new Outcome(0, false);
+        }
+        AEKey key = keyOf.apply(resource);
+        if (!target.returnsKey(key)) {
             return new Outcome(0, false);
         }
         int offered;
@@ -63,7 +72,6 @@ public final class HubReturn {
         if (offered <= 0) {
             return new Outcome(0, false);
         }
-        AEKey key = keyOf.apply(resource);
         long room = network.insert(key, offered, Actionable.SIMULATE, source);
         if (room <= 0) {
             return new Outcome(0, true);

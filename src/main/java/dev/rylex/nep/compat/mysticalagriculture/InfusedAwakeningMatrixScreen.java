@@ -3,11 +3,11 @@ package dev.rylex.nep.compat.mysticalagriculture;
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.client.MatrixScreen;
 import dev.rylex.nep.client.ReadoutButton;
 import dev.rylex.nep.client.StackTint;
 import dev.rylex.nep.client.TankGauge;
-import dev.rylex.nep.machine.RedstoneMode;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,29 +48,19 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
     protected void init() {
         super.init();
         resetButtons();
+        addHelpButton("nep/mysticalagriculture/infused-awakening-matrix.md");
         clearPending = addRightButton(
-                1,
-                "✗",
+                2,
+                NepIcons.REMOVE,
                 "gui.nep.clear_pending",
                 "gui.nep.clear_pending.hint",
                 () -> sendButton(InfusedAwakeningMatrixMenu.BUTTON_CLEAR_PENDING));
-        redstoneModeButton = addRightButton(
-                2,
-                currentMode().glyph(),
-                "gui.nep.redstone_mode",
-                "gui.nep.redstone_mode.hint",
-                () -> sendButton(InfusedAwakeningMatrixMenu.BUTTON_REDSTONE_MODE));
         addRightButton(
                 3,
-                "↓",
+                NepIcons.DOWN,
                 "gui.nep.clear_buffer",
                 "gui.nep.clear_buffer.hint",
                 () -> sendButton(InfusedAwakeningMatrixMenu.BUTTON_CLEAR_BUFFER));
-    }
-
-    private RedstoneMode currentMode() {
-        InfusedAwakeningMatrixBlockEntity matrix = menu.matrix();
-        return matrix != null ? matrix.redstoneMode() : RedstoneMode.OUTPUT;
     }
 
     @Override
@@ -81,7 +71,6 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
             clearPending.active = matrix != null
                     && (matrix.hasPending() || matrix.refusal() != InfusedAwakeningMatrixBlockEntity.Refusal.NONE);
         }
-        updateRedstoneButton(currentMode());
         tickButtons();
     }
 
@@ -244,6 +233,9 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
     }
 
     private static Component statusLine(InfusedAwakeningMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return Component.translatable("gui.nep.infused_awakening_matrix.no_network_channels");
+        }
         if (matrix.hasPowerFault()) {
             return Component.translatable("gui.nep.infused_awakening_matrix.no_network_power");
         }

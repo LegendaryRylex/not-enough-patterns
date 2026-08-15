@@ -138,6 +138,9 @@ class ConfigDocumentationTest {
         fallbacks.put("machineHub.maximumLinks", NepConfig.machineHubMaximumLinks());
         fallbacks.put("machineHub.scanBudget", NepConfig.machineHubScanBudget());
         fallbacks.put("machineHub.casingDepth", NepConfig.machineHubCasingDepth());
+        fallbacks.put("machineHub.meNetworkChannels", NepConfig.machineHubChannels());
+        fallbacks.put("machineHub.meNetworkChannelsPerLink", NepConfig.machineHubChannelsPerLink());
+        fallbacks.put(MATRIX + ".meNetworkChannels", NepConfig.mysticalInfusedAwakeningMatrixChannels());
 
         List<String> drift = new ArrayList<>();
         fallbacks.forEach((path, fallback) -> {

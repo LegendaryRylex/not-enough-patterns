@@ -54,6 +54,7 @@ var skippableRuntimeMods = [
                   [group: 'curse.maven', module: 'glodium-957920']],
         appflux: [[group: 'curse.maven', module: 'applied-flux-965012']],
         wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
+        tb     : [[group: 'curse.maven', module: 'ae2-lightning-tech-1527395']],
 ]
 
 var impliedSkips = [wtlib: ['aae', 'eae', 'appflux'], eae: ['appflux']]
@@ -169,6 +170,9 @@ dependencies {
 
     compileOnly "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
     localRuntime "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
+
+    compileOnly "curse.maven:ae2-lightning-tech-1527395:${thunderbolt_file}"
+    localRuntime "curse.maven:ae2-lightning-tech-1527395:${thunderbolt_file}"
 
     compileOnly "curse.maven:advancedae-1084104:${advanced_ae_file}"
     localRuntime "curse.maven:advancedae-1084104:${advanced_ae_file}"

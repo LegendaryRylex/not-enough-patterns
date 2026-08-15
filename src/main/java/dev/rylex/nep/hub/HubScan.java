@@ -31,28 +31,30 @@ public final class HubScan {
 
     public static List<HubLink> propose(
             Level level, BlockPos origin, int reach, int budget, int casingDepth, int limit) {
+        HubRules rules = HubRules.load();
         List<HubLink> proposed = new ArrayList<>();
-        Walk walk = new Walk(level, origin, reach, casingDepth);
+        Walk walk = new Walk(level, origin, reach, casingDepth, rules);
 
+        Step hubFace = new Step(origin, 0, null, false);
         for (Direction side : Direction.values()) {
-            walk.consider(origin.relative(side), 0, true);
+            walk.consider(origin.relative(side), hubFace, true);
         }
 
         int examined = 0;
         while (!walk.frontier.isEmpty() && examined < budget && proposed.size() < limit) {
             Step step = walk.frontier.poll();
             examined++;
-            if (linkable(level, step.pos())) {
+            if (linkable(level, step.pos()) && !rules.unlinkable(level.getBlockState(step.pos()))) {
                 proposed.add(new HubLink(step.pos(), roleFor(items(level, step.pos()))));
             }
             for (Direction side : Direction.values()) {
-                walk.consider(step.pos().relative(side), step.casing(), false);
+                walk.consider(step.pos().relative(side), step, false);
             }
         }
         return proposed;
     }
 
-    private record Step(BlockPos pos, int casing) {}
+    private record Step(BlockPos pos, int casing, @Nullable String casingMod, boolean vouching) {}
 
     private static final class Walk {
 
@@ -60,54 +62,62 @@ public final class HubScan {
         private final BlockPos origin;
         private final int reach;
         private final int casingDepth;
+        private final HubRules rules;
         private final Set<BlockPos> seen = new HashSet<>();
         private final Set<String> machineMods = new HashSet<>();
         private final Deque<Step> frontier = new ArrayDeque<>();
 
-        private Walk(Level level, BlockPos origin, int reach, int casingDepth) {
+        private Walk(Level level, BlockPos origin, int reach, int casingDepth, HubRules rules) {
             this.level = level;
             this.origin = origin;
             this.reach = reach;
             this.casingDepth = casingDepth;
+            this.rules = rules;
             seen.add(origin);
         }
 
-        private void consider(BlockPos pos, int casingSoFar, boolean touchingTheHub) {
+        private void consider(BlockPos pos, Step from, boolean touchingTheHub) {
             BlockPos at = pos.immutable();
             if (!seen.add(at) || beyond(origin, at, reach) || !level.isLoaded(at)) {
                 return;
             }
             BlockState state = level.getBlockState(at);
-            if (state.isAir() || state.liquid()) {
+            if (state.isAir() || state.liquid() || rules.blocked(state)) {
                 return;
             }
             BlockEntity be = level.getBlockEntity(at);
             if (be instanceof MachineHubBlockEntity || networkBlock(level, at)) {
                 return;
             }
+            if (rules.part(state)) {
+                frontier.add(new Step(at, 0, null, true));
+                return;
+            }
 
             String mod = namespace(state);
             boolean vanilla = VANILLA.equals(mod);
             if (machinePart(level, at, be, vanilla)) {
+                if (!trusted(mod, from, touchingTheHub)) {
+                    return;
+                }
                 if (!vanilla) {
                     machineMods.add(mod);
                 }
-                frontier.add(new Step(at, 0));
+                frontier.add(new Step(at, 0, null, false));
                 return;
             }
             if (vanilla) {
                 return;
             }
-            int casing = casingSoFar + 1;
-            if (casing > casingDepth) {
+            int casing = from.casing() + 1;
+            if (casing > casingDepth || !trusted(mod, from, touchingTheHub)) {
                 return;
             }
-            if (touchingTheHub) {
-                machineMods.add(mod);
-            } else if (!machineMods.contains(mod)) {
-                return;
-            }
-            frontier.add(new Step(at, casing));
+            frontier.add(new Step(at, casing, mod, false));
+        }
+
+        private boolean trusted(String mod, Step from, boolean touchingTheHub) {
+            return touchingTheHub || from.vouching() || machineMods.contains(mod) || mod.equals(from.casingMod());
         }
     }
 

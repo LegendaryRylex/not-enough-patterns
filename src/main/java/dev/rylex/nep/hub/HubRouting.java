@@ -5,6 +5,8 @@ import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -21,8 +23,8 @@ public final class HubRouting {
         }
         try (Transaction tx = Transaction.openRoot()) {
             long remaining = amount;
-            for (HubTarget target : targets) {
-                if (!target.accepts()) {
+            for (HubTarget target : byPriority(targets)) {
+                if (!target.acceptsKey(what)) {
                     continue;
                 }
                 if (what instanceof AEItemKey key && target.items() != null) {
@@ -47,7 +49,10 @@ public final class HubRouting {
         }
         try (Transaction tx = Transaction.openRoot()) {
             long remaining = amount;
-            for (HubTarget target : targets) {
+            for (HubTarget target : byPriority(targets)) {
+                if (!target.returnsKey(what)) {
+                    continue;
+                }
                 if (what instanceof AEItemKey key && target.items() != null) {
                     remaining -= target.items().extract(key.toResource(), clampToInt(remaining), tx);
                 } else if (what instanceof AEFluidKey key && target.fluids() != null) {
@@ -87,6 +92,15 @@ public final class HubRouting {
                 }
             }
         }
+    }
+
+    private static List<HubTarget> byPriority(List<HubTarget> targets) {
+        if (targets.size() < 2) {
+            return targets;
+        }
+        List<HubTarget> sorted = new ArrayList<>(targets);
+        sorted.sort(Comparator.comparingInt(HubTarget::priority).reversed());
+        return sorted;
     }
 
     static int clampToInt(long amount) {

@@ -8,6 +8,8 @@ import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 
 public class MatrixBuffer extends ItemStacksResourceHandler {
 
+    public static final int SLOT_LIMIT = 64;
+
     private final int fixedSize;
     private final Runnable onChanged;
 
@@ -15,6 +17,11 @@ public class MatrixBuffer extends ItemStacksResourceHandler {
         super(size);
         this.fixedSize = size;
         this.onChanged = onChanged;
+    }
+
+    @Override
+    protected int getCapacity(int index, ItemResource resource) {
+        return SLOT_LIMIT;
     }
 
     @Override

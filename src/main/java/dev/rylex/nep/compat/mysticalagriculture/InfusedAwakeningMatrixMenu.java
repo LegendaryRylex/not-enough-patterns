@@ -14,7 +14,6 @@ import org.jetbrains.annotations.Nullable;
 public class InfusedAwakeningMatrixMenu extends MachineMenu {
 
     static final int BUTTON_CLEAR_PENDING = 1;
-    static final int BUTTON_REDSTONE_MODE = 2;
     static final int BUTTON_CLEAR_BUFFER = 3;
 
     static final int WIDTH = 176;
@@ -106,10 +105,6 @@ public class InfusedAwakeningMatrixMenu extends MachineMenu {
         }
         if (id == BUTTON_CLEAR_PENDING) {
             matrix.clearPending();
-            return true;
-        }
-        if (id == BUTTON_REDSTONE_MODE) {
-            matrix.cycleRedstoneMode();
             return true;
         }
         if (id == BUTTON_CLEAR_BUFFER) {

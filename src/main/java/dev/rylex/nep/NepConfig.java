@@ -1,5 +1,7 @@
 package dev.rylex.nep;
 
+import dev.rylex.nep.hub.HubRules;
+import java.util.List;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class NepConfig {
@@ -16,6 +18,11 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue MACHINE_HUB_MAXIMUM_LINKS;
     private static final ModConfigSpec.IntValue MACHINE_HUB_SCAN_BUDGET;
     private static final ModConfigSpec.IntValue MACHINE_HUB_CASING_DEPTH;
+    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_SCAN_WHITELIST;
+    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_SCAN_BLACKLIST;
+    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_LINK_BLACKLIST;
+    private static final ModConfigSpec.IntValue MACHINE_HUB_CHANNELS;
+    private static final ModConfigSpec.IntValue MACHINE_HUB_CHANNELS_PER_LINK;
     private static final ModConfigSpec.BooleanValue APOTHIC_OVERRIDE;
     private static final ModConfigSpec.BooleanValue APOTHIC_INFUSION;
     private static final ModConfigSpec.IntValue APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE;
@@ -30,6 +37,7 @@ public final class NepConfig {
     private static final ModConfigSpec.LongValue MYSTICAL_MATRIX_TANK_CAPACITY;
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_ME_DRAIN;
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_CHANNELS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -125,6 +133,11 @@ public final class NepConfig {
                         "Energy the Matrix draws from its ME network while idle, in AE per tick. This standing cost is read once when the Matrix joins a network, so changing it needs a world reload.")
                 .translation("nep.configuration.modules.mysticalagriculture.infusedAwakeningMatrix.idleMeNetworkDrain")
                 .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        MYSTICAL_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.mysticalagriculture.infusedAwakeningMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
         builder.pop();
 
         builder.pop();
@@ -163,12 +176,38 @@ public final class NepConfig {
                         "How many blocks the Machine Hub's scan may walk through before it stops, which is what bounds the cost of pressing the button.",
                         "The scan spreads from the blocks touching the Hub through anything that looks like part of the same machine, so it never walks off into the terrain and rarely gets near this ceiling. Raise it for a machine larger than the budget can cover.")
                 .translation("nep.configuration.machineHub.scanBudget")
-                .defineInRange("scanBudget", 16, 4, 128);
+                .defineInRange("scanBudget", 128, 4, 1024);
         MACHINE_HUB_CASING_DEPTH = builder.comment(
                         "How many plain blocks in a row the Machine Hub's scan may step through between one machine part and the next.",
                         "The scan travels freely through blocks carrying a block entity, which is every hatch, port and controller. Everything else is casing, and casing is only crossed for this many blocks at a time, and only when it belongs to a mod that already owns a machine part nearby. Raise it for a multiblock with thick walls between its hatches; set it to zero to have the scan follow machine parts alone.")
                 .translation("nep.configuration.machineHub.casingDepth")
                 .defineInRange("casingDepth", 3, 0, 8);
+        MACHINE_HUB_SCAN_WHITELIST = builder.comment(
+                        "Blocks the Machine Hub's scan always treats as machine parts, written as block ids (modid:block) or mod id regex (modid:*).",
+                        "Whatever stands against a whitelisted block is trusted the way blocks touching the Hub are, and a whitelisted casing is crossed without counting against casingDepth.",
+                        "The block tag nep:machine_hub/parts does the same thing in a datapack.")
+                .translation("nep.configuration.machineHub.scanWhitelist")
+                .defineListAllowEmpty("scanWhitelist", List.of(), () -> "minecraft:stone", HubRules::configEntry);
+        MACHINE_HUB_SCAN_BLACKLIST = builder.comment(
+                        "Blocks the Machine Hub's scan never walks through and never proposes, written as block ids (modid:block) or mod id regex (modid:*). The blacklist wins over the whitelist.",
+                        "The block tag nep:machine_hub/blocked does the same thing in a datapack, and ships with common player storage (chests, barrels, shulker boxes) and general terrain and building blocks (dirt, stone, sand, wood, wool, concrete) already in it.")
+                .translation("nep.configuration.machineHub.scanBlacklist")
+                .defineListAllowEmpty("scanBlacklist", List.of(), () -> "minecraft:stone", HubRules::configEntry);
+        MACHINE_HUB_LINK_BLACKLIST = builder.comment(
+                        "Blocks a Machine Hub refuses to link at all, even from a Hub Linker plan, written as block ids (modid:block) or a mod id regex (modid:*).",
+                        "The scan can still go through them to whatever lies beyond. The block tag nep:machine_hub/unlinkable does the same thing in a datapack.")
+                .translation("nep.configuration.machineHub.linkBlacklist")
+                .defineListAllowEmpty("linkBlacklist", List.of(), () -> "minecraft:stone", HubRules::configEntry);
+        MACHINE_HUB_CHANNELS = builder.comment(
+                        "Channels the Machine Hub takes up on its ME network before its links are counted. Each linked inventory adds meNetworkChannelsPerLink on top, and anything above 8 has to pass through dense cables.",
+                        "This is read once when the Hub joins a network, so changing it needs a world reload. Set both this and meNetworkChannelsPerLink to 0 for a Hub that takes up no channels at all.")
+                .translation("nep.configuration.machineHub.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 11, 0, 128);
+        MACHINE_HUB_CHANNELS_PER_LINK = builder.comment(
+                        "Channels each inventory linked to the Machine Hub adds to what the Hub takes up, standing in for a bus each hatch would otherwise need.",
+                        "A Hub can take up to the channel limit at most depending on your AE2 config. Set to 0 to have links cost nothing.")
+                .translation("nep.configuration.machineHub.meNetworkChannelsPerLink")
+                .defineInRange("meNetworkChannelsPerLink", 1, 0, 128);
         builder.pop();
 
         builder.comment("Pattern Provider behaviour.")
@@ -223,11 +262,31 @@ public final class NepConfig {
     }
 
     public static int machineHubScanBudget() {
-        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : 16;
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : 128;
     }
 
     public static int machineHubCasingDepth() {
         return SPEC.isLoaded() ? MACHINE_HUB_CASING_DEPTH.get() : 3;
+    }
+
+    public static List<? extends String> machineHubScanWhitelist() {
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_WHITELIST.get() : List.of();
+    }
+
+    public static List<? extends String> machineHubScanBlacklist() {
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BLACKLIST.get() : List.of();
+    }
+
+    public static List<? extends String> machineHubLinkBlacklist() {
+        return SPEC.isLoaded() ? MACHINE_HUB_LINK_BLACKLIST.get() : List.of();
+    }
+
+    public static int machineHubChannels() {
+        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS.get() : 11;
+    }
+
+    public static int machineHubChannelsPerLink() {
+        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS_PER_LINK.get() : 1;
     }
 
     public static boolean apothicOverride() {
@@ -285,5 +344,9 @@ public final class NepConfig {
     public static int mysticalInfusedAwakeningMatrixIdleMeDrain() {
         int idle = SPEC.isLoaded() ? MYSTICAL_MATRIX_IDLE_ME_DRAIN.get() : 10;
         return Math.min(idle, mysticalInfusedAwakeningMatrixMeDrain());
+    }
+
+    public static int mysticalInfusedAwakeningMatrixChannels() {
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CHANNELS.get() : 15;
     }
 }

@@ -6,6 +6,7 @@ import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import dev.rylex.nep.NepGameTests;
@@ -78,6 +79,12 @@ public final class InfusionCraftingMachineGameTest {
                 .add(
                         "a_recipe_viewer_transfer_is_left_as_a_processing_pattern",
                         InfusionCraftingMachineGameTest::aRecipeViewerTransferIsLeftAsAProcessingPattern)
+                .add(
+                        "an_encoded_pattern_keeps_the_bottle_payment_it_already_held",
+                        InfusionCraftingMachineGameTest::anEncodedPatternKeepsTheBottlePaymentItAlreadyHeld)
+                .add(
+                        "an_upgraded_processing_pattern_keeps_the_bottle_payment_it_already_held",
+                        InfusionCraftingMachineGameTest::anUpgradedProcessingPatternKeepsTheBottlePaymentItAlreadyHeld)
                 .add(
                         "a_vanilla_enchanting_table_takes_no_patterns",
                         InfusionCraftingMachineGameTest::aVanillaEnchantingTableTakesNoPatterns);
@@ -429,6 +436,46 @@ public final class InfusionCraftingMachineGameTest {
                 converted == null,
                 "a recipe viewer filled these slots for a machine NEP does not drive, and NEP still claimed them as "
                         + converted + "; the pattern belongs to whichever machine the open category was for");
+        helper.succeed();
+    }
+
+    public static void anEncodedPatternKeepsTheBottlePaymentItAlreadyHeld(GameTestHelper helper) {
+        assertBottlePaymentSurvives(helper, true);
+    }
+
+    public static void anUpgradedProcessingPatternKeepsTheBottlePaymentItAlreadyHeld(GameTestHelper helper) {
+        assertBottlePaymentSurvives(helper, false);
+    }
+
+    private static void assertBottlePaymentSurvives(GameTestHelper helper, boolean named) {
+        InfusionCraftingMachine.clearCache();
+        InfusionRecipeResolver.clearCache();
+
+        RecipeHolder<InfusionRecipe> holder = simpleRecipe(helper);
+        int bottles = InfusionCosts.bottleCost(holder.value(), InfusionCosts.Rates.fromConfig());
+        IPatternDetails processing =
+                patternFor(helper, holder, new GenericStack(AEItemKey.of(Items.EXPERIENCE_BOTTLE), bottles));
+
+        PatternOrigin origin = named ? PatternOrigin.ofRecipe(holder.id().identifier()) : PatternOrigin.MANUAL;
+        ItemStack converted = PatternConverters.convertQuietly(
+                origin, processing.getDefinition().toStack(), helper.getLevel());
+        helper.assertTrue(
+                converted != null && converted.is(NepItems.ENCHANTING_PATTERN.get()),
+                "a processing pattern paying its experience in bottles did not convert: " + converted);
+
+        IPatternDetails details = decode(helper, converted);
+        long found = 0;
+        for (IPatternDetails.IInput input : details.getInputs()) {
+            GenericStack template = input.getPossibleInputs()[0];
+            AEKey what = template.what();
+            helper.assertTrue(
+                    !(what instanceof AEFluidKey),
+                    "the conversion swapped the bottle payment for " + what + " rather than keeping the bottles");
+            if (what instanceof AEItemKey key && key.matches(new ItemStack(Items.EXPERIENCE_BOTTLE))) {
+                found += input.getMultiplier() * template.amount();
+            }
+        }
+        helper.assertTrue(found == bottles, "the converted pattern pays " + found + " bottles rather than " + bottles);
         helper.succeed();
     }
 

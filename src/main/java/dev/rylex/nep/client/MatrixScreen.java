@@ -1,18 +1,15 @@
 package dev.rylex.nep.client;
 
-import dev.rylex.nep.machine.RedstoneMode;
+import dev.rylex.nep.NepIcons;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import org.jetbrains.annotations.Nullable;
 
 public abstract class MatrixScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
 
@@ -28,13 +25,9 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
     protected static final int BAR_WIDTH = READOUT_RIGHT - READOUT_X;
     protected static final int BAR_HEIGHT = 4;
 
+    public static final int HELP_BUTTON_INDEX = 1;
+
     private final List<ReadoutButton> buttons = new ArrayList<>();
-
-    @Nullable
-    protected ReadoutButton redstoneModeButton;
-
-    @Nullable
-    private RedstoneMode shownMode;
 
     protected MatrixScreen(T menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
@@ -46,11 +39,14 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
 
     protected abstract Identifier texture();
 
+    protected int sheetHeight() {
+        return 256;
+    }
+
     protected abstract void extractReadoutTooltips(GuiGraphicsExtractor graphics, int mouseX, int mouseY);
 
     protected void resetButtons() {
         buttons.clear();
-        shownMode = null;
     }
 
     protected void tickButtons() {
@@ -59,10 +55,15 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
         }
     }
 
-    protected ReadoutButton addRightButton(int index, String glyph, String nameKey, String hintKey, Runnable action) {
+    protected int borderWidth() {
+        return 4;
+    }
+
+    protected ReadoutButton addRightButton(
+            int index, Component glyph, String nameKey, String hintKey, Runnable action) {
         ReadoutButton button = addRenderableWidget(new ReadoutButton(
-                leftPos + imageWidth - index * ReadoutButton.SIZE - 4 - 4 * index,
-                topPos + 4,
+                leftPos + imageWidth - index * ReadoutButton.SIZE - borderWidth() - 4 * index,
+                topPos + borderWidth(),
                 glyph,
                 Component.translatable(nameKey),
                 Component.translatable(hintKey),
@@ -71,24 +72,15 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
         return button;
     }
 
+    protected ReadoutButton addHelpButton(String page) {
+        return addRightButton(
+                HELP_BUTTON_INDEX, NepIcons.HELP, "gui.nep.help", "gui.nep.help.hint", () -> NepGuide.open(page));
+    }
+
     protected void sendButton(int id) {
         if (minecraft != null && minecraft.gameMode != null) {
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
         }
-    }
-
-    protected void updateRedstoneButton(RedstoneMode mode) {
-        if (redstoneModeButton == null || mode == shownMode) {
-            return;
-        }
-        shownMode = mode;
-        redstoneModeButton.setGlyph(mode.glyph());
-        redstoneModeButton.setTooltip(Tooltip.create(Component.empty()
-                .append(Component.translatable("gui.nep.redstone_mode"))
-                .append("\n")
-                .append(Component.translatable(mode.key()).withStyle(ChatFormatting.YELLOW))
-                .append("\n")
-                .append(Component.translatable("gui.nep.redstone_mode.hint").withStyle(ChatFormatting.GRAY))));
     }
 
     protected static float clamp01(float value) {
@@ -138,7 +130,7 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
                 imageWidth,
                 imageHeight,
                 256,
-                256);
+                sheetHeight());
     }
 
     @Override

@@ -1,6 +1,7 @@
 package dev.rylex.nep.hub;
 
 import com.mojang.serialization.Codec;
+import dev.rylex.nep.NepIcons;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -8,19 +9,32 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.StringRepresentable;
 
 public enum HubRole implements StringRepresentable {
-    INPUT("input", "→"),
-    OUTPUT("output", "←");
+    INPUT("input", NepIcons.INPUT, true, false),
+    OUTPUT("output", NepIcons.OUTPUT, false, true),
+    BOTH("both", NepIcons.BOTH, true, true);
 
     public static final Codec<HubRole> CODEC = StringRepresentable.fromEnum(HubRole::values);
     public static final StreamCodec<ByteBuf, HubRole> STREAM_CODEC =
             ByteBufCodecs.idMapper(HubRole::byOrdinal, HubRole::ordinal);
 
     private final String serializedName;
-    private final String glyph;
+    private final Component glyph;
+    private final boolean accepts;
+    private final boolean provides;
 
-    HubRole(String serializedName, String glyph) {
+    HubRole(String serializedName, Component glyph, boolean accepts, boolean provides) {
         this.serializedName = serializedName;
         this.glyph = glyph;
+        this.accepts = accepts;
+        this.provides = provides;
+    }
+
+    public boolean accepts() {
+        return accepts;
+    }
+
+    public boolean provides() {
+        return provides;
     }
 
     @Override
@@ -28,7 +42,7 @@ public enum HubRole implements StringRepresentable {
         return serializedName;
     }
 
-    public String glyph() {
+    public Component glyph() {
         return glyph;
     }
 
