@@ -73,11 +73,11 @@ public abstract class AdvPatternProviderLogicMixin implements ImportUpgradeHost,
     }
 
     @Override
-    public void nepRecordOwed(IPatternDetails pattern, OwedSource source) {
+    public void nepRecordOwed(IPatternDetails pattern, KeyCounter[] inputs, OwedSource source) {
         if (!nep$hasImportCard()) {
             return;
         }
-        if (nep$tracker.record(pattern, source)) {
+        if (nep$tracker.record(pattern, inputs, source)) {
             mainNode.ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
             host.saveChanges();
         }
@@ -98,7 +98,7 @@ public abstract class AdvPatternProviderLogicMixin implements ImportUpgradeHost,
             Operation<Boolean> original) {
         boolean pushed = original.call(machine, pattern, inputs, ejectionDirection);
         if (pushed) {
-            nepRecordOwed(pattern, new OwedSource.Side(ejectionDirection.getOpposite()));
+            nepRecordOwed(pattern, inputs, new OwedSource.Side(ejectionDirection.getOpposite()));
         }
         return pushed;
     }
@@ -112,7 +112,7 @@ public abstract class AdvPatternProviderLogicMixin implements ImportUpgradeHost,
     private void nep$recordExternalDispatch(
             IPatternDetails patternDetails, KeyCounter[] inputHolder, CallbackInfoReturnable<Boolean> cir) {
         if (sendDirection != null) {
-            nepRecordOwed(patternDetails, new OwedSource.Side(sendDirection));
+            nepRecordOwed(patternDetails, inputHolder, new OwedSource.Side(sendDirection));
         }
     }
 
@@ -127,7 +127,7 @@ public abstract class AdvPatternProviderLogicMixin implements ImportUpgradeHost,
             KeyCounter[] inputHolder,
             IAdvPatternDetails patternDetails,
             CallbackInfoReturnable<Boolean> cir) {
-        nepRecordOwed((IPatternDetails) patternDetails, new OwedSource.Side(direction));
+        nepRecordOwed((IPatternDetails) patternDetails, inputHolder, new OwedSource.Side(direction));
     }
 
     @Inject(method = "hasWorkToDo", at = @At("RETURN"), cancellable = true)

@@ -51,6 +51,7 @@ public final class NepGameTests {
         NepRecipesGameTest.register(new Batch(event, "nep_recipes", SMALL));
         ImportCardInstallGameTest.register(new Batch(event, "nep_import_card_install", SMALL));
         AddonProviderImportCardGameTest.register(new Batch(event, "nep_addon_providers", SMALL));
+        ImportCardChainedCraftGameTest.register(new Batch(event, "nep_import_card_chain", LARGE));
         AppliedFluxCompatGameTest.register(new Batch(event, "nep_appflux", SMALL));
         AdvancedAeMixinGameTest.register(new Batch(event, "nep_advancedae", SMALL));
         PushingCpuMixinGameTest.register(new Batch(event, "nep_pushing_cpu", SMALL));

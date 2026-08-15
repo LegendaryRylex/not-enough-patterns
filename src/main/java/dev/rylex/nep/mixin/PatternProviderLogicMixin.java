@@ -72,11 +72,11 @@ public abstract class PatternProviderLogicMixin implements ImportUpgradeHost, Im
     }
 
     @Override
-    public void nepRecordOwed(IPatternDetails pattern, OwedSource source) {
+    public void nepRecordOwed(IPatternDetails pattern, KeyCounter[] inputs, OwedSource source) {
         if (!nep$hasImportCard()) {
             return;
         }
-        if (nep$tracker.record(pattern, source)) {
+        if (nep$tracker.record(pattern, inputs, source)) {
             mainNode.ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
             host.saveChanges();
         }
@@ -97,7 +97,7 @@ public abstract class PatternProviderLogicMixin implements ImportUpgradeHost, Im
             Operation<Boolean> original) {
         boolean pushed = original.call(machine, pattern, inputs, ejectionDirection);
         if (pushed) {
-            nepRecordOwed(pattern, new OwedSource.Side(ejectionDirection.getOpposite()));
+            nepRecordOwed(pattern, inputs, new OwedSource.Side(ejectionDirection.getOpposite()));
         }
         return pushed;
     }
@@ -111,7 +111,7 @@ public abstract class PatternProviderLogicMixin implements ImportUpgradeHost, Im
     private void nep$recordExternalDispatch(
             IPatternDetails patternDetails, KeyCounter[] inputHolder, CallbackInfoReturnable<Boolean> cir) {
         if (sendDirection != null) {
-            nepRecordOwed(patternDetails, new OwedSource.Side(sendDirection));
+            nepRecordOwed(patternDetails, inputHolder, new OwedSource.Side(sendDirection));
         }
     }
 

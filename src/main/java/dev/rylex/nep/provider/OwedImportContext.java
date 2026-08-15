@@ -86,6 +86,10 @@ public final class OwedImportContext implements StackTransferContext {
         return operationsRemaining < budget;
     }
 
+    public long moved() {
+        return budget - operationsRemaining;
+    }
+
     @Override
     public boolean isKeyTypeEnabled(AEKeyType space) {
         return space == AEKeyType.items();
