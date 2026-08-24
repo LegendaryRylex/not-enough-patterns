@@ -57,7 +57,7 @@ item_ids:
 
 The four bars on the right of the screen replace the Essence Vessels. Essence is an ordinary item, so a tank is really an item slot drawn as a bar: it takes one essence at a time, holds a stack of it, and is free for any other essence the moment it empties. Nothing is ever reserved, so the same four tanks serve every awakening recipe without being told in advance which essences it will want.
 
-A tank holds sixty-four by default, more than the forty a vessel takes for one craft of the priciest recipe. Raise it as far as 512 in the config to bank essence for a longer run.
+A tank holds <nep:ConfigValue name="infusedAwakeningMatrixTankCapacity"/>, where an Essence Vessel holds 40 and the priciest awakening recipe takes 40 for one craft. Raise it as far as 512 in the config to bank essence for a longer run.
 
 | Getting essence in | How |
 |---|---|
@@ -100,7 +100,7 @@ A tank holds sixty-four by default, more than the forty a vessel takes for one c
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 * The Matrix must be on a powered ME network, not just connected to one.
-* The Matrix takes up 15 channels by default, so it needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
+* The Matrix takes up <nep:ConfigValue name="infusedAwakeningMatrixChannels"/> channels, and anything above 8 needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
 * *Waiting on essence* means an awakening craft is staged but a tank is short. Feed that essence in through the input buffer; if it is already sitting there, the tanks are full and it moves across as soon as a queued craft drains one.
 * A red *Missing ingredients* line means auto-request could not source something. Hover it for the list.
 * Turn on Verbose Logging under Debug to have the Matrix log every pattern it refuses and why.

@@ -1,40 +1,32 @@
 package dev.rylex.nep.util;
 
-import dev.ryanhcode.sable.companion.ClientSubLevelAccess;
-import dev.ryanhcode.sable.companion.SableCompanion;
-import dev.ryanhcode.sable.companion.SubLevelAccess;
-import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.rylex.nep.compat.sable.SableSubLevels;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.ModList;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
 
 public final class SubLevels {
 
+    private static final boolean COMPANION_LOADED = ModList.get().isLoaded("sablecompanion");
+
+    public record Transform(Vec3 position, Vec3 scale, Vec3 rotationPoint, Quaternionf orientation) {}
+
     private SubLevels() {}
 
-    @Nullable
-    private static SubLevelAccess containing(@Nullable Level level, BlockPos pos) {
-        return level == null ? null : SableCompanion.INSTANCE.getContaining(level, pos);
-    }
-
     public static boolean sameSubLevel(@Nullable Level level, BlockPos a, BlockPos b) {
-        return containing(level, a) == containing(level, b);
+        return !COMPANION_LOADED || SableSubLevels.sameSubLevel(level, a, b);
     }
 
     public static double distanceSqr(Player player, BlockPos pos) {
-        Vec3 center = Vec3.atCenterOf(pos);
-        return SableCompanion.INSTANCE.distanceSquaredWithSubLevels(
-                player.level(), player.position(), center.x, center.y, center.z);
+        return COMPANION_LOADED ? SableSubLevels.distanceSqr(player, pos) : player.distanceToSqr(Vec3.atCenterOf(pos));
     }
 
     @Nullable
-    public static Pose3dc renderPose(@Nullable Level level, BlockPos pos, float partialTick) {
-        SubLevelAccess sub = containing(level, pos);
-        if (sub == null) {
-            return null;
-        }
-        return sub instanceof ClientSubLevelAccess client ? client.renderPose(partialTick) : sub.logicalPose();
+    public static Transform renderTransform(@Nullable Level level, BlockPos pos, float partialTick) {
+        return COMPANION_LOADED ? SableSubLevels.renderTransform(level, pos, partialTick) : null;
     }
 }

@@ -16,10 +16,15 @@ class SubLevelCompatibilityTest {
 
     private static final Path SOURCE_ROOT = ProjectFiles.root().resolve(Paths.get("src", "main", "java"));
 
+    private static final Path VANILLA_FALLBACK = Paths.get("dev", "rylex", "nep", "util", "SubLevels.java");
+
     @Test
     void menusMeasureReachThroughSubLevels() {
         List<String> violations = new ArrayList<>();
         forEachSourceFile((relative, source) -> {
+            if (relative.equals(VANILLA_FALLBACK)) {
+                return;
+            }
             if (source.contains("player.distanceToSqr(") || source.contains(".distanceToSqr(player")) {
                 violations.add(relative.toString());
             }

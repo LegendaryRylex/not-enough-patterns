@@ -78,7 +78,7 @@ item_ids:
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 * **No network power.** The Matrix needs a powered ME network before it starts anything, on top of its FE.
-* **Not enough free network channels.** The Matrix takes up 15 channels by default, so it needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
+* **Not enough free network channels.** The Matrix takes up <nep:ConfigValue name="atomicEmpoweringMatrixChannels"/> channels, and anything above 8 needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
 * **No energy.** The FE buffer is empty. The craft resumes by itself once power returns.
 * **Output buffer full.** A finished craft with nowhere to go holds the machine at full progress until the buffer is cleared.
 * **Two recipes for one item.** Only one recipe per result item can be queued at a time; a second pattern making the same item a different way is refused until the first finishes.

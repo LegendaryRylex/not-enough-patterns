@@ -40,11 +40,11 @@ public class TileFusionCraftingCoreMixin {
 
     @Inject(method = "completeCraft", at = @At("RETURN"))
     private void nep$reclaimAfterCraft(CallbackInfo ci) {
-        FusionReclaimer.onCraftEnded((TileFusionCraftingCore) (Object) this);
+        FusionReclaimer.onCraftCompleted((TileFusionCraftingCore) (Object) this);
     }
 
     @Inject(method = "cancelCraft", at = @At("RETURN"))
     private void nep$reclaimAfterCancel(CallbackInfo ci) {
-        FusionReclaimer.onCraftEnded((TileFusionCraftingCore) (Object) this);
+        FusionReclaimer.onCraftCancelled((TileFusionCraftingCore) (Object) this);
     }
 }

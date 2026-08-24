@@ -227,6 +227,7 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
                     case ITEMS_ONLY -> "gui.nep.fusion_matrix.refused.items_only";
                     case TOO_MANY_INPUTS -> "gui.nep.fusion_matrix.refused.too_many_inputs";
                     case BUFFER_FULL -> "gui.nep.fusion_matrix.refused.buffer_full";
+                    case MIXED_RECIPES -> "gui.nep.fusion_matrix.refused.mixed_recipes";
                 };
         return refused == null ? Component.translatable("gui.nep.fusion_matrix.idle") : Component.translatable(refused);
     }
@@ -262,6 +263,7 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
             case TIER_TOO_HIGH -> "gui.nep.fusion_matrix.refused.tier_too_high.hint";
             case BUFFER_FULL -> "gui.nep.fusion_matrix.refused.buffer_full.hint";
             case TOO_MANY_INPUTS -> "gui.nep.fusion_matrix.refused.too_many_inputs.hint";
+            case MIXED_RECIPES -> "gui.nep.fusion_matrix.refused.mixed_recipes.hint";
             default -> "gui.nep.fusion_matrix.refused.hint";
         };
     }

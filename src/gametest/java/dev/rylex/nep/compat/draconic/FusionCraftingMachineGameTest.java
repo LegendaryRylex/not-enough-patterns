@@ -275,6 +275,120 @@ public final class FusionCraftingMachineGameTest {
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void anAbortedCraftHandsBackEveryLoadedIngredient(GameTestHelper helper) {
+        TileFusionCraftingCore core = startKeptIngredientCraft(helper);
+        core.cancelCraft();
+
+        helper.assertTrue(
+                countReturned(helper, Items.COPPER_INGOT) == 1,
+                "a cancelled craft left the consumed ingredient in an injector; nothing consumes it now, and it blocks"
+                        + " every later push");
+        helper.assertTrue(
+                countReturned(helper, Items.IRON_INGOT) == 1,
+                "a cancelled craft left the catalyst in the core, where it blocks every later push");
+        helper.assertTrue(countReturned(helper) == 1, "a cancelled craft swallowed the kept ingredient");
+        helper.assertTrue(core.getCatalystStack().isEmpty(), "the catalyst was handed back and left in the core");
+        for (IFusionInjector injector : core.getInjectors()) {
+            helper.assertTrue(
+                    injector.getInjectorStack().isEmpty(),
+                    "an ingredient was handed back to the network and left in its injector as well");
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aStrandedIngredientIsHandedBackOnTheNextPush(GameTestHelper helper) {
+        FusionCraftingMachine.clearCache();
+        FusionRecipeResolver.clearCache();
+
+        TileFusionCraftingCore core = placeCore(helper);
+        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 2);
+        helper.setBlock(CORE.above(), Blocks.BARREL.defaultBlockState());
+        ICraftingMachine machine = machine(helper);
+
+        IFusionInjector stranded =
+                (IFusionInjector) helper.getBlockEntity(SITES.get(0).pos());
+        stranded.setInjectorStack(new ItemStack(Items.COPPER_INGOT));
+
+        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
+                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
+        helper.assertTrue(holder != null, "the kept-ingredient test recipe did not load");
+
+        IPatternDetails details = patternFor(helper, holder);
+        helper.assertTrue(
+                machine.pushPattern(details, inputsOf(details), Direction.UP),
+                "a push was refused over an ingredient an earlier craft had left in an injector, which no later push"
+                        + " can ever clear on its own");
+        helper.assertTrue(
+                countReturned(helper, Items.COPPER_INGOT) == 1,
+                "the stranded ingredient was not handed back to the pattern provider");
+        helper.assertTrue(core.isCrafting(), "the core did not start the craft after clearing the stranded injector");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aCoreLeftReadyToCraftByAnEarlierJobIsClearedAndRestarted(GameTestHelper helper) {
+        FusionCraftingMachine.clearCache();
+        FusionRecipeResolver.clearCache();
+
+        TileFusionCraftingCore core = placeCore(helper);
+        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 2);
+        helper.setBlock(CORE.above(), Blocks.BARREL.defaultBlockState());
+        ICraftingMachine machine = machine(helper);
+
+        core.setCatalystStack(new ItemStack(Items.IRON_INGOT));
+        ((IFusionInjector) helper.getBlockEntity(SITES.get(0).pos()))
+                .setInjectorStack(new ItemStack(Items.COPPER_INGOT));
+        ((IFusionInjector) helper.getBlockEntity(SITES.get(1).pos())).setInjectorStack(new ItemStack(Items.DIAMOND));
+
+        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
+                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
+        helper.assertTrue(holder != null, "the kept-ingredient test recipe did not load");
+
+        IPatternDetails details = patternFor(helper, holder);
+        helper.assertTrue(
+                machine.pushPattern(details, inputsOf(details), Direction.UP),
+                "a core sitting loaded and ready to craft, which is where a cancelled craft leaves it, refused every"
+                        + " push instead of clearing itself");
+        helper.assertTrue(
+                countReturned(helper, Items.IRON_INGOT) == 1,
+                "the catalyst an earlier craft left behind was not handed back to the pattern provider");
+        helper.assertTrue(
+                countReturned(helper, Items.COPPER_INGOT) == 1,
+                "the ingredient an earlier craft left behind was not handed back to the pattern provider");
+        helper.assertTrue(core.isCrafting(), "the core did not start the craft after clearing itself");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aStrandedIngredientWithNowhereToGoLeavesTheCoreUntouched(GameTestHelper helper) {
+        FusionCraftingMachine.clearCache();
+        FusionRecipeResolver.clearCache();
+
+        TileFusionCraftingCore core = placeCore(helper);
+        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 2);
+        ICraftingMachine machine = machine(helper);
+
+        IFusionInjector stranded =
+                (IFusionInjector) helper.getBlockEntity(SITES.get(0).pos());
+        stranded.setInjectorStack(new ItemStack(Items.COPPER_INGOT));
+
+        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
+                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
+        helper.assertTrue(holder != null, "the kept-ingredient test recipe did not load");
+
+        IPatternDetails details = patternFor(helper, holder);
+        helper.assertTrue(
+                !machine.pushPattern(details, inputsOf(details), Direction.UP),
+                "a push was accepted with no room to clear the injector it had to empty first");
+        helper.assertTrue(
+                stranded.getInjectorStack().is(Items.COPPER_INGOT),
+                "a refused push voided the ingredient it could not hand back");
+        helper.assertTrue(core.getCatalystStack().isEmpty(), "a refused push left the catalyst behind");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aCraftDrivenByTheCoreTickHandsTheKeptIngredientBack(GameTestHelper helper) {
         TileFusionCraftingCore core = startKeptIngredientCraft(helper);
 

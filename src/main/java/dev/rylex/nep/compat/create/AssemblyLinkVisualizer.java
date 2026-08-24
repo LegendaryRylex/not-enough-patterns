@@ -2,7 +2,6 @@ package dev.rylex.nep.compat.create;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.ryanhcode.sable.companion.math.Pose3dc;
 import dev.rylex.nep.util.SubLevels;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,9 +20,6 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
-import org.joml.Quaterniondc;
-import org.joml.Quaternionf;
-import org.joml.Vector3dc;
 
 final class AssemblyLinkVisualizer {
     private AssemblyLinkVisualizer() {}
@@ -90,19 +86,17 @@ final class AssemblyLinkVisualizer {
 
     private static void pushSubLevel(PoseStack pose, Level level, BlockPos anchor, float partialTick) {
         pose.pushPose();
-        Pose3dc subLevel = SubLevels.renderPose(level, anchor, partialTick);
+        SubLevels.Transform subLevel = SubLevels.renderTransform(level, anchor, partialTick);
         if (subLevel == null) {
             return;
         }
-        Vector3dc position = subLevel.position();
-        Vector3dc scale = subLevel.scale();
-        Vector3dc rotationPoint = subLevel.rotationPoint();
-        Quaterniondc orientation = subLevel.orientation();
-        pose.translate(position.x(), position.y(), position.z());
-        pose.mulPose(new Quaternionf(
-                (float) orientation.x(), (float) orientation.y(), (float) orientation.z(), (float) orientation.w()));
-        pose.scale((float) scale.x(), (float) scale.y(), (float) scale.z());
-        pose.translate(-rotationPoint.x(), -rotationPoint.y(), -rotationPoint.z());
+        Vec3 position = subLevel.position();
+        Vec3 scale = subLevel.scale();
+        Vec3 rotationPoint = subLevel.rotationPoint();
+        pose.translate(position.x, position.y, position.z);
+        pose.mulPose(subLevel.orientation());
+        pose.scale((float) scale.x, (float) scale.y, (float) scale.z);
+        pose.translate(-rotationPoint.x, -rotationPoint.y, -rotationPoint.z);
     }
 
     @Nullable

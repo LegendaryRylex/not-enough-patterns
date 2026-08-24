@@ -20,6 +20,7 @@ import dev.rylex.nep.machine.PushingCpus;
 import dev.rylex.nep.machine.ReturnDirections;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.util.ItemCounts;
+import dev.rylex.nep.util.ItemRecipeIds;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -42,6 +43,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.Containers;
@@ -85,6 +87,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private static final String QUEUE_KEY = "Queue";
     private static final String RECIRC_KEY = "Recirc";
     private static final String RECLAIM_KEY = "Reclaim";
+    private static final String RECIPE_IDS_KEY = "RecipeIds";
     private static final int POLL_INTERVAL = 10;
     private static final int BUFFER_SLOTS = 18;
     private static final int RESULT_SLOTS = 9;
@@ -154,6 +157,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private StationSnapshot stationSnapshot;
 
     private final Map<Item, Template> templates = new HashMap<>();
+    private final Map<Item, ResourceLocation> recipeIds = new HashMap<>();
     private final PushingCpus pushingCpus = new PushingCpus();
     private final List<Item> queue = new ArrayList<>();
     private final List<ItemStack> recirc = new ArrayList<>();
@@ -212,16 +216,20 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     }
 
     private void syncManualDemand(Level level, List<SequencedAssemblyRecipe> recipes) {
+        Map<Item, Long> staged = new HashMap<>();
         for (SequencedAssemblyRecipe recipe : recipes) {
             Item out = recipe.getResultItem(level.registryAccess()).getItem();
             if (templates.containsKey(out)) {
                 continue;
             }
-            long demand = countBufferBase(recipe.getIngredient()) + inFlightFor(out);
+            staged.merge(out, countBufferBase(recipe.getIngredient()), Long::sum);
+        }
+        for (Map.Entry<Item, Long> entry : staged.entrySet()) {
+            long demand = entry.getValue() + inFlightFor(entry.getKey());
             if (demand > 0) {
-                owed.put(out, demand);
+                owed.put(entry.getKey(), demand);
             } else {
-                owed.remove(out);
+                owed.remove(entry.getKey());
             }
         }
     }
@@ -440,6 +448,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         }
         owed.clear();
         templates.clear();
+        recipeIds.clear();
         pushingCpus.clear();
         inFlight.clear();
         queue.clear();
@@ -514,14 +523,27 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     }
 
     @Nullable
-    private static SequencedAssemblyRecipe recipeForOutput(
-            List<SequencedAssemblyRecipe> recipes, Level level, Item output) {
-        for (SequencedAssemblyRecipe recipe : recipes) {
-            if (recipe.getResultItem(level.registryAccess()).getItem() == output) {
-                return recipe;
+    private SequencedAssemblyRecipe recipeForOutput(List<SequencedAssemblyRecipe> recipes, Level level, Item output) {
+        ResourceLocation pushed = recipeIds.get(output);
+        if (pushed != null) {
+            SequencedAssemblyRecipe named = SequencedAssemblyResolver.resolveById(level, pushed);
+            if (named != null) {
+                return named;
             }
         }
-        return SequencedAssemblyResolver.resolveByResult(level, new ItemStack(output));
+        SequencedAssemblyRecipe fallback = null;
+        for (SequencedAssemblyRecipe recipe : recipes) {
+            if (recipe.getResultItem(level.registryAccess()).getItem() != output) {
+                continue;
+            }
+            if (hasBaseMaterial(recipe)) {
+                return recipe;
+            }
+            if (fallback == null) {
+                fallback = recipe;
+            }
+        }
+        return fallback != null ? fallback : SequencedAssemblyResolver.resolveByResult(level, new ItemStack(output));
     }
 
     private void captureTemplate(Item output, Map<AEItemKey, Long> items, Map<AEFluidKey, Long> fluids) {
@@ -963,6 +985,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             queue.remove(active);
             inFlight.remove(active);
             templates.remove(active);
+            recipeIds.remove(active);
             if (templates.isEmpty()) {
                 pushingCpus.clear();
             }
@@ -1140,6 +1163,10 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (!lineRecipes(level).contains(recipe)) {
             return reject("linked line does not match this recipe's station layout");
         }
+        ResourceLocation queued = recipeIds.get(outputKey.getItem());
+        if (queued != null && !queued.equals(assembly.recipe()) && owed.getOrDefault(outputKey.getItem(), 0L) > 0) {
+            return reject("already assembling " + outputKey.getItem() + " by recipe " + queued);
+        }
         Map<AEItemKey, Long> items = new HashMap<>();
         Map<AEFluidKey, Long> fluids = new HashMap<>();
         if (!DepotMachines.collectInputs(inputs, items, fluids)) {
@@ -1152,6 +1179,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         returnDirections.record(producedItem, ejectionDirection);
         long producedAmount = Math.max(1, outputs.get(0).amount());
         captureTemplate(producedItem, items, fluids);
+        recipeIds.put(producedItem, assembly.recipe());
         owed.merge(producedItem, producedAmount, Long::sum);
         pushingCpus.record();
         toReturn.merge(producedItem, producedAmount, Long::sum);
@@ -1588,7 +1616,8 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private List<SequencedAssemblyRecipe> queuedRecipes(Level level) {
         List<SequencedAssemblyRecipe> recipes = new ArrayList<>(queue.size());
         for (Item item : queue) {
-            SequencedAssemblyRecipe recipe = SequencedAssemblyResolver.resolveByResult(level, new ItemStack(item));
+            SequencedAssemblyRecipe recipe =
+                    SequencedAssemblyResolver.resolveFor(level, recipeIds.get(item), new ItemStack(item));
             if (recipe != null && !recipes.contains(recipe)) {
                 recipes.add(recipe);
             }
@@ -1604,7 +1633,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (active == null) {
             return missing;
         }
-        SequencedAssemblyRecipe recipe = SequencedAssemblyResolver.resolveByResult(level, new ItemStack(active));
+        SequencedAssemblyRecipe recipe = recipeForOutput(lineRecipes(level), level, active);
         if (recipe == null) {
             return missing;
         }
@@ -1875,6 +1904,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             }
             tag.put(RECIRC_KEY, recircList);
         }
+        if (!recipeIds.isEmpty()) {
+            tag.put(RECIPE_IDS_KEY, ItemRecipeIds.save(recipeIds));
+        }
         if (reclaimUntil != Long.MIN_VALUE) {
             tag.putLong(RECLAIM_KEY, reclaimUntil);
         }
@@ -2005,6 +2037,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                 }
             }
         }
+        ItemRecipeIds.load(recipeIds, tag, RECIPE_IDS_KEY);
         reclaimUntil = tag.contains(RECLAIM_KEY) ? tag.getLong(RECLAIM_KEY) : Long.MIN_VALUE;
         if (tag.contains(NODE_KEY)) {
             requester.load(tag.getCompound(NODE_KEY));

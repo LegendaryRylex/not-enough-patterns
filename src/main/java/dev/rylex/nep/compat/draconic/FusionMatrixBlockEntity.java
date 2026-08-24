@@ -154,7 +154,8 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
         TIER_TOO_HIGH,
         ITEMS_ONLY,
         TOO_MANY_INPUTS,
-        BUFFER_FULL
+        BUFFER_FULL,
+        MIXED_RECIPES
     }
 
     private record Template(
@@ -619,6 +620,14 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
                             + maximumTier().getSerializedName());
         }
 
+        Item producedItem = outputKey.getItem();
+        Template existing = templates.get(producedItem);
+        if (existing != null && !fusion.recipe().equals(existing.recipe())) {
+            return reject(
+                    Refusal.MIXED_RECIPES,
+                    "a craft of " + producedItem + " from " + existing.recipe() + " is already queued");
+        }
+
         Map<AEItemKey, Long> items = new HashMap<>();
         for (KeyCounter counter : inputs) {
             for (var entry : counter) {
@@ -637,7 +646,6 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity {
             return reject(Refusal.BUFFER_FULL, "matrix buffer is full");
         }
 
-        Item producedItem = outputKey.getItem();
         returnDirections.record(producedItem, ejectionDirection);
         for (GenericStack kept : fusion.retained()) {
             if (kept.what() instanceof AEItemKey keptKey) {

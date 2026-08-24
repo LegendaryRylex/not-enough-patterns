@@ -26,6 +26,7 @@ import dev.rylex.nep.machine.PushingCpus;
 import dev.rylex.nep.machine.ReturnDirections;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.util.ItemCounts;
+import dev.rylex.nep.util.ItemRecipeIds;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -43,6 +44,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.Containers;
@@ -97,6 +99,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private static final String RETURN_DIRS_KEY = "ReturnDirs";
     private static final String TEMPLATE_KEY = "Template";
     private static final String JOBS_KEY = "Jobs";
+    private static final String RECIPE_IDS_KEY = "RecipeIds";
     private static final String MISSING_KEY = "Missing";
     private static final String NODE_KEY = "Node";
     private static final String FLAGS_KEY = "Flags";
@@ -138,6 +141,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
 
     private final Map<Item, Template> templates = new HashMap<>();
     private final Map<Item, MatrixJob> jobs = new HashMap<>();
+    private final Map<Item, ResourceLocation> recipeIds = new HashMap<>();
     private final List<GenericStack> missingInputs = new ArrayList<>();
 
     private final MatrixGridNode power = new MatrixGridNode(
@@ -418,6 +422,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             if (!owed.containsKey(produced)) {
                 templates.remove(produced);
                 jobs.remove(produced);
+                recipeIds.remove(produced);
             }
             if (owed.isEmpty()) {
                 pushingCpus.clear();
@@ -453,8 +458,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         if (activeJob != null || NepConfig.createSequencedAssemblyMatrixGuaranteedResults()) {
             return activeResult.copy();
         }
-        SequencedAssemblyRecipe recipe =
-                activeRecipe != null ? activeRecipe : SequencedAssemblyResolver.resolveByResult(level, activeResult);
+        SequencedAssemblyRecipe recipe = activeRecipe != null
+                ? activeRecipe
+                : SequencedAssemblyResolver.resolveFor(level, recipeIds.get(activeResult.getItem()), activeResult);
         return recipe == null ? activeResult.copy() : roll(recipe, level.getRandom());
     }
 
@@ -488,7 +494,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
                 }
                 continue;
             }
-            SequencedAssemblyRecipe recipe = SequencedAssemblyResolver.resolveByResult(level, new ItemStack(wanted));
+            SequencedAssemblyRecipe recipe =
+                    SequencedAssemblyResolver.resolveFor(level, recipeIds.get(wanted), new ItemStack(wanted));
             if (recipe != null
                     && claim(
                             recipe.getResultItem(level.registryAccess()),
@@ -677,6 +684,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         owed.clear();
         templates.clear();
         jobs.clear();
+        recipeIds.clear();
         missingInputs.clear();
         pushingCpus.clear();
         power.cancelRequests();
@@ -850,7 +858,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         if (job != null) {
             return Math.max(1, job.outputCount());
         }
-        SequencedAssemblyRecipe recipe = SequencedAssemblyResolver.resolveByResult(level, new ItemStack(output));
+        SequencedAssemblyRecipe recipe =
+                SequencedAssemblyResolver.resolveFor(level, recipeIds.get(output), new ItemStack(output));
         return recipe == null
                 ? 1
                 : Math.max(1, recipe.getResultItem(level.registryAccess()).getCount());
@@ -961,10 +970,12 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         }
         int outputCount = (int) Math.max(1, Math.min(outputs.get(0).amount(), Integer.MAX_VALUE));
         MatrixJob job = null;
+        ResourceLocation assemblyRecipe = null;
         if (pattern instanceof SequencedAssemblyPattern assembly) {
             if (SequencedAssemblyResolver.resolveById(level, assembly.recipe()) == null) {
                 return reject("no sequenced assembly recipe with id " + assembly.recipe());
             }
+            assemblyRecipe = assembly.recipe();
         } else {
             MatrixJobs.Outcome outcome = MatrixJobs.resolve(pattern, level, outputKey, outputCount);
             if (outcome.job() == null) {
@@ -973,7 +984,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             job = outcome.job();
         }
         Item producedItem = outputKey.getItem();
-        if (owed.containsKey(producedItem) && !Objects.equals(jobs.get(producedItem), job)) {
+        if (owed.containsKey(producedItem)
+                && (!Objects.equals(jobs.get(producedItem), job)
+                        || !Objects.equals(recipeIds.get(producedItem), assemblyRecipe))) {
             return reject("already assembling " + producedItem + " by a recipe of another kind");
         }
         Map<AEItemKey, Long> items = new HashMap<>();
@@ -988,6 +1001,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             return reject("matrix buffer is full");
         }
         returnDirections.record(producedItem, ejectionDirection);
+        if (assemblyRecipe != null) {
+            recipeIds.put(producedItem, assemblyRecipe);
+        }
         if (job != null) {
             jobs.put(producedItem, job);
             for (ItemStack stack : job.retainedStacks()) {
@@ -1272,6 +1288,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         missingInputs.clear();
         owed.clear();
         jobs.clear();
+        recipeIds.clear();
         toReturn.clear();
         rolledResult = ItemStack.EMPTY;
         activeResult = ItemStack.EMPTY;
@@ -1420,6 +1437,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             }
             tag.put(JOBS_KEY, jobList);
         }
+        if (!recipeIds.isEmpty()) {
+            tag.put(RECIPE_IDS_KEY, ItemRecipeIds.save(recipeIds));
+        }
         pushingCpus.save(tag);
         CompoundTag nodeTag = new CompoundTag();
         power.save(nodeTag);
@@ -1525,6 +1545,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
                 }
             }
         }
+        ItemRecipeIds.load(recipeIds, tag, RECIPE_IDS_KEY);
         activeJob = activeResult.isEmpty() ? null : jobs.get(activeResult.getItem());
         pushingCpus.load(tag);
         if (tag.contains(NODE_KEY)) {

@@ -62,8 +62,10 @@ final class ApplicationRecipeResolver {
 
         ItemStack expected = outputKey.toStack();
         if (pattern instanceof AndesiteCraftingPattern andesite) {
-            RecipeHolder<?> holder =
-                    level.getRecipeManager().byKey(andesite.recipe()).orElse(null);
+            RecipeHolder<?> holder = SandPaperPolishing.byId(andesite.recipe(), level);
+            if (holder == null) {
+                holder = level.getRecipeManager().byKey(andesite.recipe()).orElse(null);
+            }
             if (holder == null) {
                 holder = LogStripping.byId(andesite.recipe(), level);
             }
@@ -123,6 +125,7 @@ final class ApplicationRecipeResolver {
         all.addAll(level.getRecipeManager()
                 .getAllRecipesFor(AllRecipeTypes.ITEM_APPLICATION.<RecipeWrapper, ManualApplicationRecipe>getType()));
         all.addAll(LogStripping.recipes(level));
+        all.addAll(SandPaperPolishing.recipes(level));
         return all;
     }
 

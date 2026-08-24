@@ -51,7 +51,7 @@ Cancel a job partway through and whatever the Provider had already sent out will
 
 The grace restarts each time the card collects something, and only starts once the job has ended. While a job is live the card waits for its results however long they take.
 
-The grace period is set to 10 seconds by default under `importCardGrace`.
+The grace period is <nep:ConfigValue name="importCardGrace"/> ticks under `importCardGrace`.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 

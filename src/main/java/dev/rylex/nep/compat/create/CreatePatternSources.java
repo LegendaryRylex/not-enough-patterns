@@ -10,6 +10,7 @@ final class CreatePatternSources {
     static final ResourceLocation SEQUENCED_ASSEMBLY = create("sequenced_assembly");
     static final ResourceLocation DEPLOYING = create("deploying");
     static final ResourceLocation ITEM_APPLICATION = create("item_application");
+    static final ResourceLocation SANDPAPER_POLISHING = create("sandpaper_polishing");
     static final ResourceLocation SPOUT_FILLING = create("spout_filling");
 
     private static ResourceLocation create(String path) {

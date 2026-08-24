@@ -92,5 +92,5 @@ If the field refuses the layout, the blocks are taken back out and the ingredien
 * **Field switched off** or **Field already crafting.** A redstone signal on any projector disables the field; a match the field found on its own has to finish first.
 * **Field too small.** Move the projectors further apart until the field is large enough for the recipe.
 * The Controller must be on a powered ME network, not just connected to one.
-* The Controller takes up 7 channels by default, which is nearly a whole normal cable's worth. A network that cannot spare them leaves it offline.
+* The Controller takes up <nep:ConfigValue name="miniaturizationControllerChannels"/> channels, and anything above 8 needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
 * Turn on Verbose Logging under Debug to have the Controller log every layout it builds, abandons, or loses.

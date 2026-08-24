@@ -14,7 +14,7 @@ item_ids:
 
   <ItemImage id="create:deployer" scale="2"/>
 
-  Automate the Deployer for `create:deploying` and `create:item_application` recipes. The Depot is the crafting machine: the base item is staged on it, and a Deployer two blocks above presses onto it.
+  Automate the Deployer for `create:deploying`, `create:item_application` and `create:sandpaper_polishing` recipes. The Depot is the crafting machine: the base item is staged on it, and a Deployer two blocks above presses onto it.
 </Column>
 
 <Recipe id="nep:module_status/deploying"/>
@@ -63,6 +63,30 @@ A plain processing pattern with the same inputs and result still works; the Depo
 If the Deployer is already holding a matching tool, that one is used and the lent copy goes straight back to the Provider untouched. A pattern with the tool left out still works too, but then the Deployer has to be loaded by hand and pushes are rejected until it is.
 
 An [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) takes the same pattern and deploys inside itself, with no Depot and no Deployer. It holds nothing by hand, so there the tool must be in the pattern, and it turns down the rare recipe whose tool a Deployer wears down instead of consuming.
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Sanding</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+<Row>
+  <ItemImage id="create:rose_quartz" scale="1.5"/>
+  <ItemImage id="create:sand_paper" scale="1.5"/>
+  <ItemImage id="create:polished_rose_quartz" scale="1.5"/>
+</Row>
+
+A Deployer holding <ItemLink id="create:sand_paper"/> polishes whatever is on the Depot, but Create files those recipes under their own `create:sandpaper_polishing` type rather than Deploying, so a pattern had nothing to name and the **+** in JEI handed back a plain processing pattern that no Depot would take. NEP now reads every polishing recipe as a Deploying one, and the **+** on Create's **Sandpaper Polishing** entry gives an <ItemLink id="nep:andesite_crafting_pattern"/> like any other.
+
+* The pattern holds the base item and one sheet, with the sheet <Color id="yellow">retained</Color>. Either <ItemLink id="create:sand_paper"/> or <ItemLink id="create:red_sand_paper"/> satisfies it.
+* A Deployer sands its sheet down a point per polish, unlike the axes it strips with. The sheet loaded into an empty Deployer is therefore spent over its lifetime, and the network is asked for a fresh one only once the old one wears through.
+* While the Deployer still holds a usable sheet, the lent one goes straight back to the Provider untouched, so a long job costs one sheet per run of polishes rather than one per craft.
+* A part-used sheet is left in the Deployer rather than returned. Nothing could ask for it back: a pattern names the pristine sheet, so a worn one would only sit in storage.
+* An [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) turns polishing down for the same reason it turns down any recipe that wears its tool: it hands retained inputs back exactly as they arrived.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 

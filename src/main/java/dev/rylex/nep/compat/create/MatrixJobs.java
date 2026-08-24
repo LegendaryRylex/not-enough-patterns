@@ -50,7 +50,7 @@ final class MatrixJobs {
         if (NepConfig.createDeploying()) {
             ApplicationRecipeResolver.Plan plan = ApplicationRecipeResolver.resolve(pattern, level);
             if (plan != null) {
-                String refusal = deployingRefusal(plan);
+                String refusal = deployingRefusal(pattern, level, plan);
                 if (refusal != null) {
                     return Outcome.refused(refusal);
                 }
@@ -62,9 +62,13 @@ final class MatrixJobs {
     }
 
     @Nullable
-    private static String deployingRefusal(ApplicationRecipeResolver.Plan plan) {
+    private static String deployingRefusal(IPatternDetails pattern, Level level, ApplicationRecipeResolver.Plan plan) {
         if (plan.keptTool() != null && plan.suppliedTool() == null) {
             return "this recipe keeps its tool and the pattern supplies none; the matrix holds nothing by hand";
+        }
+        if (SandPaperPolishing.wearsKeptTool(pattern, level)) {
+            return "a deployer sands its paper down a point per polish, and no pattern can name a tool that comes "
+                    + "back with different damage";
         }
         if (toolIsWornRatherThanConsumed(plan)) {
             return "a deployer would wear this recipe's tool down by a point rather than consume it, and no pattern "

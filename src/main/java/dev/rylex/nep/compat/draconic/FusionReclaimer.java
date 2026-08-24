@@ -20,11 +20,25 @@ import org.jetbrains.annotations.Nullable;
 public final class FusionReclaimer {
     private FusionReclaimer() {}
 
-    private static TileFusionCraftingCore assembling;
-    private static boolean endedWhileAssembling;
+    private enum Ending {
+        COMPLETED,
+        CANCELLED
+    }
 
-    static void expect(TileFusionCraftingCore core, List<GenericStack> items, Direction direction) {
-        core.setData(NepDraconicContent.FUSION_RECLAIM.get(), new FusionReclaim(items, direction));
+    private static TileFusionCraftingCore assembling;
+
+    @Nullable
+    private static Ending endedWhileAssembling;
+
+    static void expect(
+            TileFusionCraftingCore core,
+            List<GenericStack> retained,
+            List<GenericStack> loaded,
+            GenericStack catalyst,
+            Direction direction) {
+        core.setData(
+                NepDraconicContent.FUSION_RECLAIM.get(),
+                new FusionReclaim(retained, loaded, List.of(catalyst), direction));
         core.setChanged();
     }
 
@@ -34,32 +48,32 @@ public final class FusionReclaimer {
 
     public static void beginFusionState(TileFusionCraftingCore core) {
         assembling = core;
-        endedWhileAssembling = false;
+        endedWhileAssembling = null;
     }
 
     public static void endFusionState(TileFusionCraftingCore core) {
         assembling = null;
-        if (endedWhileAssembling) {
-            endedWhileAssembling = false;
-            onCraftEnded(core);
+        Ending ending = endedWhileAssembling;
+        endedWhileAssembling = null;
+        if (ending == Ending.COMPLETED) {
+            onCraftCompleted(core);
+        } else if (ending == Ending.CANCELLED) {
+            onCraftCancelled(core);
         }
     }
 
-    public static void onCraftEnded(TileFusionCraftingCore core) {
+    public static void onCraftCompleted(TileFusionCraftingCore core) {
         if (core == assembling) {
-            endedWhileAssembling = true;
+            endedWhileAssembling = Ending.COMPLETED;
             return;
         }
-        Level level = core.getLevel();
-        if (level == null || level.isClientSide()) {
-            return;
-        }
-        FusionReclaim pending =
-                core.getExistingData(NepDraconicContent.FUSION_RECLAIM.get()).orElse(null);
-        if (pending == null) {
+        Level level = serverLevel(core);
+        FusionReclaim pending = pending(core);
+        if (level == null || pending == null) {
             return;
         }
         forget(core);
+
         ItemStack output = core.getOutputStack();
         ItemStack normalized = FusionResults.normalize(output);
         if (normalized != output) {
@@ -70,11 +84,85 @@ public final class FusionReclaimer {
         if (pending.isEmpty()) {
             return;
         }
-        List<ItemStack> recovered = takeFromInjectors(core, pending.items());
+        returnItems(level, core, pending.direction(), takeFromInjectors(core, pending.retained()));
+    }
+
+    public static void onCraftCancelled(TileFusionCraftingCore core) {
+        if (core == assembling) {
+            endedWhileAssembling = Ending.CANCELLED;
+            return;
+        }
+        Level level = serverLevel(core);
+        FusionReclaim pending = pending(core);
+        if (level == null || pending == null) {
+            return;
+        }
+        forget(core);
+        core.setChanged();
+
+        List<ItemStack> recovered = takeFromInjectors(core, pending.loaded());
+        recovered.addAll(takeCatalyst(core, pending.catalyst()));
+        returnItems(level, core, pending.direction(), recovered);
+    }
+
+    static boolean returnStranded(
+            Level level, TileFusionCraftingCore core, IFusionInjector injector, Direction direction) {
+        ItemStack stranded = injector.getInjectorStack();
+        if (!handBack(level, core, stranded, direction, "an injector")) {
+            return false;
+        }
+        injector.setInjectorStack(ItemStack.EMPTY);
+        return true;
+    }
+
+    static boolean returnCatalyst(Level level, TileFusionCraftingCore core, Direction direction) {
+        ItemStack stranded = core.getCatalystStack();
+        if (!handBack(level, core, stranded, direction, "the catalyst slot")) {
+            return false;
+        }
+        core.setCatalystStack(ItemStack.EMPTY);
+        return true;
+    }
+
+    private static boolean handBack(
+            Level level, TileFusionCraftingCore core, ItemStack stranded, Direction direction, String where) {
+        if (stranded.isEmpty()) {
+            return true;
+        }
+        IItemHandler target = ejectionTarget(level, core, direction);
+        if (target == null
+                || !ItemHandlerHelper.insertItem(target, stranded.copy(), true).isEmpty()) {
+            return false;
+        }
+        ItemHandlerHelper.insertItem(target, stranded.copy(), false);
+        if (NepConfig.debugLogging()) {
+            Nep.LOGGER.info(
+                    "Fusion crafting core {} handed {} back to the pattern provider; a craft that never ran had left"
+                            + " it in {}, where it blocks every later push",
+                    core.getBlockPos(),
+                    stranded,
+                    where);
+        }
+        return true;
+    }
+
+    @Nullable
+    private static Level serverLevel(TileFusionCraftingCore core) {
+        Level level = core.getLevel();
+        return level == null || level.isClientSide() ? null : level;
+    }
+
+    @Nullable
+    private static FusionReclaim pending(TileFusionCraftingCore core) {
+        return core.getExistingData(NepDraconicContent.FUSION_RECLAIM.get()).orElse(null);
+    }
+
+    private static void returnItems(
+            Level level, TileFusionCraftingCore core, Direction direction, List<ItemStack> recovered) {
         if (recovered.isEmpty()) {
             return;
         }
-        IItemHandler target = ejectionTarget(level, core, pending.direction());
+        IItemHandler target = ejectionTarget(level, core, direction);
         for (ItemStack stack : recovered) {
             ItemStack leftover = target == null ? stack : ItemHandlerHelper.insertItem(target, stack, false);
             if (!leftover.isEmpty()) {
@@ -117,6 +205,22 @@ public final class FusionReclaimer {
                 recovered.add(key.toStack(take));
                 remaining -= take;
             }
+        }
+        return recovered;
+    }
+
+    private static List<ItemStack> takeCatalyst(TileFusionCraftingCore core, List<GenericStack> wanted) {
+        List<ItemStack> recovered = new ArrayList<>();
+        for (GenericStack want : wanted) {
+            ItemStack held = core.getCatalystStack();
+            if (!(want.what() instanceof AEItemKey key) || held.isEmpty() || !key.matches(held)) {
+                continue;
+            }
+            int take = Math.min((int) want.amount(), held.getCount());
+            ItemStack kept = held.copy();
+            kept.shrink(take);
+            core.setCatalystStack(kept);
+            recovered.add(key.toStack(take));
         }
         return recovered;
     }

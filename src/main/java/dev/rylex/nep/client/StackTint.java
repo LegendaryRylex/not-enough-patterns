@@ -17,7 +17,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
-@EventBusSubscriber(modid = Nep.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Nep.MOD_ID, value = Dist.CLIENT)
 public final class StackTint {
 
     private static final Map<AEItemKey, OptionalInt> CACHE = new HashMap<>();

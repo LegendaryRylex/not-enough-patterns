@@ -123,7 +123,7 @@ Wyvern Cores fill the buffer in a straight line, while Draconic and Chaotic Core
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 * The Matrix must be on a powered ME network, not just connected to one.
-* The Matrix takes up 15 channels by default, so it needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
+* The Matrix takes up <nep:ConfigValue name="fusionMatrixChannels"/> channels, and anything above 8 needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline.
 * Check the recipe's tier is at or below the configured maximum. Above it, patterns are refused outright.
 * A red *Missing ingredients* line means auto-request could not source something. Hover it for the list.
 * Turn on Verbose Logging under Debug to have the Matrix log every pattern it refuses and why.

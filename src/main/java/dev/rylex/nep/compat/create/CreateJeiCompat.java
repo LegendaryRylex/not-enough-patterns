@@ -1,5 +1,6 @@
 package dev.rylex.nep.compat.create;
 
+import com.simibubi.create.content.equipment.sandPaper.SandPaperPolishingRecipe;
 import com.simibubi.create.content.fluids.transfer.FillingRecipe;
 import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ManualApplicationRecipe;
@@ -37,6 +38,10 @@ public final class CreateJeiCompat {
                         RecipeType.<ManualApplicationRecipe>createRecipeHolderType(
                                 CreatePatternSources.ITEM_APPLICATION),
                         CreateRecipeIngredients::displayedItemApplication);
+                collector.add(
+                        RecipeType.<SandPaperPolishingRecipe>createRecipeHolderType(
+                                CreatePatternSources.SANDPAPER_POLISHING),
+                        CreateRecipeIngredients::sandPaperPolishing);
                 collector.add(
                         RecipeType.<FillingRecipe>createRecipeHolderType(CreatePatternSources.SPOUT_FILLING),
                         CreateRecipeIngredients::spoutFilling);

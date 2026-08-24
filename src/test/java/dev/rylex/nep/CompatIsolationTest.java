@@ -40,6 +40,7 @@ class CompatIsolationTest {
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "emi"), List.of("dev.emi")),
             new ForeignRule(
                     Paths.get("dev", "rylex", "nep", "compat", "thunderbolt"), List.of("com.moakiee.thunderbolt")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "sable"), List.of("dev.ryanhcode")),
             new ForeignRule(COMPAT_DIR, List.of("mezz.jei")));
 
     private static final List<String> COMPAT_ENTRY_POINTS = List.of(
@@ -49,7 +50,8 @@ class CompatIsolationTest {
             "dev.rylex.nep.compat.apothic.ApothicCompat",
             "dev.rylex.nep.compat.compactcrafting.CompactCraftingCompat",
             "dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsCompat",
-            "dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat");
+            "dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat",
+            "dev.rylex.nep.compat.sable.SableSubLevels");
 
     @Test
     void foreignClassesStayInsideTheirCompatPackage() {

@@ -67,10 +67,12 @@ public final class CreateCompat {
         SequencedAssemblyResolver.clearCache();
         DepotCraftingMachine.clearCache();
         LogStripping.clearCache();
+        SandPaperPolishing.clearCache();
     }
 
     private static void onTagsUpdated(TagsUpdatedEvent event) {
         LogStripping.clearCache();
+        SandPaperPolishing.clearCache();
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {

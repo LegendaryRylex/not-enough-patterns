@@ -98,6 +98,17 @@ final class SequencedAssemblyResolver {
     }
 
     @Nullable
+    static SequencedAssemblyRecipe resolveFor(Level level, @Nullable ResourceLocation recipe, ItemStack target) {
+        if (recipe != null) {
+            SequencedAssemblyRecipe named = resolveById(level, recipe);
+            if (named != null && produces(named, target)) {
+                return named;
+            }
+        }
+        return resolveByResult(level, target);
+    }
+
+    @Nullable
     static SequencedAssemblyRecipe resolveByResult(Level level, ItemStack target) {
         if (target.isEmpty()) {
             return null;

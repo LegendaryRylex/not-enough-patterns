@@ -90,7 +90,7 @@ Where a mod adds a fluid form of experience, that fluid is what a pattern asks f
 
 Doing it by hand can come out cheaper, because the table rolls a level for the offer and charges the lower of that roll and the cap. A pattern always pays the cap, so an automated infusion never costs less than the same craft at the table.
 
-Both rates are settings. A bottle pays 70 points, ten times what throwing one is worth, so bottle counts stay small; a point costs 20mB, the rate the `#c:experience` tag documents.
+Both rates are settings. A bottle pays <nep:ConfigValue name="infusionExperiencePerBottle"/> points, far more than throwing one is worth, so bottle counts stay small; a point costs <nep:ConfigValue name="infusionMillibucketsPerExperience"/>mB, the rate the `#c:experience` tag documents.
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 

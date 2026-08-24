@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 
 public final class NepGuide {
 
-    private static final ResourceLocation AE2_GUIDE = ResourceLocation.fromNamespaceAndPath("ae2", "guide");
+    public static final ResourceLocation AE2_GUIDE = ResourceLocation.fromNamespaceAndPath("ae2", "guide");
 
     private NepGuide() {}
 

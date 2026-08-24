@@ -3,6 +3,7 @@ package dev.rylex.nep.compat.create;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
+import com.simibubi.create.content.equipment.sandPaper.SandPaperPolishingRecipe;
 import com.simibubi.create.content.fluids.transfer.FillingRecipe;
 import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
 import com.simibubi.create.content.processing.recipe.ProcessingOutput;
@@ -129,6 +130,12 @@ final class CreateRecipeIngredients {
             RecipeHolder<? extends ItemApplicationRecipe> holder, Level level) {
         RecipeHolder<? extends ItemApplicationRecipe> backing = LogStripping.substitute(holder, level);
         return itemApplication(backing == null ? holder : backing, level);
+    }
+
+    @Nullable
+    static EncodedIngredients sandPaperPolishing(RecipeHolder<SandPaperPolishingRecipe> holder, Level level) {
+        RecipeHolder<? extends ItemApplicationRecipe> application = SandPaperPolishing.substitute(holder, level);
+        return application == null ? null : itemApplication(application, level);
     }
 
     @Nullable

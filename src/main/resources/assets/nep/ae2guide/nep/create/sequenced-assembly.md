@@ -75,7 +75,7 @@ The plan is stored on the Linker as you tag blocks, then applied when you use th
 
 > <Color id="yellow">Tag your stations in recipe step order.</Color> Each Deployer is assigned the tool for its own step by that order, so tagging them out of order sends the wrong item to the wrong Deployer.
 
-Everything must sit within the configured link range of the Controller, which defaults to 16 blocks.
+Everything must sit within the Controller's link range, <nep:ConfigValue name="sequencedAssemblyLinkRange"/> blocks.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -135,7 +135,7 @@ If the network runs dry, the Controller halts and its face turns <Color id="red"
 
 * Hold the finished item and use it on the Controller. It prints a full report of what the recipe needs against what your line actually has.
 * Every Deployer must face down, and every station needs rotational power.
-* The Controller takes up 7 channels by default, which is nearly a whole normal cable's worth. A network that cannot spare them leaves it offline and nothing on the line moves.
+* The Controller takes up <nep:ConfigValue name="sequencedAssemblyChannels"/> channels, and anything above 8 needs an ME Controller and a dense cable running to it. A network that cannot spare them leaves it offline and nothing on the line moves.
 * A Create: New Age Energiser also needs Forge Energy. The Controller only checks its rotation, so a wired-but-empty Energiser holds the part on the belt until its buffer fills.
 * The output must be a <ItemLink id="create:depot"/>. Nothing else is accepted.
 * Open the Controller to see its station strip. A red bar under a station means that station is the problem.
@@ -152,7 +152,7 @@ If the network runs dry, the Controller halts and its face turns <Color id="red"
 
 <ItemImage id="minecraft:air" scale="0.25"/>
 
-Fluids a pattern sends arrive before the Spouts need them, so the Controller stages them in four tanks beside its ingredient grid. Each holds <Color id="aqua">64,000 mB</Color> and one fluid claims one tank, so a recipe may use up to four different fluids at once. The Controller tops the Spouts up from them as the line runs. Hover a tank to see what it holds.
+Fluids a pattern sends arrive before the Spouts need them, so the Controller stages them in four tanks beside its ingredient grid. Each holds <Color id="aqua"><nep:ConfigValue name="sequencedAssemblyTankCapacity"/> mB</Color> and one fluid claims one tank, so a recipe may use up to four different fluids at once. The Controller tops the Spouts up from them as the line runs. Hover a tank to see what it holds.
 
 You can also fill the tanks by hand. Use a filled bucket or fluid container on the Controller, or click one onto a tank while the interface is open, and its contents empty into a matching or empty tank.
 

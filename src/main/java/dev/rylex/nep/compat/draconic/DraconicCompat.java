@@ -35,7 +35,7 @@ public final class DraconicCompat {
 
     private static void onBlockBroken(BlockEvent.BreakEvent event) {
         if (event.getLevel().getBlockEntity(event.getPos()) instanceof TileFusionCraftingCore core) {
-            FusionReclaimer.onCraftEnded(core);
+            FusionReclaimer.onCraftCancelled(core);
         }
     }
 

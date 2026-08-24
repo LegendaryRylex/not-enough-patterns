@@ -1,0 +1,40 @@
+{
+  "type": "create:sequenced_assembly",
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "create" }
+  ],
+  "ingredient": {
+    "item": "minecraft:gold_ingot"
+  },
+  "loops": 1,
+  "results": [
+    {
+      "chance": 1.0,
+      "id": "minecraft:nether_star"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        { "item": "minecraft:brick" },
+        { "item": "minecraft:flint" }
+      ],
+      "results": [
+        { "id": "minecraft:brick" }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        { "item": "minecraft:brick" }
+      ],
+      "results": [
+        { "id": "minecraft:brick" }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "minecraft:brick"
+  }
+}

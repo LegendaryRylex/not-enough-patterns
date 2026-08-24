@@ -489,6 +489,37 @@ public final class FusionMatrixGameTest {
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aSecondRecipeForTheSameOutputIsRefused(GameTestHelper helper) {
+        FusionMatrixBlockEntity matrix = place(helper);
+
+        RecipeHolder<IFusionRecipe> first = FusionRecipeResolver.resolveById(
+                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "fusion_mixed_output_a"));
+        RecipeHolder<IFusionRecipe> second = FusionRecipeResolver.resolveById(
+                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "fusion_mixed_output_b"));
+        helper.assertTrue(first != null && second != null, "the shared-output fusion test recipes did not load");
+
+        IPatternDetails queued = patternFor(helper, first);
+        helper.assertTrue(
+                matrix.pushMatrixPattern(queued, inputsOf(queued), Direction.UP),
+                "the first shared-output pattern was rejected");
+
+        IPatternDetails rival = patternFor(helper, second);
+        helper.assertTrue(
+                !matrix.pushMatrixPattern(rival, inputsOf(rival), Direction.UP),
+                "the matrix accepted a second recipe for an output it already owes from another recipe; the rival"
+                        + " overwrote the stored template, so both crafts would run under one recipe and consume the"
+                        + " wrong ingredients");
+        helper.assertTrue(
+                matrix.refusal() == FusionMatrixBlockEntity.Refusal.MIXED_RECIPES,
+                "the matrix refused the rival pattern as " + matrix.refusal() + " instead of MIXED_RECIPES");
+
+        helper.assertTrue(
+                matrix.pushMatrixPattern(queued, inputsOf(queued), Direction.UP),
+                "refusing the rival recipe also blocked the recipe already queued");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aKeptIngredientIsEncodedAsARemainingKey(GameTestHelper helper) {
         RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
                 helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));

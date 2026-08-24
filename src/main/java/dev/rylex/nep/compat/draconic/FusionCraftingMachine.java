@@ -8,6 +8,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEItems;
 import com.brandon3055.draconicevolution.api.crafting.IFusionInjector;
+import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import com.brandon3055.draconicevolution.blocks.tileentity.TileFusionCraftingCore;
 import com.brandon3055.draconicevolution.init.DEContent;
 import dev.rylex.nep.Nep;
@@ -24,6 +25,7 @@ import java.util.Set;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 
 public class FusionCraftingMachine implements ICraftingMachine {
@@ -105,8 +107,10 @@ public class FusionCraftingMachine implements ICraftingMachine {
         if (core.isCrafting()) {
             return PushOutcome.retry("crafting core is already running a craft");
         }
-        if (!core.getCatalystStack().isEmpty()) {
-            return PushOutcome.retry("catalyst slot is occupied");
+        ItemStack occupying = core.getCatalystStack().copy();
+        if (!occupying.isEmpty() && !FusionReclaimer.returnCatalyst(level, core, ejectionDirection)) {
+            return PushOutcome.retry("the catalyst slot is holding " + occupying
+                    + ", which this push cannot use, and the pattern provider would not take it back");
         }
 
         ItemStack result = plan.result().what() instanceof AEItemKey resultKey
@@ -130,19 +134,19 @@ public class FusionCraftingMachine implements ICraftingMachine {
         List<Ingredient> unmatched = new ArrayList<>(plan.preloaded());
         for (IFusionInjector injector : core.getInjectors()) {
             ItemStack stack = injector.getInjectorStack();
-            if (injector.getInjectorTier().index < plan.tier().index) {
-                if (!stack.isEmpty()) {
+            boolean belowTier = injector.getInjectorTier().index < plan.tier().index;
+            if (!stack.isEmpty() && (belowTier || !removeFirstMatch(unmatched, stack))) {
+                if (!FusionReclaimer.returnStranded(level, core, injector, ejectionDirection)) {
                     return PushOutcome.retry(
-                            "an injector below the recipe's tier is holding " + stack + ", which blocks the craft");
+                            (belowTier ? "an injector below the recipe's tier is holding " : "an injector is holding ")
+                                    + stack
+                                    + ", which this recipe cannot use, and the pattern provider would not take it"
+                                    + " back");
                 }
-                continue;
+                stack = ItemStack.EMPTY;
             }
-            if (stack.isEmpty()) {
+            if (!belowTier && stack.isEmpty()) {
                 fillable.add(injector);
-                continue;
-            }
-            if (!removeFirstMatch(unmatched, stack)) {
-                return PushOutcome.retry("injector is holding " + stack + ", which this recipe does not use");
             }
         }
 
@@ -184,10 +188,12 @@ public class FusionCraftingMachine implements ICraftingMachine {
                     .toStack((int) loading.get(i).amount()));
             filled.add(injector);
         }
-        FusionReclaimer.expect(core, plan.retainedItems(), ejectionDirection);
+        FusionReclaimer.expect(core, plan.retainedItems(), loading, plan.catalyst(), ejectionDirection);
 
+        RecipeHolder<IFusionRecipe> wasActive = core.getActiveRecipe();
         core.startCraft();
         if (!core.isCrafting()) {
+            core.setActiveRecipe(wasActive);
             core.setCatalystStack(ItemStack.EMPTY);
             for (IFusionInjector injector : filled) {
                 injector.setInjectorStack(ItemStack.EMPTY);

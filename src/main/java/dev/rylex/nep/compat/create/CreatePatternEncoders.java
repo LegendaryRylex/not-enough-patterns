@@ -4,7 +4,9 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import com.simibubi.create.AllRecipeTypes;
+import com.simibubi.create.content.equipment.sandPaper.SandPaperPolishingRecipe;
 import com.simibubi.create.content.fluids.transfer.FillingRecipe;
+import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.NepConfig;
@@ -35,6 +37,7 @@ final class CreatePatternEncoders {
         SyntheticRecipes.register((recipe, level) -> LogStripping.byId(recipe, level) != null);
         PatternConverters.register(SequencedAssemblyRecipe.class, CreatePatternEncoders::sequencedAssembly);
         PatternConverters.register(ItemApplicationRecipe.class, CreatePatternEncoders::itemApplication);
+        PatternConverters.register(SandPaperPolishingRecipe.class, CreatePatternEncoders::sandPaperPolishing);
         PatternConverters.register(FillingRecipe.class, CreatePatternEncoders::filling);
         PatternConverters.register(CraftingRecipe.class, CreatePatternEncoders::mechanicalCrafting);
         PatternConverters.registerFallback(CreatePatternEncoders::mechanicalCraftingByResult);
@@ -80,6 +83,18 @@ final class CreatePatternEncoders {
             return null;
         }
         return andesiteCrafting(encoded, holder, CreateRecipeIngredients.itemApplication(holder, level));
+    }
+
+    @Nullable
+    private static ItemStack sandPaperPolishing(
+            IPatternDetails encoded, RecipeHolder<SandPaperPolishingRecipe> holder, Level level) {
+        if (!NepConfig.createDeploying()) {
+            return null;
+        }
+        RecipeHolder<DeployerApplicationRecipe> application = SandPaperPolishing.substitute(holder, level);
+        return application == null
+                ? null
+                : andesiteCrafting(encoded, application, CreateRecipeIngredients.itemApplication(application, level));
     }
 
     @Nullable

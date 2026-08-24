@@ -67,7 +67,15 @@ public final class DeployerReclaimer {
             return ItemStack.EMPTY;
         }
         int heldSlot = handler.getSlots() - 1;
-        if (!tool.matches(handler.getStackInSlot(heldSlot))) {
+        ItemStack held = handler.getStackInSlot(heldSlot);
+        if (!tool.matches(held)) {
+            if (NepConfig.debugLogging() && !held.isEmpty() && held.is(tool.getItem())) {
+                Nep.LOGGER.info(
+                        "Deployer {} wore down {} while crafting; keeping it until it breaks instead of returning a"
+                                + " damaged tool no pattern can ask for",
+                        deployer.getBlockPos(),
+                        tool);
+            }
             return ItemStack.EMPTY;
         }
         ItemStack taken = handler.extractItem(heldSlot, amount, false);
