@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
 
 public final class NepGuide {
 
-    private static final Identifier AE2_GUIDE = Identifier.fromNamespaceAndPath("ae2", "guide");
+    public static final Identifier AE2_GUIDE = Identifier.fromNamespaceAndPath("ae2", "guide");
 
     private NepGuide() {}
 

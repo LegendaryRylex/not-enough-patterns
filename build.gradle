@@ -3,6 +3,7 @@ plugins {
     id 'java-library'
     id 'net.neoforged.moddev' version '2.0.142'
     id 'com.diffplug.spotless' version '8.8.0'
+    id 'me.modmuss50.mod-publish-plugin' version '1.1.0'
 }
 
 version = mod_version
@@ -260,4 +261,38 @@ idea {
         downloadSources = true
         downloadJavadoc = true
     }
+}
+
+publishMods {
+    file = jar.archiveFile
+    def changelogFile = file("changelogs/${mod_version}.md")
+    changelog = changelogFile.exists() ? changelogFile.text : "Release ${version}"
+    displayName = "${mod_name} ${mod_version}"
+    type = STABLE
+    modLoaders.add("neoforge")
+    dryRun = providers.gradleProperty('publish_dry_run').present
+
+    curseforge {
+        projectId = curseforge_project_id
+        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+        minecraftVersions.add(minecraft_version)
+        clientRequired = true
+        serverRequired = true
+        var required = curseforge_required_dependencies.split(',')*.trim().findAll { it }
+        var optionalDependencies = curseforge_optional_dependencies.split(',')*.trim().findAll { it }
+        if (required) {
+            requires(*required)
+        }
+        if (optionalDependencies) {
+            optional(*optionalDependencies)
+        }
+    }
+}
+
+tasks.named('publishMods') {
+    dependsOn 'check'
+}
+
+tasks.named('publishCurseforge') {
+    dependsOn 'check'
 }
