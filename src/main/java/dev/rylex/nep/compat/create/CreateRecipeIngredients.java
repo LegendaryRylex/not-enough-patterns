@@ -118,11 +118,16 @@ final class CreateRecipeIngredients {
             return null;
         }
 
+        DeployerToolFate fate = DeployerToolFate.of(holder.id(), recipe, level);
         List<List<GenericStack>> inputs = new ArrayList<>();
         inputs.add(options(processed, 1));
-        Set<Integer> retained = recipe.shouldKeepHeldItem() ? Set.of(inputs.size()) : Set.of();
+        Set<Integer> toolSlot = Set.of(inputs.size());
         inputs.add(options(held, 1));
-        return new EncodedIngredients(List.copyOf(inputs), List.of(result), retained);
+        return new EncodedIngredients(
+                List.copyOf(inputs),
+                List.of(result),
+                fate == DeployerToolFate.KEPT ? toolSlot : Set.of(),
+                fate == DeployerToolFate.WORN ? toolSlot : Set.of());
     }
 
     @Nullable

@@ -171,6 +171,71 @@ final class FusionRecipeResolver {
                 result);
     }
 
+    @Nullable
+    static Plan planFromProvided(Plan plan, Map<AEItemKey, Long> provided, Level level) {
+        List<DraconicRecipeIngredients.Demand> demands =
+                DraconicRecipeIngredients.demandOf(plan.holder().value());
+        if (demands == null) {
+            return null;
+        }
+
+        Map<AEItemKey, Long> left = new LinkedHashMap<>(provided);
+        GenericStack catalyst = null;
+        List<GenericStack> injectorItems = new ArrayList<>();
+        List<GenericStack> retainedItems = new ArrayList<>();
+        List<Ingredient> preloaded = new ArrayList<>();
+        for (int index = 0; index < demands.size(); index++) {
+            DraconicRecipeIngredients.Demand demand = demands.get(index);
+            AEItemKey chosen = take(left, demand);
+            if (chosen == null) {
+                if (index == 0 || demand.consume()) {
+                    return null;
+                }
+                preloaded.add(demand.ingredient());
+            } else if (index == 0) {
+                catalyst = new GenericStack(chosen, demand.count());
+            } else {
+                (demand.consume() ? injectorItems : retainedItems).add(new GenericStack(chosen, demand.count()));
+            }
+        }
+        if (catalyst == null || !left.isEmpty()) {
+            return null;
+        }
+
+        AEItemKey produced =
+                FusionResults.resultFor(plan.holder().value(), level, List.of((AEItemKey) catalyst.what()));
+        if (produced == null) {
+            return null;
+        }
+        return new Plan(
+                plan.holder(),
+                plan.tier(),
+                catalyst,
+                List.copyOf(injectorItems),
+                List.copyOf(retainedItems),
+                List.copyOf(preloaded),
+                Map.copyOf(provided),
+                new GenericStack(produced, plan.result().amount()));
+    }
+
+    @Nullable
+    private static AEItemKey take(Map<AEItemKey, Long> left, DraconicRecipeIngredients.Demand demand) {
+        for (AEItemKey key : List.copyOf(left.keySet())) {
+            long held = left.get(key);
+            if (held < demand.count() || !demand.ingredient().test(key.toStack(demand.count()))) {
+                continue;
+            }
+            long remaining = held - demand.count();
+            if (remaining > 0) {
+                left.put(key, remaining);
+            } else {
+                left.remove(key);
+            }
+            return key;
+        }
+        return null;
+    }
+
     private static GenericStack @Nullable [] match(
             @Nullable EncodedIngredients expected, List<GenericStack> inputs, GenericStack result) {
         return IngredientMatching.matchAssign(expected, inputs, result);

@@ -4,11 +4,14 @@ import appeng.menu.me.items.PatternEncodingTermMenu;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.client.MachineHubScreen;
 import dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsJeiCompat;
+import dev.rylex.nep.compat.ae2lt.Ae2LtJeiCompat;
 import dev.rylex.nep.compat.ae2wtlib.Ae2WtLibJeiCompat;
 import dev.rylex.nep.compat.apothic.ApothicJeiCompat;
+import dev.rylex.nep.compat.ars.ArsJeiCompat;
 import dev.rylex.nep.compat.compactcrafting.CompactCraftingJeiCompat;
 import dev.rylex.nep.compat.create.CreateJeiCompat;
 import dev.rylex.nep.compat.draconic.DraconicJeiCompat;
+import dev.rylex.nep.compat.malum.MalumJeiCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalJeiCompat;
 import dev.rylex.nep.compat.viewer.EncodableCategories;
 import java.util.ArrayList;
@@ -22,6 +25,7 @@ import mezz.jei.api.registration.IIngredientAliasRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
+import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.MenuType;
@@ -57,9 +61,23 @@ public final class NepJeiPlugin implements IModPlugin {
                     }
 
                     @Override
+                    public <R extends Recipe<?>> void addViewing(
+                            RecipeType<RecipeHolder<R>> recipeType,
+                            PatternTransferHandler.ViewExtractor<RecipeHolder<R>> extractor) {
+                        register(recipeType, extractor, (holder, level) -> holder.id());
+                    }
+
+                    @Override
                     public <T> void addUnwrapped(
                             RecipeType<T> recipeType,
                             PatternTransferHandler.Extractor<T> extractor,
+                            PatternTransferHandler.Identifier<T> identifier) {
+                        register(recipeType, (recipe, slots, level) -> extractor.extract(recipe, level), identifier);
+                    }
+
+                    private <T> void register(
+                            RecipeType<T> recipeType,
+                            PatternTransferHandler.ViewExtractor<T> extractor,
                             PatternTransferHandler.Identifier<T> identifier) {
                         registration.addRecipeTransferHandler(
                                 new PatternTransferHandler<>(
@@ -76,6 +94,30 @@ public final class NepJeiPlugin implements IModPlugin {
         binder.bind(PatternEncodingTermMenu.class, PatternEncodingTermMenu.TYPE);
         if (ModList.get().isLoaded("ae2wtlib")) {
             Ae2WtLibJeiCompat.bindPatternMenus(binder);
+        }
+        if (ModList.get().isLoaded("ae2lt")) {
+            Ae2LtJeiCompat.bindPatternMenus(binder);
+        }
+        if (ModList.get().isLoaded("draconicevolution")) {
+            DraconicJeiCompat.addManualTransfers(registration, helper);
+        }
+        if (ModList.get().isLoaded("actuallyadditions")) {
+            ActuallyAdditionsJeiCompat.addManualTransfers(registration, helper);
+        }
+        if (ModList.get().isLoaded("compactcrafting")) {
+            CompactCraftingJeiCompat.addManualTransfers(registration, helper);
+        }
+        if (ModList.get().isLoaded("mysticalagriculture")) {
+            MysticalJeiCompat.addManualTransfers(registration, helper);
+        }
+        if (ModList.get().isLoaded("create")) {
+            CreateJeiCompat.addManualTransfers(registration, helper);
+        }
+        if (ModList.get().isLoaded("malum")) {
+            MalumJeiCompat.addManualTransfers(registration, helper);
+        }
+        if (ModList.get().isLoaded("ars_nouveau")) {
+            ArsJeiCompat.addManualTransfers(registration, helper);
         }
     }
 
@@ -99,6 +141,14 @@ public final class NepJeiPlugin implements IModPlugin {
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         for (JeiTransferSource source : sources()) {
             source.addCatalysts(registration);
+        }
+    }
+
+    @Override
+    public void onRuntimeAvailable(IJeiRuntime runtime) {
+        DecoderJeiVisibility.apply(runtime);
+        if (ModList.get().isLoaded("malum")) {
+            MalumJeiCompat.onRuntimeAvailable(runtime);
         }
     }
 
@@ -128,6 +178,12 @@ public final class NepJeiPlugin implements IModPlugin {
         }
         if (ModList.get().isLoaded("mysticalagriculture")) {
             sources.add(MysticalJeiCompat.source());
+        }
+        if (ModList.get().isLoaded("malum")) {
+            sources.add(MalumJeiCompat.source());
+        }
+        if (ModList.get().isLoaded("ars_nouveau")) {
+            sources.add(ArsJeiCompat.source());
         }
         return List.copyOf(sources);
     }

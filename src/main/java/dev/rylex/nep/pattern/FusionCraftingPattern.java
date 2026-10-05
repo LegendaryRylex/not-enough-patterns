@@ -9,13 +9,21 @@ import java.util.function.BiFunction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 public class FusionCraftingPattern extends RecipePattern {
 
     private static volatile BiFunction<GenericStack, Level, GenericStack> canonicalizer = (stack, level) -> stack;
 
+    private static volatile BiFunction<ResourceLocation, Level, InputSubstitution> substitutions =
+            (recipe, level) -> null;
+
     public static void canonicalizeWith(BiFunction<GenericStack, Level, GenericStack> canonicalizer) {
         FusionCraftingPattern.canonicalizer = canonicalizer;
+    }
+
+    public static void substituteInputsWith(BiFunction<ResourceLocation, Level, InputSubstitution> substitutions) {
+        FusionCraftingPattern.substitutions = substitutions;
     }
 
     public FusionCraftingPattern(AEItemKey definition, Level level) {
@@ -23,7 +31,17 @@ public class FusionCraftingPattern extends RecipePattern {
                 definition,
                 NepComponents.ENCODED_FUSION_CRAFTING_PATTERN.get(),
                 level,
-                stack -> level == null ? stack : canonicalizer.apply(stack, level));
+                stack -> level == null ? stack : canonicalizer.apply(stack, level),
+                substitutionFor(definition, level));
+    }
+
+    @Nullable
+    private static InputSubstitution substitutionFor(AEItemKey definition, @Nullable Level level) {
+        if (level == null) {
+            return null;
+        }
+        EncodedRecipePattern encoded = definition.get(NepComponents.ENCODED_FUSION_CRAFTING_PATTERN.get());
+        return encoded == null ? null : substitutions.apply(encoded.recipe(), level);
     }
 
     public static ItemStack encode(ResourceLocation recipe, List<GenericStack> inputs, GenericStack result) {

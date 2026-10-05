@@ -1,0 +1,10 @@
+{
+    "parent": "nep:block/matrix/cage_core",
+    "textures": {
+        "core": "nep:block/matrix/core/miniaturization",
+        "corner": "nep:block/matrix/miniaturization/corner",
+        "particle": "nep:block/matrix/miniaturization/border",
+        "ring": "nep:block/matrix/miniaturization/ring",
+        "strut": "nep:block/matrix/miniaturization/strut"
+    }
+}

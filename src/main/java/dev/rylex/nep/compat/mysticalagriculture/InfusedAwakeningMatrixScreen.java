@@ -117,7 +117,7 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
         Component queuedText = queued > 0
                 ? Component.translatable("gui.nep.infused_awakening_matrix.queued", queued)
                 : Component.empty();
-        int nameLimit = READOUT_RIGHT - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
+        int nameLimit = readoutRight() - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
         Component craftingName = making.isEmpty()
                 ? Component.translatable("gui.nep.infused_awakening_matrix.crafting.idle")
                 : making.getHoverName();
@@ -293,7 +293,7 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
             graphics.renderComponentTooltip(font, tankTooltip(matrix.tank(index)), mouseX, mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, 32)) {
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), 32)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

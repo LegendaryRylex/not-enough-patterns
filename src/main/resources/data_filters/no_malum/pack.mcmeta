@@ -1,0 +1,14 @@
+{
+  "pack": {
+    "description": "Hides nep's Malum data maps when that mod is absent",
+    "pack_format": 48
+  },
+  "filter": {
+    "block": [
+      {
+        "namespace": "malum",
+        "path": "^data_maps/.*"
+      }
+    ]
+  }
+}

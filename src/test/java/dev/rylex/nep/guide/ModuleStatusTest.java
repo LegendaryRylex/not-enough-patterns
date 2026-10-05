@@ -47,7 +47,18 @@ class ModuleStatusTest {
             "awakening_altar",
             "infused_awakening_matrix",
             "apothic_enchanting",
-            "enchantment_infusion");
+            "enchantment_infusion",
+            "malum",
+            "spirit_infusion",
+            "spirit_focusing",
+            "runeworking",
+            "focused_spirit_matrix",
+            "ars_nouveau",
+            "enchanting_apparatus",
+            "imbuement_chamber",
+            "arcane_lectern",
+            "ritual_conductor",
+            "arcane_enchanting_matrix");
 
     @Test
     void everyModuleHasAStatusRecipe() {

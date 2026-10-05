@@ -3,6 +3,7 @@ package dev.rylex.nep.compat.create;
 import dev.rylex.nep.machine.MachineFluidInput;
 import dev.rylex.nep.menu.MachineMenu;
 import dev.rylex.nep.menu.MachineSlot;
+import dev.rylex.nep.menu.ManualCraftMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -12,7 +13,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-public class SequencedAssemblyControllerMenu extends MachineMenu {
+public class SequencedAssemblyControllerMenu extends MachineMenu implements ManualCraftMenu {
 
     static final int BUTTON_CLEAR_BUFFER = 1;
     static final int BUTTON_CLEAR_PENDING = 2;
@@ -81,6 +82,11 @@ public class SequencedAssemblyControllerMenu extends MachineMenu {
                 });
             }
         }
+    }
+
+    @Override
+    public BlockPos machinePos() {
+        return pos;
     }
 
     BlockPos controllerPos() {

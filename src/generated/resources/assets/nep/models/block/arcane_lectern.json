@@ -1,0 +1,254 @@
+{
+    "parent": "minecraft:block/block",
+    "elements": [
+        {
+            "faces": {
+                "down": {
+                    "cullface": "down",
+                    "texture": "#casing"
+                },
+                "east": {
+                    "texture": "#casing"
+                },
+                "north": {
+                    "texture": "#casing"
+                },
+                "south": {
+                    "texture": "#casing"
+                },
+                "west": {
+                    "texture": "#casing"
+                }
+            },
+            "from": [
+                1,
+                0,
+                1
+            ],
+            "to": [
+                15,
+                9,
+                15
+            ]
+        },
+        {
+            "faces": {
+                "down": {
+                    "texture": "#frame"
+                },
+                "east": {
+                    "cullface": "east",
+                    "texture": "#frame"
+                },
+                "north": {
+                    "cullface": "north",
+                    "texture": "#frame"
+                },
+                "south": {
+                    "cullface": "south",
+                    "texture": "#frame"
+                },
+                "up": {
+                    "texture": "#rim"
+                },
+                "west": {
+                    "cullface": "west",
+                    "texture": "#frame"
+                }
+            },
+            "from": [
+                0,
+                9,
+                0
+            ],
+            "to": [
+                16,
+                11,
+                16
+            ]
+        },
+        {
+            "faces": {
+                "down": {
+                    "texture": "#drive"
+                },
+                "east": {
+                    "texture": "#drive"
+                },
+                "north": {
+                    "texture": "#drive"
+                },
+                "up": {
+                    "texture": "#drive"
+                },
+                "west": {
+                    "texture": "#drive"
+                }
+            },
+            "from": [
+                3,
+                5,
+                0.5
+            ],
+            "to": [
+                13,
+                7,
+                1
+            ]
+        },
+        {
+            "faces": {
+                "down": {
+                    "texture": "#drive"
+                },
+                "east": {
+                    "texture": "#drive"
+                },
+                "north": {
+                    "texture": "#drive"
+                },
+                "up": {
+                    "texture": "#drive"
+                },
+                "west": {
+                    "texture": "#drive"
+                }
+            },
+            "from": [
+                3,
+                2,
+                0.5
+            ],
+            "to": [
+                13,
+                4,
+                1
+            ]
+        },
+        {
+            "faces": {
+                "down": {
+                    "texture": "#glow"
+                },
+                "east": {
+                    "texture": "#glow"
+                },
+                "north": {
+                    "texture": "#glow"
+                },
+                "up": {
+                    "texture": "#glow"
+                },
+                "west": {
+                    "texture": "#glow"
+                }
+            },
+            "from": [
+                11,
+                5.5,
+                0.25
+            ],
+            "to": [
+                12.5,
+                6.5,
+                0.5
+            ]
+        },
+        {
+            "faces": {
+                "down": {
+                    "texture": "#glow"
+                },
+                "east": {
+                    "texture": "#glow"
+                },
+                "north": {
+                    "texture": "#glow"
+                },
+                "up": {
+                    "texture": "#glow"
+                },
+                "west": {
+                    "texture": "#glow"
+                }
+            },
+            "from": [
+                11,
+                2.5,
+                0.25
+            ],
+            "to": [
+                12.5,
+                3.5,
+                0.5
+            ]
+        },
+        {
+            "faces": {
+                "east": {
+                    "texture": "#lens"
+                },
+                "north": {
+                    "texture": "#lens"
+                },
+                "south": {
+                    "texture": "#lens"
+                },
+                "up": {
+                    "texture": "#lens"
+                },
+                "west": {
+                    "texture": "#lens"
+                }
+            },
+            "from": [
+                5,
+                11,
+                5
+            ],
+            "to": [
+                11,
+                12,
+                11
+            ]
+        },
+        {
+            "faces": {
+                "east": {
+                    "texture": "#glow"
+                },
+                "north": {
+                    "texture": "#glow"
+                },
+                "south": {
+                    "texture": "#glow"
+                },
+                "up": {
+                    "texture": "#glow"
+                },
+                "west": {
+                    "texture": "#glow"
+                }
+            },
+            "from": [
+                6.5,
+                12,
+                6.5
+            ],
+            "to": [
+                9.5,
+                12.5,
+                9.5
+            ]
+        }
+    ],
+    "textures": {
+        "casing": "nep:block/ars/casing",
+        "drive": "nep:block/ars/drive",
+        "frame": "nep:block/ars/frame",
+        "glow": "nep:block/ars/fluix_off",
+        "lens": "nep:block/ars/lens",
+        "particle": "nep:block/ars/casing",
+        "rim": "nep:block/ars/rim"
+    }
+}

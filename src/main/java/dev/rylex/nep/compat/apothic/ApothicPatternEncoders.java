@@ -5,6 +5,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.pattern.EnchantingPattern;
 import dev.rylex.nep.pattern.PatternStacks;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
@@ -22,8 +23,9 @@ final class ApothicPatternEncoders {
     private ApothicPatternEncoders() {}
 
     static void register() {
-        PatternConverters.register(InfusionRecipe.class, ApothicPatternEncoders::infusion);
-        PatternConverters.registerFallback(ApothicPatternEncoders::infusionByResult);
+        PatternConverters.register(
+                DecoderModule.APOTHIC_ENCHANTING, InfusionRecipe.class, ApothicPatternEncoders::infusion);
+        PatternConverters.registerFallback(DecoderModule.APOTHIC_ENCHANTING, ApothicPatternEncoders::infusionByResult);
     }
 
     @Nullable

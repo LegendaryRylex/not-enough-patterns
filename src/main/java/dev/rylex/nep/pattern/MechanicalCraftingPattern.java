@@ -59,7 +59,7 @@ public class MechanicalCraftingPattern implements NepPattern {
         }
         this.plan = new GridPlan(encoded.width(), encoded.height(), cells);
         this.inputs = PatternContents.condense(filled).stream()
-                .map(stack -> new PatternInput(stack.what(), stack.amount(), false))
+                .map(stack -> new PatternInput(stack.what(), stack.amount(), false, false, null))
                 .toArray(PatternInput[]::new);
         this.outputs = List.of(encoded.result());
     }

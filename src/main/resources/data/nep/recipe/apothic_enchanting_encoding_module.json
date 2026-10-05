@@ -1,0 +1,30 @@
+{
+  "type": "nep:decoder_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "apothic_enchanting"
+    }
+  ],
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "LBL",
+    " S "
+  ],
+  "key": {
+    "S": {
+      "item": "apothic_enchanting:infused_breath"
+    },
+    "L": {
+      "item": "ae2:logic_processor"
+    },
+    "B": {
+      "item": "ae2:blank_pattern"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:apothic_enchanting_encoding_module"
+  }
+}

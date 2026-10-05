@@ -2,6 +2,7 @@ package dev.rylex.nep.pattern.encoding;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
+import dev.rylex.nep.decoder.DecoderModule;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,7 +18,9 @@ import org.jetbrains.annotations.Nullable;
 public final class PatternConverters {
     private PatternConverters() {}
 
-    private record Entry<R extends Recipe<?>>(Class<R> type, PatternConverter<R> converter) {
+    public record Claim(ItemStack stack, DecoderModule module) {}
+
+    private record Entry<R extends Recipe<?>>(DecoderModule module, Class<R> type, PatternConverter<R> converter) {
 
         @Nullable
         ItemStack convert(IPatternDetails encoded, RecipeHolder<?> holder, Level level) {
@@ -31,29 +34,37 @@ public final class PatternConverters {
     }
 
     private static final List<Entry<?>> CONVERTERS = new CopyOnWriteArrayList<>();
-    private static final List<PatternFallback> FALLBACKS = new CopyOnWriteArrayList<>();
 
-    public static <R extends Recipe<?>> void register(Class<R> type, PatternConverter<R> converter) {
-        CONVERTERS.add(new Entry<>(type, converter));
+    private record Fallback(DecoderModule module, PatternFallback fallback) {}
+
+    private static final List<Fallback> FALLBACKS = new CopyOnWriteArrayList<>();
+
+    public static <R extends Recipe<?>> void register(
+            DecoderModule module, Class<R> type, PatternConverter<R> converter) {
+        CONVERTERS.add(new Entry<>(module, type, converter));
     }
 
-    public static void registerFallback(PatternFallback fallback) {
-        FALLBACKS.add(fallback);
+    public static void registerFallback(DecoderModule module, PatternFallback fallback) {
+        FALLBACKS.add(new Fallback(module, fallback));
     }
 
     @Nullable
     public static ItemStack convert(PatternOrigin origin, ItemStack encoded, Player player) {
-        return convert(origin, encoded, player.level(), player);
+        return stackOf(claim(origin, encoded, player.level(), player));
     }
 
     @Nullable
     public static ItemStack convertQuietly(PatternOrigin origin, ItemStack encoded, Level level) {
-        return convert(origin, encoded, level, null);
+        return stackOf(claim(origin, encoded, level, null));
     }
 
     @Nullable
-    private static ItemStack convert(
-            PatternOrigin origin, ItemStack encoded, Level level, @Nullable Player feedbackTo) {
+    private static ItemStack stackOf(@Nullable Claim claim) {
+        return claim == null ? null : claim.stack();
+    }
+
+    @Nullable
+    public static Claim claim(PatternOrigin origin, ItemStack encoded, Level level, @Nullable Player feedbackTo) {
         if (origin.recipeViewer()) {
             return null;
         }
@@ -66,11 +77,11 @@ public final class PatternConverters {
         RecipeHolder<?> holder =
                 recipe == null ? null : level.getRecipeManager().byKey(recipe).orElse(null);
         if (holder != null) {
-            List<ItemStack> converterClaims = new ArrayList<>();
+            List<Claim> converterClaims = new ArrayList<>();
             for (Entry<?> entry : CONVERTERS) {
                 ItemStack converted = sanitize(entry.convert(details, holder, level));
                 if (converted != null) {
-                    converterClaims.add(converted);
+                    converterClaims.add(new Claim(converted, entry.module()));
                 }
             }
             if (converterClaims.size() > 1) {
@@ -82,16 +93,16 @@ public final class PatternConverters {
             }
         }
 
-        List<ItemStack> fallbackClaims = new ArrayList<>();
+        List<Claim> fallbackClaims = new ArrayList<>();
         Component feedback = null;
-        for (PatternFallback fallback : FALLBACKS) {
-            PatternFallback.Result result = fallback.convert(details, level);
+        for (Fallback fallback : FALLBACKS) {
+            PatternFallback.Result result = fallback.fallback().convert(details, level);
             if (result == null) {
                 continue;
             }
             ItemStack stack = sanitize(result.stack());
             if (stack != null) {
-                fallbackClaims.add(stack);
+                fallbackClaims.add(new Claim(stack, fallback.module()));
             } else if (feedback == null) {
                 feedback = result.feedback();
             }

@@ -4,6 +4,7 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.GenericStack;
 import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
@@ -20,8 +21,12 @@ final class CompactCraftingPatternEncoders {
     private CompactCraftingPatternEncoders() {}
 
     static void register() {
-        PatternConverters.register(MiniaturizationRecipe.class, CompactCraftingPatternEncoders::miniaturization);
-        PatternConverters.registerFallback(CompactCraftingPatternEncoders::miniaturizationByResult);
+        PatternConverters.register(
+                DecoderModule.COMPACT_CRAFTING,
+                MiniaturizationRecipe.class,
+                CompactCraftingPatternEncoders::miniaturization);
+        PatternConverters.registerFallback(
+                DecoderModule.COMPACT_CRAFTING, CompactCraftingPatternEncoders::miniaturizationByResult);
     }
 
     @Nullable

@@ -19,11 +19,15 @@ public final class EnergyGauge {
     private EnergyGauge() {}
 
     public static void draw(GuiGraphics graphics, int x, int y, long stored, long capacity) {
-        graphics.blit(TEXTURE, x, y, EMPTY_U, 0, WIDTH, HEIGHT, SHEET_WIDTH, SHEET_HEIGHT);
+        draw(graphics, TEXTURE, x, y, stored, capacity);
+    }
+
+    public static void draw(GuiGraphics graphics, ResourceLocation texture, int x, int y, long stored, long capacity) {
+        graphics.blit(texture, x, y, EMPTY_U, 0, WIDTH, HEIGHT, SHEET_WIDTH, SHEET_HEIGHT);
         int filled = capacity <= 0 ? 0 : (int) Math.min(HEIGHT, HEIGHT * Math.max(0L, stored) / capacity);
         if (filled > 0) {
             int top = HEIGHT - filled;
-            graphics.blit(TEXTURE, x, y + top, FULL_U, top, WIDTH, filled, SHEET_WIDTH, SHEET_HEIGHT);
+            graphics.blit(texture, x, y + top, FULL_U, top, WIDTH, filled, SHEET_WIDTH, SHEET_HEIGHT);
         }
     }
 }

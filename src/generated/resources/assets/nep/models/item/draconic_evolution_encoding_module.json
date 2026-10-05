@@ -1,0 +1,6 @@
+{
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "nep:item/draconic_evolution_encoding_module"
+    }
+}

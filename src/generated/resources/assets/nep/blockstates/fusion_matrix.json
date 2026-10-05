@@ -1,0 +1,7 @@
+{
+    "variants": {
+        "": {
+            "model": "nep:block/fusion_matrix"
+        }
+    }
+}

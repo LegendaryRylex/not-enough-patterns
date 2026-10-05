@@ -4,6 +4,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import com.blakebr0.mysticalagriculture.api.crafting.IAwakeningRecipe;
 import com.blakebr0.mysticalagriculture.api.crafting.IInfusionRecipe;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import java.util.ArrayList;
@@ -107,6 +108,27 @@ final class MysticalRecipeIngredients {
             demands.add(new Demand(ingredient, 1));
         }
         return List.copyOf(demands);
+    }
+
+    static List<ManualRequirement> manualInfusionRequirements(IInfusionRecipe recipe) {
+        return requirementsOf(infusionDemands(recipe), List.of());
+    }
+
+    static List<ManualRequirement> manualAwakeningRequirements(IAwakeningRecipe recipe) {
+        return requirementsOf(awakeningDemands(recipe), recipe.getEssences());
+    }
+
+    private static List<ManualRequirement> requirementsOf(List<Demand> demands, List<ItemStack> essences) {
+        List<ManualRequirement> requirements = new ArrayList<>(demands.size() + essences.size());
+        for (Demand demand : demands) {
+            requirements.add(new ManualRequirement(demand.ingredient(), demand.count(), true));
+        }
+        for (ItemStack essence : essences) {
+            if (!essence.isEmpty()) {
+                requirements.add(new ManualRequirement(Ingredient.of(essence.getItem()), essence.getCount(), true));
+            }
+        }
+        return List.copyOf(requirements);
     }
 
     private static boolean addSingle(List<List<GenericStack>> inputs, Ingredient ingredient) {

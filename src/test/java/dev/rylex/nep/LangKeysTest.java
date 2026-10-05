@@ -107,7 +107,8 @@ class LangKeysTest {
                         "gui.nep.atomic_empowering_matrix.title", "Atomic Empowering Matrix",
                         "gui.nep.miniaturization_matrix.title", "Miniaturization Matrix",
                         "gui.nep.miniaturization_controller.title", "Miniaturization Controller",
-                        "gui.nep.infused_awakening_matrix.title", "Infused Awakening Matrix")
+                        "gui.nep.infused_awakening_matrix.title", "Infused Awakening Matrix",
+                        "gui.nep.arcane_enchanting_matrix.title", "Arcane Enchanting Matrix")
                 .entrySet()) {
             if (!lang.has(machine.getKey())) {
                 untitled.add(machine.getValue() + " -> " + machine.getKey());

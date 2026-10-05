@@ -1,0 +1,10 @@
+{
+    "variants": {
+        "conducting=false": {
+            "model": "nep:block/ritual_conductor"
+        },
+        "conducting=true": {
+            "model": "nep:block/ritual_conductor_conducting"
+        }
+    }
+}

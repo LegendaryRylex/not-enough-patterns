@@ -9,6 +9,7 @@ import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import com.brandon3055.draconicevolution.init.ItemData;
 import dev.rylex.nep.util.RecipeCache;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -151,6 +152,18 @@ final class FusionResults {
 
     static ItemStack assemble(IFusionRecipe recipe, Level level, ItemStack catalyst) {
         return normalize(recipe.assemble(new CatalystOnly(catalyst), level.registryAccess()));
+    }
+
+    @Nullable
+    static AEItemKey resultFor(IFusionRecipe recipe, Level level, Collection<AEItemKey> provided) {
+        int count = DraconicRecipeIngredients.requiredCount(recipe.getCatalyst());
+        for (AEItemKey key : provided) {
+            ItemStack stack = key.toStack(count);
+            if (recipe.getCatalyst().test(stack)) {
+                return AEItemKey.of(assemble(recipe, level, stack));
+            }
+        }
+        return null;
     }
 
     static ItemStack expectedResult(IFusionRecipe recipe, Level level) {

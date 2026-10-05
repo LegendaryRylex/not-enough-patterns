@@ -2,13 +2,16 @@ package dev.rylex.nep.compat.create;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
+import appeng.api.stacks.KeyCounter;
 import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ManualApplicationRecipe;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
 import dev.rylex.nep.util.RecipeCache;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -30,6 +33,7 @@ final class ApplicationRecipeResolver {
             @Nullable AEItemKey consumedTool,
             @Nullable AEItemKey suppliedTool,
             @Nullable Ingredient keptTool,
+            boolean wornTool,
             Map<AEItemKey, Long> expectedItems) {}
 
     private record Split(Map<AEItemKey, Long> consumed, Map<AEItemKey, Long> retained) {}
@@ -43,19 +47,29 @@ final class ApplicationRecipeResolver {
     @Nullable
     static Plan resolve(IPatternDetails pattern, Level level) {
         return CACHE.get(level)
-                .computeIfAbsent(pattern.getDefinition(), def -> Optional.ofNullable(compute(pattern, level)))
+                .computeIfAbsent(
+                        pattern.getDefinition(),
+                        def -> Optional.ofNullable(compute(pattern, level, splitInputs(pattern))))
                 .orElse(null);
     }
 
+    /**
+     * The plan for the keys AE2 actually handed over, which differ from the pattern templates as soon as a worn tool is
+     * drawn from stock at some other damage value.
+     */
     @Nullable
-    private static Plan compute(IPatternDetails pattern, Level level) {
+    static Plan resolveProvided(IPatternDetails pattern, Level level, KeyCounter[] provided) {
+        return compute(pattern, level, splitProvided(pattern, provided));
+    }
+
+    @Nullable
+    private static Plan compute(IPatternDetails pattern, Level level, @Nullable Split available) {
         List<GenericStack> outputs = pattern.getOutputs();
         if (outputs.size() != 1 || !(outputs.get(0).what() instanceof AEItemKey outputKey)) {
             return null;
         }
         long outputCount = outputs.get(0).amount();
 
-        Split available = splitInputs(pattern);
         if (available == null) {
             return null;
         }
@@ -72,11 +86,11 @@ final class ApplicationRecipeResolver {
             if (holder == null || !(holder.value() instanceof ItemApplicationRecipe recipe)) {
                 return null;
             }
-            return planFor(holder, recipe, available, expected, outputCount);
+            return planFor(holder, recipe, available, expected, outputCount, level);
         }
 
         for (RecipeHolder<? extends ItemApplicationRecipe> holder : candidates(level)) {
-            Plan plan = planFor(holder, holder.value(), available, expected, outputCount);
+            Plan plan = planFor(holder, holder.value(), available, expected, outputCount, level);
             if (plan != null) {
                 return plan;
             }
@@ -94,9 +108,42 @@ final class ApplicationRecipeResolver {
                 return null;
             }
             long amount = primary.amount() * input.getMultiplier();
-            (input.getRemainingKey(key) == null ? consumed : retained).merge(key, amount, Long::sum);
+            (handedBack(input) ? retained : consumed).merge(key, amount, Long::sum);
         }
         return consumed.isEmpty() ? null : new Split(consumed, retained);
+    }
+
+    @Nullable
+    private static Split splitProvided(IPatternDetails pattern, KeyCounter[] provided) {
+        IPatternDetails.IInput[] inputs = pattern.getInputs();
+        if (provided.length != inputs.length) {
+            return null;
+        }
+        Map<AEItemKey, Long> consumed = new LinkedHashMap<>();
+        Map<AEItemKey, Long> retained = new LinkedHashMap<>();
+        for (int slot = 0; slot < inputs.length; slot++) {
+            boolean back = handedBack(inputs[slot]);
+            for (Object2LongMap.Entry<AEKey> entry : provided[slot]) {
+                long amount = entry.getLongValue();
+                if (amount == 0) {
+                    continue;
+                }
+                if (amount < 0 || !(entry.getKey() instanceof AEItemKey key)) {
+                    return null;
+                }
+                (back ? retained : consumed).merge(key, amount, Long::sum);
+            }
+        }
+        return consumed.isEmpty() ? null : new Split(consumed, retained);
+    }
+
+    /**
+     * Asked of the template rather than of the pushed key, so a tool on its last point of durability still counts as
+     * the recipe tool even though this one craft breaks it and leaves nothing to hand back.
+     */
+    private static boolean handedBack(IPatternDetails.IInput input) {
+        GenericStack primary = input.getPossibleInputs()[0];
+        return input.getRemainingKey(primary.what()) != null;
     }
 
     @Nullable
@@ -105,7 +152,8 @@ final class ApplicationRecipeResolver {
             ItemApplicationRecipe recipe,
             Split available,
             ItemStack expected,
-            long outputCount) {
+            long outputCount,
+            Level level) {
         if (!AllRecipeTypes.CAN_BE_AUTOMATED.test(holder)) {
             return null;
         }
@@ -115,7 +163,11 @@ final class ApplicationRecipeResolver {
         if (recipe.getIngredients().size() < 2) {
             return null;
         }
-        return match(available, recipe.getProcessedItem(), recipe.getRequiredHeldItem(), recipe.shouldKeepHeldItem());
+        return match(
+                available,
+                recipe.getProcessedItem(),
+                recipe.getRequiredHeldItem(),
+                DeployerToolFate.of(holder.id(), recipe, level));
     }
 
     static List<RecipeHolder<? extends ItemApplicationRecipe>> candidates(Level level) {
@@ -130,7 +182,7 @@ final class ApplicationRecipeResolver {
     }
 
     @Nullable
-    private static Plan match(Split split, Ingredient depot, Ingredient tool, boolean keepTool) {
+    private static Plan match(Split split, Ingredient depot, Ingredient tool, DeployerToolFate fate) {
         Map<AEItemKey, Long> available = split.consumed();
         Map<AEItemKey, Long> retained = split.retained();
         long total = 0;
@@ -138,7 +190,8 @@ final class ApplicationRecipeResolver {
             total += count;
         }
 
-        if (keepTool) {
+        if (fate.returnsTool()) {
+            boolean worn = fate == DeployerToolFate.WORN;
             if (total != 1) {
                 return null;
             }
@@ -147,7 +200,7 @@ final class ApplicationRecipeResolver {
                 return null;
             }
             if (retained.isEmpty()) {
-                return new Plan(base, null, null, tool, Map.of(base, 1L));
+                return new Plan(base, null, null, tool, worn, Map.of(base, 1L));
             }
             if (retained.size() != 1) {
                 return null;
@@ -159,7 +212,7 @@ final class ApplicationRecipeResolver {
             Map<AEItemKey, Long> expected = new LinkedHashMap<>();
             expected.merge(base, 1L, Long::sum);
             expected.merge(kept.getKey(), 1L, Long::sum);
-            return new Plan(base, null, kept.getKey(), tool, Map.copyOf(expected));
+            return new Plan(base, null, kept.getKey(), tool, worn, Map.copyOf(expected));
         }
 
         if (total != 2 || !retained.isEmpty()) {
@@ -170,7 +223,7 @@ final class ApplicationRecipeResolver {
             AEItemKey key = keys.get(0);
             ItemStack stack = key.toStack();
             if (depot.test(stack) && tool.test(stack)) {
-                return new Plan(key, key, null, null, Map.of(key, 2L));
+                return new Plan(key, key, null, null, false, Map.of(key, 2L));
             }
             return null;
         }
@@ -180,10 +233,10 @@ final class ApplicationRecipeResolver {
             return null;
         }
         if (depot.test(a.toStack()) && tool.test(b.toStack())) {
-            return new Plan(a, b, null, null, Map.of(a, 1L, b, 1L));
+            return new Plan(a, b, null, null, false, Map.of(a, 1L, b, 1L));
         }
         if (depot.test(b.toStack()) && tool.test(a.toStack())) {
-            return new Plan(b, a, null, null, Map.of(a, 1L, b, 1L));
+            return new Plan(b, a, null, null, false, Map.of(a, 1L, b, 1L));
         }
         return null;
     }

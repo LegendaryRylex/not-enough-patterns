@@ -1,16 +1,26 @@
 package dev.rylex.nep.compat.create;
 
+import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.machine.ManualCraftFixtures;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualCraftResult;
+import dev.rylex.nep.machine.ManualRequirement;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
+import org.jetbrains.annotations.Nullable;
 
 @GameTestHolder(Nep.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -166,6 +176,52 @@ public final class SequencedAssemblyMatrixGameTest {
 
         helper.assertItemEntityPresent(Items.OBSIDIAN, MATRIX, 2.0);
         helper.assertItemEntityPresent(Items.DIAMOND, MATRIX, 2.0);
+        helper.succeed();
+    }
+
+    @Nullable
+    private static RecipeHolder<SequencedAssemblyRecipe> handStartable(GameTestHelper helper) {
+        for (RecipeHolder<SequencedAssemblyRecipe> holder : SequencedAssemblyResolver.all(helper.getLevel())) {
+            if (SequencedAssemblyResolver.manualRequirements(holder.value()) != null
+                    && !holder.value().resultPool.isEmpty()) {
+                return holder;
+            }
+        }
+        return null;
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void queuesASequencedAssemblyCraftFromThePlayersInventory(GameTestHelper helper) {
+        SequencedAssemblyMatrixBlockEntity matrix = place(helper);
+        RecipeHolder<SequencedAssemblyRecipe> holder = handStartable(helper);
+        helper.assertTrue(
+                holder != null, "no fluid-free sequenced assembly recipe loaded, so this test proves nothing");
+        List<ManualRequirement> requirements = SequencedAssemblyResolver.manualRequirements(holder.value());
+        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+
+        ManualCraftOutcome outcome = matrix.startManualCraft(player, holder.id(), 1);
+
+        ManualCraftFixtures.assertQueued(helper, outcome, "the Assembly Matrix");
+        helper.assertTrue(
+                ManualCraftFixtures.inventoryCount(player) == 0, "the Matrix left ingredients in the inventory");
+        helper.assertTrue(
+                ManualCraftFixtures.bufferedCount(matrix.getInputBuffer()) > 0,
+                "the Matrix took the ingredients without staging them");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void refusesASequencedAssemblyCraftTheInventoryCannotPayFor(GameTestHelper helper) {
+        SequencedAssemblyMatrixBlockEntity matrix = place(helper);
+        RecipeHolder<SequencedAssemblyRecipe> holder = handStartable(helper);
+        helper.assertTrue(
+                holder != null, "no fluid-free sequenced assembly recipe loaded, so this test proves nothing");
+
+        ManualCraftOutcome outcome = matrix.startManualCraft(helper.makeMockPlayer(GameType.SURVIVAL), holder.id(), 1);
+
+        helper.assertTrue(
+                outcome.status() == ManualCraftResult.MISSING_ITEMS,
+                "an empty inventory did not read as missing items: " + outcome.status());
         helper.succeed();
     }
 }

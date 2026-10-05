@@ -1,6 +1,6 @@
 package dev.rylex.nep.provider;
 
-import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -8,37 +8,37 @@ public final class OwedDispatch {
 
     public static final long NO_DEADLINE = -1;
 
-    private final Map<AEItemKey, Long> parked;
-    private final Map<AEItemKey, Long> owed;
+    private final Map<AEKey, Long> parked;
+    private final Map<AEKey, Long> owed;
     private long deadline;
 
-    public OwedDispatch(Map<AEItemKey, Long> parked, Map<AEItemKey, Long> owed) {
+    public OwedDispatch(Map<AEKey, Long> parked, Map<AEKey, Long> owed) {
         this(parked, owed, NO_DEADLINE);
     }
 
-    public OwedDispatch(Map<AEItemKey, Long> parked, Map<AEItemKey, Long> owed, long deadline) {
+    public OwedDispatch(Map<AEKey, Long> parked, Map<AEKey, Long> owed, long deadline) {
         this.parked = new LinkedHashMap<>(parked);
         this.owed = new LinkedHashMap<>(owed);
         this.deadline = deadline;
     }
 
-    public Map<AEItemKey, Long> parked() {
+    public Map<AEKey, Long> parked() {
         return parked;
     }
 
-    public Map<AEItemKey, Long> owed() {
+    public Map<AEKey, Long> owed() {
         return owed;
     }
 
-    public long owedAmount(AEItemKey key) {
+    public long owedAmount(AEKey key) {
         return owed.getOrDefault(key, 0L);
     }
 
-    public long reserved(AEItemKey key) {
+    public long reserved(AEKey key) {
         return Math.max(0, parked.getOrDefault(key, 0L) - owedAmount(key));
     }
 
-    public long take(AEItemKey key, long amount) {
+    public long take(AEKey key, long amount) {
         long remaining = owedAmount(key);
         long taken = Math.min(remaining, amount);
         if (taken <= 0) {

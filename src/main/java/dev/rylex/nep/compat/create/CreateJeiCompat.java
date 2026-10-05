@@ -6,16 +6,43 @@ import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ManualApplicationRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.compat.jei.JeiTransferSource;
+import dev.rylex.nep.compat.jei.ManualTransferHandler;
 import java.util.List;
 import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 
 public final class CreateJeiCompat {
     private CreateJeiCompat() {}
+
+    public static void addManualTransfers(
+            IRecipeTransferRegistration registration, IRecipeTransferHandlerHelper helper) {
+        RecipeType<RecipeHolder<SequencedAssemblyRecipe>> type =
+                RecipeType.createRecipeHolderType(CreatePatternSources.SEQUENCED_ASSEMBLY);
+        registration.addRecipeTransferHandler(
+                new ManualTransferHandler<>(
+                        SequencedAssemblyMatrixMenu.class,
+                        NepCreateContent.MATRIX_MENU.get(),
+                        type,
+                        helper,
+                        (holder, level) -> SequencedAssemblyResolver.manualRequirements(holder.value()),
+                        (holder, level) -> holder.id()),
+                type);
+        registration.addRecipeTransferHandler(
+                new ManualTransferHandler<>(
+                        SequencedAssemblyControllerMenu.class,
+                        NepCreateContent.CONTROLLER_MENU.get(),
+                        type,
+                        helper,
+                        (holder, level) -> SequencedAssemblyResolver.manualRequirements(holder.value()),
+                        (holder, level) -> holder.id()),
+                type);
+    }
 
     public static JeiTransferSource source() {
         return new JeiTransferSource() {

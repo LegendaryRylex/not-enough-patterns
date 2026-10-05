@@ -15,13 +15,11 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
     protected static final int READOUT_WARN = 0xFF7A4A;
 
     protected static final int READOUT_X = 12;
-    protected static final int READOUT_RIGHT = 164;
     protected static final int LINE_ONE_Y = 22;
     protected static final int LINE_TWO_Y = 32;
     protected static final int LINE_THREE_Y = 42;
     protected static final int BAR_X = 12;
     protected static final int BAR_Y = 52;
-    protected static final int BAR_WIDTH = READOUT_RIGHT - READOUT_X;
     protected static final int BAR_HEIGHT = 4;
 
     public static final int HELP_BUTTON_INDEX = 1;
@@ -54,6 +52,14 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
         return 4;
     }
 
+    protected int readoutRight() {
+        return imageWidth - 12;
+    }
+
+    protected int barWidth() {
+        return readoutRight() - READOUT_X;
+    }
+
     protected ReadoutButton addRightButton(
             int index, Component glyph, String nameKey, String hintKey, Runnable action) {
         ReadoutButton button = addRenderableWidget(new ReadoutButton(
@@ -83,7 +89,7 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
     }
 
     protected void drawTrailing(GuiGraphics graphics, Component text, int y, int occupiedUntil, int colour) {
-        int x = READOUT_RIGHT - font.width(text);
+        int x = readoutRight() - font.width(text);
         if (x < occupiedUntil + 6) {
             return;
         }
@@ -99,8 +105,8 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
     }
 
     protected void drawProgressBar(GuiGraphics graphics, float progress, int track, int fill) {
-        graphics.fill(BAR_X, BAR_Y, BAR_X + BAR_WIDTH, BAR_Y + BAR_HEIGHT, 0xFF000000 | track);
-        int filled = Math.round(BAR_WIDTH * clamp01(progress));
+        graphics.fill(BAR_X, BAR_Y, BAR_X + barWidth(), BAR_Y + BAR_HEIGHT, 0xFF000000 | track);
+        int filled = Math.round(barWidth() * clamp01(progress));
         if (filled > 0) {
             graphics.fill(BAR_X, BAR_Y, BAR_X + filled, BAR_Y + BAR_HEIGHT, 0xFF000000 | fill);
         }

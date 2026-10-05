@@ -5,6 +5,7 @@ import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEItems;
 import com.simibubi.create.AllBlocks;
@@ -17,6 +18,7 @@ import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.machine.PushOutcome;
 import dev.rylex.nep.machine.RejectLog;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
+import dev.rylex.nep.pattern.ToolWear;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +35,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
+import org.jetbrains.annotations.Nullable;
 
 public class DepotCraftingMachine implements ICraftingMachine {
 
@@ -125,8 +128,8 @@ public class DepotCraftingMachine implements ICraftingMachine {
             IPatternDetails patternDetails,
             KeyCounter[] inputs,
             Direction ejectionDirection) {
-        ApplicationRecipeResolver.Plan plan = ApplicationRecipeResolver.resolve(patternDetails, level);
-        if (plan == null) {
+        ApplicationRecipeResolver.Plan template = ApplicationRecipeResolver.resolve(patternDetails, level);
+        if (template == null) {
             return PushOutcome.unsatisfiable("no deploying/item_application recipe matched the pattern");
         }
 
@@ -135,9 +138,17 @@ public class DepotCraftingMachine implements ICraftingMachine {
         if (!DepotMachines.collectInputs(inputs, items, fluids) || !fluids.isEmpty()) {
             return PushOutcome.unsatisfiable("unexpected fluid input for a deploying pattern");
         }
-        if (!items.equals(plan.expectedItems())) {
-            return PushOutcome.unsatisfiable(
-                    "pushed items " + items + " do not match the recipe's inputs " + plan.expectedItems());
+
+        ApplicationRecipeResolver.Plan plan = template;
+        if (!items.equals(template.expectedItems())) {
+            if (!template.wornTool()) {
+                return PushOutcome.unsatisfiable(
+                        "pushed items " + items + " do not match the recipe's inputs " + template.expectedItems());
+            }
+            plan = ApplicationRecipeResolver.resolveProvided(patternDetails, level, inputs);
+            if (plan == null) {
+                return PushOutcome.retry("pushed items " + items + " do not match the recipe's inputs");
+            }
         }
 
         if (!DepotMachines.depotReady(depot)) {
@@ -164,7 +175,16 @@ public class DepotCraftingMachine implements ICraftingMachine {
                 : plan.suppliedTool().toStack();
         boolean loadTool = false;
 
-        if (plan.keptTool() != null) {
+        if (plan.wornTool()) {
+            if (suppliedTool.isEmpty()) {
+                return PushOutcome.retry("this recipe wears its tool down, so the pattern has to supply one");
+            }
+            if (!held.isEmpty()) {
+                return PushOutcome.retry(
+                        "deployer is still holding " + held + "; a worn tool is lent fresh for each craft");
+            }
+            loadTool = true;
+        } else if (plan.keptTool() != null) {
             if (suppliedTool.isEmpty()) {
                 if (held.isEmpty() || !plan.keptTool().test(held)) {
                     return PushOutcome.retry("deployer must hold the non-consumed tool for this recipe");
@@ -206,7 +226,7 @@ public class DepotCraftingMachine implements ICraftingMachine {
             deployerHandler.insertItem(heldSlot, deployed, false);
         }
         if (loadTool) {
-            DeployerReclaimer.expect(deployer, plan.suppliedTool(), providerPos, providerFace);
+            DeployerReclaimer.expect(deployer, plan.suppliedTool(), wornForm(plan), providerPos, providerFace);
         } else if (returnTool) {
             ItemHandlerHelper.insertItem(provider, suppliedTool, false);
         }
@@ -325,6 +345,15 @@ public class DepotCraftingMachine implements ICraftingMachine {
             }
         }
         return in.toString().trim();
+    }
+
+    @Nullable
+    private static AEItemKey wornForm(ApplicationRecipeResolver.Plan plan) {
+        if (!plan.wornTool() || plan.suppliedTool() == null) {
+            return null;
+        }
+        AEKey worn = ToolWear.worn(plan.suppliedTool());
+        return worn instanceof AEItemKey key ? key : null;
     }
 
     private static boolean facesDown(DeployerBlockEntity deployer) {

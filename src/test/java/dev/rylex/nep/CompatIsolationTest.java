@@ -37,10 +37,20 @@ class CompatIsolationTest {
                     List.of("com.blakebr0.mysticalagriculture", "com.blakebr0.cucumber")),
             new ForeignRule(
                     Paths.get("dev", "rylex", "nep", "compat", "advancedae"), List.of("net.pedroksl.advanced_ae")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "malum"),
+                    List.of("com.sammy.malum", "team.lodestar.lodestone")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ars"), List.of("com.hollingsworth.arsnouveau")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ars", "arseng"), List.of("gripe._90.arseng")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "extendedae"), List.of("com.glodblock.github")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "emi"), List.of("dev.emi")),
             new ForeignRule(
                     Paths.get("dev", "rylex", "nep", "compat", "thunderbolt"), List.of("com.moakiee.thunderbolt")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ae2lt"), List.of("com.moakiee.ae2lt")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "sable"), List.of("dev.ryanhcode")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "provider"),
+                    List.of("com.loliball.appliedcreate", "com.ae2draconicfusion")),
             new ForeignRule(COMPAT_DIR, List.of("mezz.jei")));
 
     private static final List<String> COMPAT_ENTRY_POINTS = List.of(
@@ -51,6 +61,9 @@ class CompatIsolationTest {
             "dev.rylex.nep.compat.compactcrafting.CompactCraftingCompat",
             "dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsCompat",
             "dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat",
+            "dev.rylex.nep.compat.malum.MalumCompat",
+            "dev.rylex.nep.compat.ars.ArsCompat",
+            "dev.rylex.nep.compat.extendedae.ExtendedAeCompat",
             "dev.rylex.nep.compat.sable.SableSubLevels");
 
     @Test

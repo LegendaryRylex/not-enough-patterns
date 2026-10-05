@@ -10,11 +10,16 @@ import de.ellpeck.actuallyadditions.mod.crafting.LaserRecipe;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsRecipeIngredients.Demand;
-import dev.rylex.nep.compat.actuallyadditions.AtomicEmpoweringMatrixBlock.MatrixStatus;
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
 import dev.rylex.nep.machine.MachineItemView;
+import dev.rylex.nep.machine.ManualCraftHost;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualCraftResult;
+import dev.rylex.nep.machine.ManualRequirement;
+import dev.rylex.nep.machine.ManualStaging;
 import dev.rylex.nep.machine.MatrixEnergyBuffer;
 import dev.rylex.nep.machine.MatrixGridNode;
+import dev.rylex.nep.machine.MatrixStatus;
 import dev.rylex.nep.pattern.AtomicReconstructionPattern;
 import dev.rylex.nep.pattern.EmpoweringPattern;
 import dev.rylex.nep.pattern.RecipePattern;
@@ -28,7 +33,6 @@ import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -38,7 +42,6 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -50,7 +53,7 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity {
+public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity implements ManualCraftHost {
 
     static final int INPUT_SLOTS = 21;
     static final int OUTPUT_SLOTS = 9;
@@ -58,7 +61,6 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
     private static final int RESTOCK_INTERVAL = 10;
     private static final int RUNNING_GRACE_TICKS = 10;
     private static final int ENERGY_STARVED_TICKS = 40;
-    private static final int ENERGY_SYNC_STEPS = 256;
     private static final int REFUSAL_MEMORY_TICKS = 200;
 
     private static final String INPUT_KEY = "Input";
@@ -86,7 +88,7 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
     private final MatrixEnergyBuffer energy = new MatrixEnergyBuffer(
             NepConfig.actuallyAdditionsMatrixCapacity(), NepConfig.actuallyAdditionsMatrixChargeRate());
 
-    private final Map<Item, Template> templates = new HashMap<>();
+    private final Map<AEItemKey, Template> templates = new HashMap<>();
     private final IItemHandler outputView = new OutputView();
     private final IItemHandler machineView =
             MachineItemView.demandLimited(inputBuffer, outputView, this::manualDemandFor);
@@ -219,19 +221,10 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         hash = 31 * hash + missingInputs.hashCode();
         hash = 31 * hash + stall.ordinal();
         hash = 31 * hash + refusal.ordinal();
-        hash = 31 * hash + energyLevel();
+        hash = 31 * hash + energy.syncLevel();
         hash = 31 * hash + Long.hashCode(craftCost);
         hash = 31 * hash + Long.hashCode(pendingJobs());
         return hash;
-    }
-
-    private int energyLevel() {
-        long capacity = energy.capacity();
-        long stored = energy.stored();
-        if (capacity <= 0L || stored <= 0L) {
-            return 0;
-        }
-        return (int) Math.min(ENERGY_SYNC_STEPS, stored / Math.max(1L, capacity / ENERGY_SYNC_STEPS));
     }
 
     private void refreshCapacity() {
@@ -253,6 +246,11 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         int ticks = Math.max(1, craftTicks());
         long instalment = Math.min(outstanding, Math.max(1L, (craftCost + ticks - 1) / ticks));
+        if (energy.stored() < instalment
+                && NepConfig.actuallyAdditionsMatrixMeCharge()
+                && power.chargeBuffer(energy, instalment - energy.stored()) > 0) {
+            setChanged();
+        }
         if (energy.stored() < instalment) {
             return false;
         }
@@ -274,7 +272,7 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
 
     private boolean beginCraft(Level level) {
         Stall reason = Stall.NONE;
-        for (Item wanted : List.copyOf(owed.keySet())) {
+        for (AEItemKey wanted : List.copyOf(owed.keySet())) {
             if (owed.getOrDefault(wanted, 0L) <= 0) {
                 continue;
             }
@@ -414,16 +412,22 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         outputBlocked = false;
         ItemHandlerHelper.insertItem(outputBuffer, result.copy(), false);
-        Item produced = result.getItem();
-        if (owed.getOrDefault(produced, 0L) > 0) {
+        AEItemKey produced = AEItemKey.of(result);
+        if (produced != null && owed.getOrDefault(produced, 0L) > 0) {
+            boolean manual = isManualJob(produced);
             decrement(owed, produced, 1);
+            if (manual) {
+                decrement(manualOwed, produced, 1);
+            }
             if (!owed.containsKey(produced)) {
                 templates.remove(produced);
             }
             if (owed.isEmpty()) {
                 pushingCpus.clear();
             }
-            toReturn.merge(produced, (long) result.getCount(), Long::sum);
+            if (!manual) {
+                toReturn.merge(produced, (long) result.getCount(), Long::sum);
+            }
         }
         completeCraft();
         flushOutput(level);
@@ -499,7 +503,10 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
             batch = plan.batch();
         }
 
-        Item producedItem = outputKey.getItem();
+        AEItemKey producedItem = outputKey;
+        if (isManualJob(producedItem)) {
+            return reject(Refusal.MIXED_RECIPES, "a manual craft of " + producedItem + " is already queued");
+        }
         Template existing = templates.get(producedItem);
         if (existing != null && !existing.recipe().equals(recipe)) {
             return reject(
@@ -538,8 +545,70 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         return true;
     }
 
+    @Override
+    public ManualCraftOutcome startManualCraft(Player player, ResourceLocation recipe, int batches) {
+        Level level = getLevel();
+        if (level == null || level.isClientSide) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNKNOWN_RECIPE);
+        }
+        if (!NepConfig.manualCrafting() || !NepConfig.actuallyAdditionsMatrix()) {
+            return ManualCraftOutcome.failed(ManualCraftResult.DISABLED);
+        }
+
+        Kind kind;
+        List<ManualRequirement> requirements;
+        ItemStack result;
+        RecipeHolder<EmpowererRecipe> empowering = ActuallyAdditionsRecipeResolver.empoweringById(level, recipe);
+        if (empowering != null) {
+            kind = Kind.EMPOWERING;
+            requirements = ActuallyAdditionsRecipeIngredients.empoweringRequirements(empowering.value());
+            result = empowering.value().getOutput().copy();
+        } else {
+            RecipeHolder<LaserRecipe> laser = ActuallyAdditionsRecipeResolver.laserById(level, recipe);
+            if (laser == null) {
+                return ManualCraftOutcome.failed(ManualCraftResult.UNKNOWN_RECIPE);
+            }
+            kind = Kind.LASER;
+            requirements = ActuallyAdditionsRecipeIngredients.laserRequirements(laser.value());
+            result = laser.value().getResultItem(level.registryAccess()).copy();
+        }
+        if (result.isEmpty() || requirements.isEmpty()) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNSUPPORTED);
+        }
+
+        AEItemKey produced = AEItemKey.of(result);
+        Template existing = templates.get(produced);
+        if (existing != null && (existing.kind() != kind || !recipe.equals(existing.recipe()))) {
+            return ManualCraftOutcome.failed(ManualCraftResult.BUSY);
+        }
+        if (owed.containsKey(produced) && !isManualJob(produced)) {
+            return ManualCraftOutcome.failed(ManualCraftResult.BUSY);
+        }
+
+        ManualStaging.Result staged = pullFromPlayer(player, requirements, batches);
+        if (staged.status() != ManualCraftResult.STARTED) {
+            return ManualCraftOutcome.failed(staged.status());
+        }
+
+        captureTemplate(produced, kind, staged.perCraft(), 1, recipe);
+        owed.merge(produced, (long) staged.batches(), Long::sum);
+        manualOwed.merge(produced, (long) staged.batches(), Long::sum);
+        clearRefusal();
+        markScanNeeded();
+        setChanged();
+        if (NepConfig.debugLogging()) {
+            Nep.LOGGER.info(
+                    "Atomic empowering matrix {} queued {} manual craft(s) of {} for {}",
+                    getBlockPos(),
+                    staged.batches(),
+                    produced,
+                    player.getName().getString());
+        }
+        return ManualCraftOutcome.started(staged.batches(), result);
+    }
+
     private void captureTemplate(
-            Item output, Kind kind, Map<AEItemKey, Long> items, long batch, ResourceLocation recipe) {
+            AEItemKey output, Kind kind, Map<AEItemKey, Long> items, long batch, ResourceLocation recipe) {
         List<AEKey> keys = new ArrayList<>(items.size());
         List<Long> counts = new ArrayList<>(items.size());
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
@@ -556,9 +625,9 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         List<AEKey> keys = new ArrayList<>();
         List<Long> targets = new ArrayList<>();
-        for (Map.Entry<Item, Long> entry : owed.entrySet()) {
+        for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
             Template template = templates.get(entry.getKey());
-            if (template == null) {
+            if (template == null || isManualJob(entry.getKey())) {
                 continue;
             }
             for (int i = 0; i < template.keys().size(); i++) {
@@ -597,7 +666,7 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
 
     private int reportedDemandFor(AEKey key) {
         long target = 0;
-        for (Map.Entry<Item, Long> entry : owed.entrySet()) {
+        for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
             Template template = templates.get(entry.getKey());
             if (template == null) {
                 continue;
@@ -717,6 +786,7 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
                     cancelled);
         }
         owed.clear();
+        manualOwed.clear();
         templates.clear();
         pushingCpus.clear();
         power.cancelRequests();
@@ -758,9 +828,9 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         tag.put(INPUT_KEY, inputBuffer.serializeNBT(registries));
         tag.put(OUTPUT_KEY, outputBuffer.serializeNBT(registries));
         tag.put(ENERGY_KEY, energy.save());
-        tag.put(OWED_KEY, ItemCounts.save(owed));
-        tag.put(RETURN_KEY, ItemCounts.save(toReturn));
-        tag.put(RETURN_DIRS_KEY, returnDirections.save());
+        tag.put(OWED_KEY, ItemCounts.save(owed, registries));
+        tag.put(RETURN_KEY, ItemCounts.save(toReturn, registries));
+        tag.put(RETURN_DIRS_KEY, returnDirections.save(registries));
         tag.put(TEMPLATE_KEY, saveTemplates(registries));
         if (!activeResult.isEmpty()) {
             tag.put(ACTIVE_KEY, activeResult.save(registries));
@@ -799,9 +869,9 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         loadBuffer(inputBuffer, registries, tag.getCompound(INPUT_KEY));
         loadBuffer(outputBuffer, registries, tag.getCompound(OUTPUT_KEY));
         energy.load(tag.getCompound(ENERGY_KEY));
-        ItemCounts.load(owed, tag, OWED_KEY);
-        ItemCounts.load(toReturn, tag, RETURN_KEY);
-        returnDirections.load(tag, RETURN_DIRS_KEY, "ReturnDir", toReturn.keySet());
+        ItemCounts.load(owed, tag, OWED_KEY, registries);
+        ItemCounts.load(toReturn, tag, RETURN_KEY, registries);
+        returnDirections.load(tag, RETURN_DIRS_KEY, "ReturnDir", toReturn.keySet(), registries);
         loadTemplates(tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND), registries);
         activeResult = tag.contains(ACTIVE_KEY)
                 ? ItemStack.parse(registries, tag.getCompound(ACTIVE_KEY)).orElse(ItemStack.EMPTY)
@@ -847,9 +917,9 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
 
     private ListTag saveTemplates(HolderLookup.Provider registries) {
         ListTag list = new ListTag();
-        for (Map.Entry<Item, Template> entry : templates.entrySet()) {
+        for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
             CompoundTag tag = new CompoundTag();
-            tag.putString("Id", BuiltInRegistries.ITEM.getKey(entry.getKey()).toString());
+            ItemCounts.putKey(tag, entry.getKey(), registries);
             tag.putString("Kind", entry.getValue().kind().name());
             ListTag stacks = new ListTag();
             for (int i = 0; i < entry.getValue().keys().size(); i++) {
@@ -870,7 +940,7 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         templates.clear();
         for (int i = 0; i < list.size(); i++) {
             CompoundTag tag = list.getCompound(i);
-            Item item = ItemCounts.item(tag.getString("Id"));
+            AEItemKey item = ItemCounts.key(tag, registries);
             ResourceLocation recipe = ResourceLocation.tryParse(tag.getString("Recipe"));
             if (item == null || recipe == null) {
                 continue;
@@ -927,7 +997,8 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         @Override
         public @NotNull ItemStack extractItem(int slot, int amount, boolean simulate) {
             ItemStack stack = outputBuffer.getStackInSlot(slot);
-            if (stack.isEmpty() || toReturn.getOrDefault(stack.getItem(), 0L) > 0) {
+            AEItemKey key = AEItemKey.of(stack);
+            if (key == null || toReturn.getOrDefault(key, 0L) > 0) {
                 return ItemStack.EMPTY;
             }
             return outputBuffer.extractItem(slot, amount, simulate);

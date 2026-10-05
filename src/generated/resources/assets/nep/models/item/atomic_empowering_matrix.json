@@ -1,0 +1,10 @@
+{
+    "parent": "nep:block/matrix/cage_core",
+    "textures": {
+        "core": "nep:block/matrix/core/empowering",
+        "corner": "nep:block/matrix/empowering/corner",
+        "particle": "nep:block/matrix/empowering/border",
+        "ring": "nep:block/matrix/empowering/ring",
+        "strut": "nep:block/matrix/empowering/strut"
+    }
+}

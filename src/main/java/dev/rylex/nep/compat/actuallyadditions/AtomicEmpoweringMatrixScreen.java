@@ -116,7 +116,7 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
         Component queuedText = queued > 0
                 ? Component.translatable("gui.nep.atomic_empowering_matrix.queued", queued)
                 : Component.empty();
-        int nameLimit = READOUT_RIGHT - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
+        int nameLimit = readoutRight() - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
         Component craftingName = making.isEmpty()
                 ? Component.translatable("gui.nep.atomic_empowering_matrix.crafting.idle")
                 : making.getHoverName();
@@ -277,7 +277,7 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
                     mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, 32)) {
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), 32)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

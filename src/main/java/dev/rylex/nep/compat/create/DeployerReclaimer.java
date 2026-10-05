@@ -5,6 +5,7 @@ import appeng.api.stacks.GenericStack;
 import com.simibubi.create.content.kinetics.deployer.DeployerBlockEntity;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.machine.CraftedOutputs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Containers;
@@ -18,10 +19,12 @@ import org.jetbrains.annotations.Nullable;
 public final class DeployerReclaimer {
     private DeployerReclaimer() {}
 
-    static void expect(DeployerBlockEntity deployer, AEItemKey tool, BlockPos provider, Direction face) {
+    static void expect(
+            DeployerBlockEntity deployer, AEItemKey tool, @Nullable AEItemKey worn, BlockPos provider, Direction face) {
         deployer.setData(
                 NepCreateContent.DEPLOYER_RECLAIM.get(),
-                new DeployerReclaim(new GenericStack(tool, 1), provider, face));
+                new DeployerReclaim(
+                        new GenericStack(tool, 1), worn == null ? null : new GenericStack(worn, 1), provider, face));
         deployer.setChanged();
     }
 
@@ -42,9 +45,14 @@ public final class DeployerReclaimer {
         }
         forget(deployer);
 
-        ItemStack recovered = take(deployer, key, (int) pending.tool().amount());
+        AEItemKey worn = pending.wears() && pending.expected().what() instanceof AEItemKey expected ? expected : null;
+        ItemStack recovered =
+                take(deployer, key, pending.wears(), (int) pending.tool().amount());
         if (recovered.isEmpty()) {
             return;
+        }
+        if (worn != null) {
+            CraftedOutputs.expect(AEItemKey.of(recovered), worn);
         }
 
         IItemHandler target = providerHandler(level, pending.provider(), pending.face());
@@ -61,20 +69,17 @@ public final class DeployerReclaimer {
         }
     }
 
-    private static ItemStack take(DeployerBlockEntity deployer, AEItemKey tool, int amount) {
+    private static ItemStack take(DeployerBlockEntity deployer, AEItemKey tool, boolean wears, int amount) {
         IItemHandler handler = DepotMachines.itemHandler(deployer);
         if (handler == null || handler.getSlots() == 0) {
             return ItemStack.EMPTY;
         }
         int heldSlot = handler.getSlots() - 1;
         ItemStack held = handler.getStackInSlot(heldSlot);
-        if (!tool.matches(held)) {
-            if (NepConfig.debugLogging() && !held.isEmpty() && held.is(tool.getItem())) {
+        if (!accepts(tool, wears, held)) {
+            if (NepConfig.debugLogging()) {
                 Nep.LOGGER.info(
-                        "Deployer {} wore down {} while crafting; keeping it until it breaks instead of returning a"
-                                + " damaged tool no pattern can ask for",
-                        deployer.getBlockPos(),
-                        tool);
+                        "Deployer {} did not give back {}; it is holding {}", deployer.getBlockPos(), tool, held);
             }
             return ItemStack.EMPTY;
         }
@@ -86,6 +91,13 @@ public final class DeployerReclaimer {
                     tool);
         }
         return taken;
+    }
+
+    private static boolean accepts(AEItemKey tool, boolean wears, ItemStack held) {
+        if (tool.matches(held)) {
+            return true;
+        }
+        return wears && !held.isEmpty() && held.is(tool.getItem());
     }
 
     @Nullable

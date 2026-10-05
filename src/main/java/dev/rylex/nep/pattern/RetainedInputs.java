@@ -25,6 +25,17 @@ public final class RetainedInputs {
         }
     }
 
+    public static void describeWorn(PatternDetailsTooltip tooltip, List<GenericStack> worn) {
+        boolean first = true;
+        for (GenericStack tool : worn) {
+            tooltip.addProperty(Component.empty()
+                    .append(Component.translatable(first ? "nep.pattern.worn" : "nep.pattern.worn.and"))
+                    .append(": ")
+                    .append(entry(tool).withStyle(ChatFormatting.YELLOW)));
+            first = false;
+        }
+    }
+
     public static MutableComponent entry(GenericStack stack) {
         AEKeyType type = stack.what().getType();
         return Component.literal(type.formatAmount(stack.amount(), AmountFormat.FULL))

@@ -19,6 +19,8 @@ item_ids:
 
 <Recipe id="nep:module_status/atomic_empowering_matrix"/>
 
+> <Color id="yellow">The block reads its own state.</Color> The Matrix is an open frame with a faceted core turning inside it, visible through every face. The core drifts while the Matrix is idle, spins up and brightens as a craft runs, and flares when the craft lands. A stalled Matrix dims and judders in place, and its frame goes dark. Neighbouring Matrices are offset from one another, so a wall of them never turns in lockstep.
+
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 ***
@@ -36,6 +38,7 @@ item_ids:
 
 * Put a Pattern Provider against any Matrix face and drop both <ItemLink id="nep:empowering_pattern"/> or <ItemLink id="nep:atomic_reconstruction_pattern"/> patterns in it; The Matrix accepts both.
 * Provide the Matrix **FE** on any face.
+* Short of FE, a craft draws on the ME network's own power instead, down to the last tenth the network keeps in reserve. The `Charge From ME Network` config turns that off.
 * The Matrix is also an ME machine: It joins the network through its own grid connection, draws a small standing power cost, and returns finished items to the Provider on its own. It needs no **Import Card**.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
@@ -66,6 +69,24 @@ item_ids:
 * The three buttons clear the pending jobs, empty the buffers into your inventory, and open this page. **Guide** is always the rightmost of them.
 * A Comparator beside the Matrix reads the output buffer, empty for nothing staged up to a full 15.
 * Input slots only accept what the Matrix is actually short of, so a hopper can top it up without stuffing it.
+* Each buffer slot holds up to 64 of any item, whatever that item normally stacks to, so a recipe wanting a pile of tools or potions still fits.
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Crafting By Hand</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+An empowering or atomic reconstruction recipe can also be started out of your own inventory, with no pattern and no Provider anywhere near it. Open the Matrix, find the recipe in the recipe viewer, and press its transfer button: every ingredient leaves your inventory in one go and the craft queues up like any other.
+
+* It is all or nothing. Come up short and nothing moves: the button says so and the recipe marks the ingredients you are missing in red.
+* Holding shift queues as many crafts as your inventory can pay for, up to sixty-four, trimmed to what the input buffer has room to stage.
+* The finished item waits in the output buffer for you to take. Nothing goes to the network, and no crafting job is created.
+* Energy comes from outside as always, so the Matrix still needs its FE and a powered network for a hand-started craft to move.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 

@@ -147,7 +147,7 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
         long queued = matrix.pendingJobs();
         Component queuedText =
                 queued > 0 ? Component.translatable("gui.nep.fusion_matrix.queued", queued) : Component.empty();
-        int nameLimit = READOUT_RIGHT - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
+        int nameLimit = readoutRight() - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
         Component craftingName = making.isEmpty()
                 ? Component.translatable("gui.nep.fusion_matrix.crafting.idle")
                 : making.getHoverName();
@@ -175,8 +175,8 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
                 READOUT_X + font.width(energyLine),
                 READOUT_DIM);
 
-        graphics.fill(BAR_X, BAR_Y, BAR_X + BAR_WIDTH, BAR_Y + BAR_HEIGHT, 0xFF000000 | BAR_TRACK);
-        int filled = Math.round(BAR_WIDTH * clamp01(matrix.craftProgress()));
+        graphics.fill(BAR_X, BAR_Y, BAR_X + barWidth(), BAR_Y + BAR_HEIGHT, 0xFF000000 | BAR_TRACK);
+        int filled = Math.round(barWidth() * clamp01(matrix.craftProgress()));
         if (filled > 0) {
             graphics.fill(
                     BAR_X,
@@ -350,7 +350,7 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
             graphics.renderComponentTooltip(font, gauge, mouseX, mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, 32)) {
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), 32)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

@@ -5,6 +5,7 @@ import appeng.api.stacks.GenericStack;
 import com.blakebr0.mysticalagriculture.api.crafting.IAwakeningRecipe;
 import com.blakebr0.mysticalagriculture.api.crafting.IInfusionRecipe;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.pattern.AwakeningPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.PatternStacks;
@@ -23,10 +24,14 @@ final class MysticalPatternEncoders {
     private MysticalPatternEncoders() {}
 
     static void register() {
-        PatternConverters.register(IInfusionRecipe.class, MysticalPatternEncoders::infusion);
-        PatternConverters.register(IAwakeningRecipe.class, MysticalPatternEncoders::awakening);
-        PatternConverters.registerFallback(MysticalPatternEncoders::infusionByResult);
-        PatternConverters.registerFallback(MysticalPatternEncoders::awakeningByResult);
+        PatternConverters.register(
+                DecoderModule.MYSTICAL_AGRICULTURE, IInfusionRecipe.class, MysticalPatternEncoders::infusion);
+        PatternConverters.register(
+                DecoderModule.MYSTICAL_AGRICULTURE, IAwakeningRecipe.class, MysticalPatternEncoders::awakening);
+        PatternConverters.registerFallback(
+                DecoderModule.MYSTICAL_AGRICULTURE, MysticalPatternEncoders::infusionByResult);
+        PatternConverters.registerFallback(
+                DecoderModule.MYSTICAL_AGRICULTURE, MysticalPatternEncoders::awakeningByResult);
     }
 
     @Nullable

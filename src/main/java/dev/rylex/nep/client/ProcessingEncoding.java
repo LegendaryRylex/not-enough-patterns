@@ -38,7 +38,7 @@ public final class ProcessingEncoding {
             chosen.add(best(priorities, options));
         }
 
-        fill(menu.getProcessingInputSlots(), PatternContents.condenseSlots(chosen, encoded.retainedSlots()));
+        fill(menu.getProcessingInputSlots(), PatternContents.condenseSlots(chosen, encoded.returnedSlots()));
         fill(menu.getProcessingOutputSlots(), encoded.outputs());
     }
 

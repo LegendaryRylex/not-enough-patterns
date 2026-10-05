@@ -1,0 +1,55 @@
+{
+  "type": "compactcrafting:miniaturization",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "compactcrafting"
+    }
+  ],
+  "version": 1,
+  "recipeSize": 3,
+  "layers": [
+    {
+      "type": "compactcrafting:mixed",
+      "pattern": [
+        ["G", "G", "G"],
+        ["G", "_", "G"],
+        ["G", "G", "G"]
+      ]
+    },
+    {
+      "type": "compactcrafting:mixed",
+      "pattern": [
+        ["E", "G", "E"],
+        ["G", "I", "G"],
+        ["E", "G", "E"]
+      ]
+    }
+  ],
+  "catalyst": {
+    "id": "minecraft:redstone"
+  },
+  "components": {
+    "G": {
+      "type": "compactcrafting:block",
+      "block": "minecraft:glass"
+    },
+    "I": {
+      "type": "compactcrafting:block",
+      "block": "minecraft:iron_block"
+    },
+    "_": {
+      "type": "compactcrafting:block",
+      "block": "minecraft:air"
+    },
+    "E": {
+      "type": "compactcrafting:empty"
+    }
+  },
+  "outputs": [
+    {
+      "id": "minecraft:sponge",
+      "count": 1
+    }
+  ]
+}

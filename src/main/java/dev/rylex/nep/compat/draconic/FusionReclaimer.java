@@ -3,14 +3,17 @@ package dev.rylex.nep.compat.draconic;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import com.brandon3055.draconicevolution.api.crafting.IFusionInjector;
+import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import com.brandon3055.draconicevolution.blocks.tileentity.TileFusionCraftingCore;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.machine.CraftedOutputs;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -80,11 +83,20 @@ public final class FusionReclaimer {
             core.setOutputStack(normalized);
         }
         core.setChanged();
+        rememberCraftedForm(level, normalized);
 
         if (pending.isEmpty()) {
             return;
         }
         returnItems(level, core, pending.direction(), takeFromInjectors(core, pending.retained()));
+    }
+
+    private static void rememberCraftedForm(Level level, ItemStack output) {
+        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveByOutputItem(level, output.getItem());
+        if (holder != null) {
+            CraftedOutputs.expect(
+                    AEItemKey.of(output), AEItemKey.of(FusionResults.expectedResult(holder.value(), level)));
+        }
     }
 
     public static void onCraftCancelled(TileFusionCraftingCore core) {

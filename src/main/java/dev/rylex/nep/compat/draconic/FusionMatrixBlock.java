@@ -1,10 +1,16 @@
 package dev.rylex.nep.compat.draconic;
 
 import com.mojang.serialization.MapCodec;
+import dev.rylex.nep.machine.MatrixStatus;
+import java.util.List;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.StringRepresentable;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -22,7 +28,7 @@ public class FusionMatrixBlock extends BaseEntityBlock {
 
     public static final MapCodec<FusionMatrixBlock> CODEC = simpleCodec(FusionMatrixBlock::new);
 
-    public static final EnumProperty<MatrixStatus> STATUS = EnumProperty.create("status", MatrixStatus.class);
+    public static final EnumProperty<MatrixStatus> STATUS = MatrixStatus.PROPERTY;
 
     public FusionMatrixBlock(Properties properties) {
         super(properties);
@@ -88,20 +94,9 @@ public class FusionMatrixBlock extends BaseEntityBlock {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    public enum MatrixStatus implements StringRepresentable {
-        IDLE("idle"),
-        RUNNING("running"),
-        STALLED("stalled");
-
-        private final String name;
-
-        MatrixStatus(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public String getSerializedName() {
-            return name;
-        }
+    @Override
+    public void appendHoverText(
+            ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("tooltip.nep.fusion_matrix").withStyle(ChatFormatting.GRAY));
     }
 }

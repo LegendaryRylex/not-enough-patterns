@@ -7,7 +7,12 @@ import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEBlocks;
 import de.ellpeck.actuallyadditions.mod.crafting.EmpowererRecipe;
 import de.ellpeck.actuallyadditions.mod.crafting.LaserRecipe;
+import dev.rylex.nep.ConfigOverrides;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.machine.ManualCraftFixtures;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualCraftResult;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.AtomicReconstructionPattern;
 import dev.rylex.nep.pattern.EmpoweringPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
@@ -17,8 +22,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -28,6 +35,7 @@ public final class AtomicEmpoweringMatrixGameTest {
 
     private static final String TEMPLATE = "empty_5x5x5";
     private static final String BATCH = "nep_atomic_empowering_matrix";
+    private static final String ME_CHARGE_FIELD = "ACTUALLY_ADDITIONS_MATRIX_ME_CHARGE";
 
     private static final BlockPos MATRIX = new BlockPos(2, 1, 2);
     private static final BlockPos ME_CONTROLLER = new BlockPos(2, 1, 3);
@@ -189,8 +197,9 @@ public final class AtomicEmpoweringMatrixGameTest {
                 () -> helper.assertTrue(outputHolds(matrix, result, 4), "the Matrix did not finish all four crafts"));
     }
 
-    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
+    @GameTest(template = TEMPLATE, batch = "nep_atomic_empowering_matrix_unpowered", timeoutTicks = 200)
     public static void anUnpoweredMatrixKeepsTheIngredientsItWasHanded(GameTestHelper helper) {
+        ConfigOverrides.Restore restore = ConfigOverrides.override(ME_CHARGE_FIELD, false);
         ActuallyAdditionsRecipeResolver.clearCache();
         AtomicEmpoweringMatrixBlockEntity matrix = placeMatrix(helper);
 
@@ -205,9 +214,45 @@ public final class AtomicEmpoweringMatrixGameTest {
 
         ItemStack result = holder.value().getResultItem(helper.getLevel().registryAccess());
         helper.runAfterDelay(120L, () -> {
+            restore.undo();
             helper.assertTrue(!outputHolds(matrix, result, 1), "an unpowered Matrix produced a result anyway");
             helper.assertTrue(matrix.pendingJobs() == 1, "an unpowered Matrix dropped the job it was handed");
             helper.succeed();
         });
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void queuesAnEmpoweringCraftFromThePlayersInventory(GameTestHelper helper) {
+        AtomicEmpoweringMatrixBlockEntity matrix = placeMatrix(helper);
+        RecipeHolder<EmpowererRecipe> holder = cheapestEmpowering(helper);
+        List<ManualRequirement> requirements =
+                ActuallyAdditionsRecipeIngredients.empoweringRequirements(holder.value());
+        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+
+        ManualCraftOutcome outcome = matrix.startManualCraft(player, holder.id(), 1);
+
+        ManualCraftFixtures.assertQueued(helper, outcome, "the Atomic Empowering Matrix");
+        helper.assertTrue(
+                ManualCraftFixtures.inventoryCount(player) == 0, "the Matrix left ingredients in the inventory");
+        helper.assertTrue(
+                ManualCraftFixtures.bufferedCount(matrix.getInputBuffer()) > 0,
+                "the Matrix took the ingredients without staging them");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void refusesAnEmpoweringCraftTheInventoryCannotPayFor(GameTestHelper helper) {
+        AtomicEmpoweringMatrixBlockEntity matrix = placeMatrix(helper);
+        RecipeHolder<EmpowererRecipe> holder = cheapestEmpowering(helper);
+
+        ManualCraftOutcome outcome = matrix.startManualCraft(helper.makeMockPlayer(GameType.SURVIVAL), holder.id(), 1);
+
+        helper.assertTrue(
+                outcome.status() == ManualCraftResult.MISSING_ITEMS,
+                "an empty inventory did not read as missing items: " + outcome.status());
+        helper.assertTrue(
+                ManualCraftFixtures.bufferedCount(matrix.getInputBuffer()) == 0,
+                "the Matrix staged something for a craft it refused");
+        helper.succeed();
     }
 }

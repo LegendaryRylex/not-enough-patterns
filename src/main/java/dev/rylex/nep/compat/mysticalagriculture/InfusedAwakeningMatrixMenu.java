@@ -2,6 +2,7 @@ package dev.rylex.nep.compat.mysticalagriculture;
 
 import dev.rylex.nep.menu.MachineMenu;
 import dev.rylex.nep.menu.MachineSlot;
+import dev.rylex.nep.menu.ManualCraftMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -11,7 +12,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class InfusedAwakeningMatrixMenu extends MachineMenu {
+public class InfusedAwakeningMatrixMenu extends MachineMenu implements ManualCraftMenu {
 
     static final int BUTTON_CLEAR_PENDING = 1;
     static final int BUTTON_CLEAR_BUFFER = 3;
@@ -86,6 +87,11 @@ public class InfusedAwakeningMatrixMenu extends MachineMenu {
     @Nullable
     InfusedAwakeningMatrixBlockEntity matrix() {
         return matrix;
+    }
+
+    @Override
+    public BlockPos machinePos() {
+        return pos;
     }
 
     BlockPos matrixPos() {

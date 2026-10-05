@@ -1,0 +1,32 @@
+{
+  "type": "malum:spirit_repair",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "malum"
+    }
+  ],
+  "durabilityPercentage": 1.0,
+  "repairMaterial": {
+    "count": 1,
+    "item": "nep:matrix_circuitry"
+  },
+  "spirits": [
+    {
+      "type": "malum:umbral",
+      "count": 1
+    },
+    {
+      "type": "malum:arcane",
+      "count": 2
+    },
+    {
+      "type": "malum:eldritch",
+      "count": 2
+    }
+  ],
+  "validItems": [
+    "nep:matrix_impetus",
+    "nep:fractured_matrix_impetus"
+  ]
+}

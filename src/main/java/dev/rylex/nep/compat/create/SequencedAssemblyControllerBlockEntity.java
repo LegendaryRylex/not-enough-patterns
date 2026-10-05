@@ -16,6 +16,11 @@ import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.create.SequencedAssemblyControllerBlock.ControllerStatus;
 import dev.rylex.nep.machine.ComparatorSignal;
 import dev.rylex.nep.machine.MachineItemView;
+import dev.rylex.nep.machine.ManualCraftHost;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualCraftResult;
+import dev.rylex.nep.machine.ManualRequirement;
+import dev.rylex.nep.machine.ManualStaging;
 import dev.rylex.nep.machine.PushingCpus;
 import dev.rylex.nep.machine.ReturnDirections;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
@@ -33,7 +38,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -67,7 +71,8 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class SequencedAssemblyControllerBlockEntity extends BlockEntity implements MenuProvider, Clearable {
+public class SequencedAssemblyControllerBlockEntity extends BlockEntity
+        implements MenuProvider, Clearable, ManualCraftHost {
 
     private static final String INPUT_KEY = "Input";
     private static final String OUTPUT_KEY = "Output";
@@ -78,6 +83,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     private static final String BYPRODUCT_BUFFER_KEY = "ByproductBuffer";
     private static final String FLUID_BUFFER_KEY = "FluidBuffer";
     private static final String OWED_KEY = "Owed";
+    private static final String MANUAL_OWED_KEY = "ManualOwed";
     private static final String TO_RETURN_KEY = "ToReturn";
     private static final String RETURN_DIR_KEY = "ReturnDir";
     private static final String RETURN_DIRS_KEY = "ReturnDirs";
@@ -131,10 +137,11 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
 
     private final IItemHandler machineView = MachineItemView.feedable(buffer, null);
 
-    private final Map<Item, Long> owed = new HashMap<>();
-    private final Map<Item, Long> toReturn = new HashMap<>();
+    private final Map<AEItemKey, Long> owed = new HashMap<>();
+    private final Map<AEItemKey, Long> toReturn = new HashMap<>();
+    private final Map<AEItemKey, Long> manualOwed = new HashMap<>();
     private long lastProgressTick = Long.MIN_VALUE;
-    private final Map<Item, Long> inFlight = new HashMap<>();
+    private final Map<AEItemKey, Long> inFlight = new HashMap<>();
     private long lastResolveTick = Long.MIN_VALUE;
     private long reclaimUntil = Long.MIN_VALUE;
     private boolean halted;
@@ -156,10 +163,10 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     @Nullable
     private StationSnapshot stationSnapshot;
 
-    private final Map<Item, Template> templates = new HashMap<>();
-    private final Map<Item, ResourceLocation> recipeIds = new HashMap<>();
+    private final Map<AEItemKey, Template> templates = new HashMap<>();
+    private final Map<AEItemKey, ResourceLocation> recipeIds = new HashMap<>();
     private final PushingCpus pushingCpus = new PushingCpus();
-    private final List<Item> queue = new ArrayList<>();
+    private final List<AEItemKey> queue = new ArrayList<>();
     private final List<ItemStack> recirc = new ArrayList<>();
 
     private final SequencedAssemblyRequester requester = new SequencedAssemblyRequester(this);
@@ -187,22 +194,22 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         return total;
     }
 
-    private long inFlightFor(Item output) {
-        return inFlight.getOrDefault(output, 0L);
+    private long inFlightFor(@Nullable AEItemKey output) {
+        return output == null ? 0 : inFlight.getOrDefault(output, 0L);
     }
 
-    private void addInFlight(Item output, long amount) {
+    private void addInFlight(AEItemKey output, long amount) {
         inFlight.merge(output, amount, Long::sum);
     }
 
-    private List<Item> owedInOrder() {
-        List<Item> outputs = new ArrayList<>(owed.keySet());
-        outputs.sort(Comparator.comparing(BuiltInRegistries.ITEM::getKey));
+    private List<AEItemKey> owedInOrder() {
+        List<AEItemKey> outputs = new ArrayList<>(owed.keySet());
+        outputs.sort(Comparator.comparing(AEItemKey::toString).thenComparingInt(AEItemKey::hashCode));
         return outputs;
     }
 
     private void syncQueue() {
-        for (Item output : owedInOrder()) {
+        for (AEItemKey output : owedInOrder()) {
             if (!queue.contains(output)) {
                 queue.add(output);
             }
@@ -211,20 +218,20 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     }
 
     @Nullable
-    private Item activeOutput() {
+    private AEItemKey activeOutput() {
         return queue.isEmpty() ? null : queue.get(0);
     }
 
     private void syncManualDemand(Level level, List<SequencedAssemblyRecipe> recipes) {
-        Map<Item, Long> staged = new HashMap<>();
+        Map<AEItemKey, Long> staged = new HashMap<>();
         for (SequencedAssemblyRecipe recipe : recipes) {
-            Item out = recipe.getResultItem(level.registryAccess()).getItem();
-            if (templates.containsKey(out)) {
+            AEItemKey out = AEItemKey.of(recipe.getResultItem(level.registryAccess()));
+            if (out == null || templates.containsKey(out)) {
                 continue;
             }
             staged.merge(out, countBufferBase(recipe.getIngredient()), Long::sum);
         }
-        for (Map.Entry<Item, Long> entry : staged.entrySet()) {
+        for (Map.Entry<AEItemKey, Long> entry : staged.entrySet()) {
             long demand = entry.getValue() + inFlightFor(entry.getKey());
             if (demand > 0) {
                 owed.put(entry.getKey(), demand);
@@ -245,12 +252,12 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         return total;
     }
 
-    private List<Item> requestOrder(@Nullable Item active) {
-        List<Item> order = new ArrayList<>();
+    private List<AEItemKey> requestOrder(@Nullable AEItemKey active) {
+        List<AEItemKey> order = new ArrayList<>();
         if (active != null && owed.containsKey(active)) {
             order.add(active);
         }
-        for (Item output : owedInOrder()) {
+        for (AEItemKey output : owedInOrder()) {
             if (!order.contains(output)) {
                 order.add(output);
             }
@@ -315,10 +322,13 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             return;
         }
         ControllerStatus desired = desiredStatus();
-        if (state.getValue(SequencedAssemblyControllerBlock.STATUS) != desired) {
+        boolean working = desired == ControllerStatus.ON && anythingOnTheLine();
+        if (state.getValue(SequencedAssemblyControllerBlock.STATUS) != desired
+                || state.getValue(SequencedAssemblyControllerBlock.WORKING) != working) {
             level.setBlock(
                     getBlockPos(),
-                    state.setValue(SequencedAssemblyControllerBlock.STATUS, desired),
+                    state.setValue(SequencedAssemblyControllerBlock.STATUS, desired)
+                            .setValue(SequencedAssemblyControllerBlock.WORKING, working),
                     Block.UPDATE_CLIENTS);
         }
     }
@@ -385,7 +395,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
 
         syncManualDemand(level, recipes);
         syncQueue();
-        Item active = activeOutput();
+        AEItemKey active = activeOutput();
         SequencedAssemblyRecipe activeRecipe = active == null ? null : recipeForOutput(recipes, level, active);
 
         if (activeRecipe != null) {
@@ -447,6 +457,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                     cancelled);
         }
         owed.clear();
+        manualOwed.clear();
         templates.clear();
         recipeIds.clear();
         pushingCpus.clear();
@@ -474,13 +485,13 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         refreshVisualState();
     }
 
-    private void autoRequest(Level level, List<SequencedAssemblyRecipe> recipes, @Nullable Item active) {
+    private void autoRequest(Level level, List<SequencedAssemblyRecipe> recipes, @Nullable AEItemKey active) {
         if (templates.isEmpty()) {
             return;
         }
-        for (Item output : requestOrder(active)) {
+        for (AEItemKey output : requestOrder(active)) {
             Template template = templates.get(output);
-            if (template == null || template.keys().isEmpty()) {
+            if (template == null || template.keys().isEmpty() || isManualJob(output)) {
                 continue;
             }
             long owe = owed.getOrDefault(output, 0L);
@@ -523,7 +534,8 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     }
 
     @Nullable
-    private SequencedAssemblyRecipe recipeForOutput(List<SequencedAssemblyRecipe> recipes, Level level, Item output) {
+    private SequencedAssemblyRecipe recipeForOutput(
+            List<SequencedAssemblyRecipe> recipes, Level level, AEItemKey output) {
         ResourceLocation pushed = recipeIds.get(output);
         if (pushed != null) {
             SequencedAssemblyRecipe named = SequencedAssemblyResolver.resolveById(level, pushed);
@@ -533,7 +545,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         }
         SequencedAssemblyRecipe fallback = null;
         for (SequencedAssemblyRecipe recipe : recipes) {
-            if (recipe.getResultItem(level.registryAccess()).getItem() != output) {
+            if (!output.matches(recipe.getResultItem(level.registryAccess()))) {
                 continue;
             }
             if (hasBaseMaterial(recipe)) {
@@ -543,10 +555,65 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                 fallback = recipe;
             }
         }
-        return fallback != null ? fallback : SequencedAssemblyResolver.resolveByResult(level, new ItemStack(output));
+        return fallback != null ? fallback : SequencedAssemblyResolver.resolveByResult(level, output.toStack());
     }
 
-    private void captureTemplate(Item output, Map<AEItemKey, Long> items, Map<AEFluidKey, Long> fluids) {
+    @Override
+    public ManualCraftOutcome startManualCraft(Player player, ResourceLocation recipe, int batches) {
+        Level level = getLevel();
+        if (level == null || level.isClientSide) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNKNOWN_RECIPE);
+        }
+        if (!NepConfig.manualCrafting() || !NepConfig.createSequencedAssembly()) {
+            return ManualCraftOutcome.failed(ManualCraftResult.DISABLED);
+        }
+        SequencedAssemblyRecipe assembly = SequencedAssemblyResolver.resolveById(level, recipe);
+        if (assembly == null) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNKNOWN_RECIPE);
+        }
+        if (!readyForPatterns() || !lineRecipes(level).contains(assembly)) {
+            return ManualCraftOutcome.failed(ManualCraftResult.NO_LINE);
+        }
+        List<ManualRequirement> requirements = SequencedAssemblyResolver.manualRequirements(assembly);
+        ItemStack result = assembly.resultPool.isEmpty()
+                ? ItemStack.EMPTY
+                : assembly.resultPool.get(0).getStack().copy();
+        AEItemKey produced = AEItemKey.of(result);
+        if (requirements == null || produced == null) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNSUPPORTED);
+        }
+
+        ResourceLocation queued = recipeIds.get(produced);
+        if (owed.getOrDefault(produced, 0L) > 0 && (!recipe.equals(queued) || !isManualJob(produced))) {
+            return ManualCraftOutcome.failed(ManualCraftResult.BUSY);
+        }
+
+        ManualStaging.Result staged =
+                ManualStaging.pull(player, requirements, batches, items -> bufferAll(items, Map.of()));
+        if (staged.status() != ManualCraftResult.STARTED) {
+            return ManualCraftOutcome.failed(staged.status());
+        }
+
+        captureTemplate(produced, staged.perCraft(), Map.of());
+        recipeIds.put(produced, recipe);
+        owed.merge(produced, (long) staged.batches(), Long::sum);
+        manualOwed.merge(produced, (long) staged.batches(), Long::sum);
+        if (lastProgressTick == Long.MIN_VALUE) {
+            markProgress(level);
+        }
+        setChanged();
+        if (NepConfig.debugLogging()) {
+            Nep.LOGGER.info(
+                    "SA controller {} queued {} manual craft(s) of {} for {}",
+                    getBlockPos(),
+                    staged.batches(),
+                    produced,
+                    player.getName().getString());
+        }
+        return ManualCraftOutcome.started(staged.batches(), result);
+    }
+
+    private void captureTemplate(AEItemKey output, Map<AEItemKey, Long> items, Map<AEFluidKey, Long> fluids) {
         List<AEKey> keys = new ArrayList<>();
         List<Long> counts = new ArrayList<>();
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
@@ -713,14 +780,15 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         }
         for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
             ItemStack stack = outputBuffer.getStackInSlot(slot);
-            if (stack.isEmpty()) {
+            AEItemKey stackKey = AEItemKey.of(stack);
+            if (stackKey == null) {
                 continue;
             }
-            long owedReturn = toReturn.getOrDefault(stack.getItem(), 0L);
+            long owedReturn = toReturn.getOrDefault(stackKey, 0L);
             if (owedReturn <= 0) {
                 continue;
             }
-            IItemHandler target = returnDirections.targetFor(level, getBlockPos(), stack.getItem());
+            IItemHandler target = returnDirections.targetFor(level, getBlockPos(), stackKey);
             if (target == null) {
                 continue;
             }
@@ -732,25 +800,25 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                     Nep.LOGGER.info(
                             "SA controller {} returned {} x{} to the network via {}",
                             getBlockPos(),
-                            stack.getItem(),
+                            stackKey,
                             moved,
-                            returnDirections.directionFor(stack.getItem()));
+                            returnDirections.directionFor(stackKey));
                 }
                 outputBuffer.extractItem(slot, moved, false);
-                decrementToReturn(stack.getItem(), moved);
+                decrementToReturn(stackKey, moved);
             }
         }
     }
 
-    private void decrementToReturn(Item item, long amount) {
-        long remaining = toReturn.getOrDefault(item, 0L) - amount;
+    private void decrementToReturn(AEItemKey key, long amount) {
+        long remaining = toReturn.getOrDefault(key, 0L) - amount;
         if (remaining > 0) {
-            toReturn.put(item, remaining);
+            toReturn.put(key, remaining);
             return;
         }
-        toReturn.remove(item);
-        if (!owed.containsKey(item) && inFlightFor(item) <= 0) {
-            returnDirections.forget(item);
+        toReturn.remove(key);
+        if (!owed.containsKey(key) && inFlightFor(key) <= 0) {
+            returnDirections.forget(key);
         }
     }
 
@@ -787,10 +855,13 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         boolean pending = pending() > 0 || inFlightTotal() > 0;
         boolean reclaiming = !pending && reclaiming(level);
         Set<Item> transitionals = new HashSet<>();
-        Set<Item> primaries = new HashSet<>();
+        Set<AEItemKey> primaries = new HashSet<>();
         for (SequencedAssemblyRecipe recipe : recipes) {
             transitionals.add(recipe.getTransitionalItem().getItem());
-            primaries.add(recipe.getResultItem(level.registryAccess()).getItem());
+            AEItemKey primary = AEItemKey.of(recipe.getResultItem(level.registryAccess()));
+            if (primary != null) {
+                primaries.add(primary);
+            }
         }
 
         for (int slot = 0; slot < out.getSlots(); slot++) {
@@ -798,8 +869,11 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             if (onDepot.isEmpty()) {
                 continue;
             }
-            Item item = onDepot.getItem();
-            if (transitionals.contains(item)) {
+            AEItemKey item = AEItemKey.of(onDepot);
+            if (item == null) {
+                continue;
+            }
+            if (transitionals.contains(onDepot.getItem())) {
                 if (pending) {
                     holdTransitional(out, slot, onDepot);
                 } else if (reclaiming) {
@@ -821,11 +895,15 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                     return true;
                 }
             } else if (pending) {
-                int captured = capture(out, slot, onDepot, byproductBuffer, onDepot.getCount());
+                AEItemKey attributed = primaries.contains(item) ? item : attributeJunk(level, recipes, item);
+                boolean manual = attributed != null && isManualJob(attributed);
+                int captured = capture(out, slot, onDepot, manual ? outputBuffer : byproductBuffer, onDepot.getCount());
                 if (captured <= 0) {
                     return true;
                 }
-                Item attributed = primaries.contains(item) ? item : attributeJunk(level, recipes, item);
+                if (manual) {
+                    settleJunk(recipes, attributed, item, captured);
+                }
                 resolveAttempts(level, captured, attributed);
                 markProgress(level);
             }
@@ -858,14 +936,24 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         return captured;
     }
 
-    private void decrementOwed(Item item, long amount) {
-        long remaining = owed.getOrDefault(item, 0L) - amount;
+    private void decrementOwed(AEItemKey key, long amount) {
+        long remaining = owed.getOrDefault(key, 0L) - amount;
         if (remaining > 0) {
-            owed.put(item, remaining);
+            owed.put(key, remaining);
         } else {
-            owed.remove(item);
+            owed.remove(key);
+        }
+        long manual = manualOwed.getOrDefault(key, 0L) - amount;
+        if (manual > 0) {
+            manualOwed.put(key, manual);
+        } else {
+            manualOwed.remove(key);
         }
         setChanged();
+    }
+
+    private boolean isManualJob(@Nullable AEItemKey key) {
+        return key != null && manualOwed.getOrDefault(key, 0L) > 0;
     }
 
     private int capture(IItemHandler out, int slot, ItemStack onDepot, ItemStackHandler target, int maxCount) {
@@ -886,11 +974,42 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         return taken.getCount();
     }
 
+    private void settleJunk(List<SequencedAssemblyRecipe> recipes, AEItemKey output, AEItemKey junk, int captured) {
+        long attempts = Math.max(1, captured / junkPerRoll(recipes, junk));
+        long settled = Math.min(attempts, owed.getOrDefault(output, 0L));
+        if (settled <= 0) {
+            return;
+        }
+        decrementOwed(output, settled);
+        if (NepConfig.debugLogging()) {
+            Nep.LOGGER.info(
+                    "SA controller {} counted {} x{} of junk against {} manual attempt(s) of {}",
+                    getBlockPos(),
+                    junk,
+                    captured,
+                    settled,
+                    output);
+        }
+    }
+
+    private static int junkPerRoll(List<SequencedAssemblyRecipe> recipes, AEItemKey junk) {
+        int perRoll = 1;
+        for (SequencedAssemblyRecipe recipe : recipes) {
+            for (int i = 1; i < recipe.resultPool.size(); i++) {
+                ItemStack stack = recipe.resultPool.get(i).getStack();
+                if (junk.matches(stack)) {
+                    perRoll = Math.max(perRoll, stack.getCount());
+                }
+            }
+        }
+        return perRoll;
+    }
+
     private void markProgress(Level level) {
         lastProgressTick = level.getGameTime();
     }
 
-    private void resolveAttempts(Level level, int count, @Nullable Item output) {
+    private void resolveAttempts(Level level, int count, @Nullable AEItemKey output) {
         if (output != null) {
             long remaining = Math.max(0, inFlightFor(output) - count);
             if (remaining > 0) {
@@ -903,13 +1022,13 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
     }
 
     @Nullable
-    private Item attributeJunk(Level level, List<SequencedAssemblyRecipe> recipes, Item junk) {
-        Item mapped = null;
+    private AEItemKey attributeJunk(Level level, List<SequencedAssemblyRecipe> recipes, AEItemKey junk) {
+        AEItemKey mapped = null;
         for (SequencedAssemblyRecipe recipe : recipes) {
             for (int i = 1; i < recipe.resultPool.size(); i++) {
-                if (recipe.resultPool.get(i).getStack().getItem() == junk) {
-                    Item output = recipe.getResultItem(level.registryAccess()).getItem();
-                    if (mapped != null && mapped != output) {
+                if (junk.matches(recipe.resultPool.get(i).getStack())) {
+                    AEItemKey output = AEItemKey.of(recipe.getResultItem(level.registryAccess()));
+                    if (mapped != null && !mapped.equals(output)) {
                         mapped = null;
                         break;
                     }
@@ -920,9 +1039,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (mapped != null && inFlightFor(mapped) > 0) {
             return mapped;
         }
-        Item busiest = null;
+        AEItemKey busiest = null;
         long best = 0;
-        for (Map.Entry<Item, Long> entry : inFlight.entrySet()) {
+        for (Map.Entry<AEItemKey, Long> entry : inFlight.entrySet()) {
             if (entry.getValue() > best) {
                 best = entry.getValue();
                 busiest = entry.getKey();
@@ -976,7 +1095,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         return false;
     }
 
-    private void manageQueue(Level level, @Nullable Item active, @Nullable SequencedAssemblyRecipe activeRecipe) {
+    private void manageQueue(Level level, @Nullable AEItemKey active, @Nullable SequencedAssemblyRecipe activeRecipe) {
         if (active == null || activeRecipe == null) {
             return;
         }
@@ -1153,9 +1272,6 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (outputs.isEmpty() || !(outputs.get(0).what() instanceof AEItemKey outputKey)) {
             return reject("pattern has no item output");
         }
-        if (!outputKey.toStack().getComponentsPatch().isEmpty()) {
-            return reject("pattern output carries data components");
-        }
         SequencedAssemblyRecipe recipe = SequencedAssemblyResolver.resolveById(level, assembly.recipe());
         if (recipe == null) {
             return reject("no sequenced assembly recipe with id " + assembly.recipe());
@@ -1163,9 +1279,12 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (!lineRecipes(level).contains(recipe)) {
             return reject("linked line does not match this recipe's station layout");
         }
-        ResourceLocation queued = recipeIds.get(outputKey.getItem());
-        if (queued != null && !queued.equals(assembly.recipe()) && owed.getOrDefault(outputKey.getItem(), 0L) > 0) {
-            return reject("already assembling " + outputKey.getItem() + " by recipe " + queued);
+        if (isManualJob(outputKey)) {
+            return reject("a manual craft of " + outputKey + " is already queued");
+        }
+        ResourceLocation queued = recipeIds.get(outputKey);
+        if (queued != null && !queued.equals(assembly.recipe()) && owed.getOrDefault(outputKey, 0L) > 0) {
+            return reject("already assembling " + outputKey + " by recipe " + queued);
         }
         Map<AEItemKey, Long> items = new HashMap<>();
         Map<AEFluidKey, Long> fluids = new HashMap<>();
@@ -1175,7 +1294,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (!bufferAll(items, fluids)) {
             return reject("controller buffer is full");
         }
-        Item producedItem = outputKey.getItem();
+        AEItemKey producedItem = outputKey;
         returnDirections.record(producedItem, ejectionDirection);
         long producedAmount = Math.max(1, outputs.get(0).amount());
         captureTemplate(producedItem, items, fluids);
@@ -1236,7 +1355,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         return staged;
     }
 
-    private void distribute(Level level, SequencedAssemblyRecipe activeRecipe, Item active) {
+    private void distribute(Level level, SequencedAssemblyRecipe activeRecipe, AEItemKey active) {
         List<SequencedAssemblyRecipe> only = List.of(activeRecipe);
         boolean recircBlocked =
                 drainRecirc(level, activeRecipe.getTransitionalItem().getItem());
@@ -1374,7 +1493,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         return false;
     }
 
-    private boolean activeFluidAllowed(@Nullable Item active, FluidStack buffered) {
+    private boolean activeFluidAllowed(@Nullable AEItemKey active, FluidStack buffered) {
         Template template = active == null ? null : templates.get(active);
         if (template == null) {
             return true;
@@ -1387,7 +1506,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         return false;
     }
 
-    private void stockSpouts(Level level, Item active) {
+    private void stockSpouts(Level level, AEItemKey active) {
         if (fluids.isEmpty()) {
             return;
         }
@@ -1604,8 +1723,8 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             }
         }
         List<SequencedAssemblyState.Making> makingList = new ArrayList<>(owed.size());
-        for (Map.Entry<Item, Long> entry : owed.entrySet()) {
-            makingList.add(new SequencedAssemblyState.Making(new ItemStack(entry.getKey()), entry.getValue()));
+        for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
+            makingList.add(new SequencedAssemblyState.Making(entry.getKey().toStack(), entry.getValue()));
         }
         makingList.sort((a, b) -> Long.compare(b.count(), a.count()));
         List<GenericStack> missing = halted && level != null ? collectMissing(level) : List.of();
@@ -1615,9 +1734,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
 
     private List<SequencedAssemblyRecipe> queuedRecipes(Level level) {
         List<SequencedAssemblyRecipe> recipes = new ArrayList<>(queue.size());
-        for (Item item : queue) {
+        for (AEItemKey item : queue) {
             SequencedAssemblyRecipe recipe =
-                    SequencedAssemblyResolver.resolveFor(level, recipeIds.get(item), new ItemStack(item));
+                    SequencedAssemblyResolver.resolveFor(level, recipeIds.get(item), item.toStack());
             if (recipe != null && !recipes.contains(recipe)) {
                 recipes.add(recipe);
             }
@@ -1629,7 +1748,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         List<GenericStack> missing = new ArrayList<>();
         Set<Item> seen = new HashSet<>();
         List<BlockPos> deployers = orderedDeployers(level);
-        Item active = activeOutput();
+        AEItemKey active = activeOutput();
         if (active == null) {
             return missing;
         }
@@ -1720,8 +1839,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         emptyHandlerTo(player, buffer);
         for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
             ItemStack taken = outputBuffer.extractItem(slot, Integer.MAX_VALUE, false);
-            if (!taken.isEmpty()) {
-                decrementToReturn(taken.getItem(), taken.getCount());
+            AEItemKey takenKey = AEItemKey.of(taken);
+            if (takenKey != null) {
+                decrementToReturn(takenKey, taken.getCount());
                 player.getInventory().placeItemBackInInventory(taken);
             }
         }
@@ -1857,21 +1977,22 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         tag.put(OUTPUT_BUFFER_KEY, outputBuffer.serializeNBT(registries));
         tag.put(BYPRODUCT_BUFFER_KEY, byproductBuffer.serializeNBT(registries));
         if (!owed.isEmpty()) {
-            tag.put(OWED_KEY, ItemCounts.save(owed));
+            tag.put(OWED_KEY, ItemCounts.save(owed, registries));
+            tag.put(MANUAL_OWED_KEY, ItemCounts.save(manualOwed, registries));
         }
         if (!toReturn.isEmpty()) {
-            tag.put(TO_RETURN_KEY, ItemCounts.save(toReturn));
+            tag.put(TO_RETURN_KEY, ItemCounts.save(toReturn, registries));
         }
         if (!inFlight.isEmpty()) {
-            tag.put(INFLIGHT_KEY, ItemCounts.save(inFlight));
+            tag.put(INFLIGHT_KEY, ItemCounts.save(inFlight, registries));
         }
         if (!returnDirections.isEmpty()) {
-            tag.put(RETURN_DIRS_KEY, returnDirections.save());
+            tag.put(RETURN_DIRS_KEY, returnDirections.save(registries));
         }
         pushingCpus.save(tag);
         if (!templates.isEmpty()) {
             ListTag templateList = new ListTag();
-            for (Map.Entry<Item, Template> entry : templates.entrySet()) {
+            for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
                 Template template = entry.getValue();
                 ListTag entries = new ListTag();
                 for (int i = 0; i < template.keys().size(); i++) {
@@ -1881,8 +2002,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                     entries.add(keyTag);
                 }
                 CompoundTag templateTag = new CompoundTag();
-                templateTag.putString(
-                        "Output", BuiltInRegistries.ITEM.getKey(entry.getKey()).toString());
+                ItemCounts.putKey(templateTag, entry.getKey(), registries);
                 templateTag.put("Entries", entries);
                 templateList.add(templateTag);
             }
@@ -1890,9 +2010,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         }
         if (!queue.isEmpty()) {
             ListTag queueList = new ListTag();
-            for (Item output : queue) {
+            for (AEItemKey output : queue) {
                 CompoundTag entryTag = new CompoundTag();
-                entryTag.putString("Id", BuiltInRegistries.ITEM.getKey(output).toString());
+                ItemCounts.putKey(entryTag, output, registries);
                 queueList.add(entryTag);
             }
             tag.put(QUEUE_KEY, queueList);
@@ -1905,7 +2025,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
             tag.put(RECIRC_KEY, recircList);
         }
         if (!recipeIds.isEmpty()) {
-            tag.put(RECIPE_IDS_KEY, ItemRecipeIds.save(recipeIds));
+            tag.put(RECIPE_IDS_KEY, ItemRecipeIds.save(recipeIds, registries));
         }
         if (reclaimUntil != Long.MIN_VALUE) {
             tag.putLong(RECLAIM_KEY, reclaimUntil);
@@ -1990,10 +2110,11 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (tag.contains(BYPRODUCT_BUFFER_KEY)) {
             byproductBuffer.deserializeNBT(registries, tag.getCompound(BYPRODUCT_BUFFER_KEY));
         }
-        ItemCounts.load(owed, tag, OWED_KEY);
-        ItemCounts.load(toReturn, tag, TO_RETURN_KEY);
-        ItemCounts.load(inFlight, tag, INFLIGHT_KEY);
-        returnDirections.load(tag, RETURN_DIRS_KEY, RETURN_DIR_KEY, toReturn.keySet());
+        ItemCounts.load(owed, tag, OWED_KEY, registries);
+        ItemCounts.load(manualOwed, tag, MANUAL_OWED_KEY, registries);
+        ItemCounts.load(toReturn, tag, TO_RETURN_KEY, registries);
+        ItemCounts.load(inFlight, tag, INFLIGHT_KEY, registries);
+        returnDirections.load(tag, RETURN_DIRS_KEY, RETURN_DIR_KEY, toReturn.keySet(), registries);
         pushingCpus.load(tag);
         templates.clear();
         if (tag.contains(TEMPLATE_KEY, Tag.TAG_LIST)) {
@@ -2011,7 +2132,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                         counts.add(keyTag.getLong("Per"));
                     }
                 }
-                Item outputItem = ItemCounts.item(templateTag.getString("Output"));
+                AEItemKey outputItem = ItemCounts.key(templateTag, "Output", registries);
                 if (!keys.isEmpty() && outputItem != null) {
                     templates.put(outputItem, new Template(List.copyOf(keys), List.copyOf(counts)));
                 }
@@ -2021,7 +2142,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
         if (tag.contains(QUEUE_KEY, Tag.TAG_LIST)) {
             ListTag queueList = tag.getList(QUEUE_KEY, Tag.TAG_COMPOUND);
             for (int i = 0; i < queueList.size(); i++) {
-                Item output = ItemCounts.item(queueList.getCompound(i).getString("Id"));
+                AEItemKey output = ItemCounts.key(queueList.getCompound(i), registries);
                 if (output != null && !queue.contains(output)) {
                     queue.add(output);
                 }
@@ -2037,7 +2158,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity implemen
                 }
             }
         }
-        ItemRecipeIds.load(recipeIds, tag, RECIPE_IDS_KEY);
+        ItemRecipeIds.load(recipeIds, tag, RECIPE_IDS_KEY, registries);
         reclaimUntil = tag.contains(RECLAIM_KEY) ? tag.getLong(RECLAIM_KEY) : Long.MIN_VALUE;
         if (tag.contains(NODE_KEY)) {
             requester.load(tag.getCompound(NODE_KEY));

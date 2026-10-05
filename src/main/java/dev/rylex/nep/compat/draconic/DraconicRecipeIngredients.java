@@ -5,6 +5,7 @@ import appeng.api.stacks.GenericStack;
 import com.brandon3055.draconicevolution.api.crafting.IFusionDataTransfer;
 import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import com.brandon3055.draconicevolution.api.crafting.StackIngredient;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import java.util.ArrayList;
@@ -88,6 +89,31 @@ final class DraconicRecipeIngredients {
     }
 
     record Demand(Ingredient ingredient, int count, boolean consume) {}
+
+    @Nullable
+    static List<ManualRequirement> manualRequirements(IFusionRecipe recipe) {
+        List<Demand> demands = demandOf(recipe);
+        if (demands == null) {
+            return null;
+        }
+        List<ManualRequirement> requirements = new ArrayList<>(demands.size());
+        for (int index = 0; index < demands.size(); index++) {
+            Demand demand = demands.get(index);
+            requirements.add(new ManualRequirement(
+                    demand.ingredient(), demand.count(), demand.consume(), index == 0 && carriesData(demand)));
+        }
+        return List.copyOf(requirements);
+    }
+
+    /** Fusion assembles its result from the catalyst it was handed, so a damageable catalyst hands its wear and its enchantments to the result. */
+    private static boolean carriesData(Demand catalyst) {
+        for (ItemStack option : catalyst.ingredient().getItems()) {
+            if (option.isDamageableItem()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Nullable
     static List<Demand> demandOf(IFusionRecipe recipe) {

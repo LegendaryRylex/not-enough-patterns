@@ -1,6 +1,5 @@
 package dev.rylex.nep.compat.create;
 
-import appeng.api.crafting.IPatternDetails;
 import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.AllTags;
 import com.simibubi.create.content.equipment.sandPaper.SandPaperPolishingRecipe;
@@ -8,7 +7,6 @@ import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
 import com.simibubi.create.content.processing.recipe.ProcessingOutput;
 import dev.rylex.nep.NepConfig;
-import dev.rylex.nep.pattern.AndesiteCraftingPattern;
 import dev.rylex.nep.util.RecipeCache;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,10 +39,6 @@ final class SandPaperPolishing {
     @Nullable
     static RecipeHolder<DeployerApplicationRecipe> substitute(RecipeHolder<?> polishing, Level level) {
         return byId(polishing.id(), level);
-    }
-
-    static boolean wearsKeptTool(IPatternDetails pattern, Level level) {
-        return pattern instanceof AndesiteCraftingPattern andesite && byId(andesite.recipe(), level) != null;
     }
 
     private static Map<ResourceLocation, RecipeHolder<DeployerApplicationRecipe>> table(Level level) {

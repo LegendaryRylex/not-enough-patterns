@@ -3,6 +3,7 @@ package dev.rylex.nep.compat.create;
 import dev.rylex.nep.machine.MachineFluidInput;
 import dev.rylex.nep.menu.MachineMenu;
 import dev.rylex.nep.menu.MachineSlot;
+import dev.rylex.nep.menu.ManualCraftMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -11,7 +12,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class SequencedAssemblyMatrixMenu extends MachineMenu {
+public class SequencedAssemblyMatrixMenu extends MachineMenu implements ManualCraftMenu {
 
     static final int BUTTON_CLEAR_PENDING = 1;
     static final int BUTTON_FILL_TANK = 2;
@@ -91,6 +92,11 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu {
     @Nullable
     SequencedAssemblyMatrixBlockEntity matrix() {
         return matrix;
+    }
+
+    @Override
+    public BlockPos machinePos() {
+        return pos;
     }
 
     BlockPos matrixPos() {

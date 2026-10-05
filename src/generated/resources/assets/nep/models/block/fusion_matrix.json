@@ -1,0 +1,9 @@
+{
+    "parent": "nep:block/matrix/cage",
+    "textures": {
+        "corner": "nep:block/matrix/fusion/corner",
+        "particle": "nep:block/matrix/fusion/border",
+        "ring": "nep:block/matrix/fusion/ring",
+        "strut": "nep:block/matrix/fusion/strut"
+    }
+}

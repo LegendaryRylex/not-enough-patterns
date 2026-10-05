@@ -3,15 +3,20 @@ package dev.rylex.nep;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.upgrades.Upgrades;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
+import dev.rylex.nep.pattern.ApparatusPattern;
 import dev.rylex.nep.pattern.AtomicReconstructionPattern;
 import dev.rylex.nep.pattern.AwakeningPattern;
 import dev.rylex.nep.pattern.EmpoweringPattern;
 import dev.rylex.nep.pattern.EnchantingPattern;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
+import dev.rylex.nep.pattern.ImbuementPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.MechanicalCraftingPattern;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
+import dev.rylex.nep.pattern.RuneworkingPattern;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
+import dev.rylex.nep.pattern.SpiritFocusingPattern;
+import dev.rylex.nep.pattern.SpiritInfusionPattern;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -59,6 +64,26 @@ public final class NepItems {
 
     public static final DeferredItem<Item> AWAKENING_PATTERN = ITEMS.register(
             "awakening_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(AwakeningPattern::new)
+                    .build());
+
+    public static final DeferredItem<Item> SPIRIT_INFUSION_PATTERN = ITEMS.register(
+            "spirit_infusion_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(SpiritInfusionPattern::new)
+                    .build());
+
+    public static final DeferredItem<Item> SPIRIT_FOCUSING_PATTERN = ITEMS.register(
+            "spirit_focusing_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(SpiritFocusingPattern::new)
+                    .build());
+
+    public static final DeferredItem<Item> RUNEWORKING_PATTERN = ITEMS.register(
+            "runeworking_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(RuneworkingPattern::new)
+                    .build());
+
+    public static final DeferredItem<Item> APPARATUS_PATTERN = ITEMS.register(
+            "apparatus_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(ApparatusPattern::new)
+                    .build());
+
+    public static final DeferredItem<Item> IMBUEMENT_PATTERN = ITEMS.register(
+            "imbuement_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(ImbuementPattern::new)
                     .build());
 
     public static final DeferredItem<Item> ENCHANTING_PATTERN = ITEMS.register(

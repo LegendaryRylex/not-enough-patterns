@@ -1,0 +1,16 @@
+{
+  "type": "malum:void_favor",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "malum"
+    }
+  ],
+  "input": {
+    "item": "nep:pure_spirit"
+  },
+  "result": {
+    "count": 1,
+    "id": "malum:umbral_spirit"
+  }
+}

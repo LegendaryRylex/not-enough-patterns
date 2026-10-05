@@ -1,0 +1,10 @@
+{
+    "parent": "nep:block/matrix/cage_core",
+    "textures": {
+        "core": "nep:block/matrix/core/arcane_enchanting",
+        "corner": "nep:block/matrix/arcane_enchanting/corner",
+        "particle": "nep:block/matrix/arcane_enchanting/border",
+        "ring": "nep:block/matrix/arcane_enchanting/ring",
+        "strut": "nep:block/matrix/arcane_enchanting/strut"
+    }
+}

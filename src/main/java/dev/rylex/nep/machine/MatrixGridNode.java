@@ -2,6 +2,7 @@ package dev.rylex.nep.machine;
 
 import appeng.api.config.Actionable;
 import appeng.api.config.PowerMultiplier;
+import appeng.api.config.PowerUnit;
 import appeng.api.networking.GridFlags;
 import appeng.api.networking.GridHelper;
 import appeng.api.networking.IGrid;
@@ -9,14 +10,18 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.IInWorldGridNodeHost;
 import appeng.api.networking.IManagedGridNode;
+import appeng.api.networking.crafting.ICraftingCPU;
 import appeng.api.networking.crafting.ICraftingLink;
 import appeng.api.networking.crafting.ICraftingRequester;
 import appeng.api.networking.crafting.ICraftingService;
+import appeng.api.networking.energy.IEnergyService;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
+import appeng.api.storage.IStorageProvider;
 import appeng.api.storage.MEStorage;
 import appeng.helpers.MultiCraftingTracker;
+import appeng.me.cluster.implementations.CraftingCPUCluster;
 import com.google.common.collect.ImmutableSet;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
@@ -35,6 +40,8 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
 
     private static final double POWER_EPSILON = 0.01;
 
+    private static final double NETWORK_ENERGY_RESERVE = 0.1;
+
     private static final IGridNodeListener<MatrixGridNode> LISTENER = new Listener();
 
     private final MatrixHost owner;
@@ -46,6 +53,7 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
     private final int channels;
 
     private MultiCraftingTracker tracker;
+    private final ThrottledLog restockLog = new ThrottledLog();
 
     private boolean starved;
 
@@ -72,6 +80,20 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
         return channels;
     }
 
+    /** Must be called before the node joins a grid. */
+    public void provideStorage(MEStorage storage) {
+        mainNode.addService(IStorageProvider.class, mounts -> mounts.mount(storage));
+    }
+
+    /** True when {@code other} is this node's own machine, which is how a mounted storage refuses to feed itself. */
+    public boolean isOwnActionSource(IActionSource other) {
+        return other.machine().orElse(null) == this;
+    }
+
+    public void requestStorageUpdate() {
+        IStorageProvider.requestUpdate(mainNode);
+    }
+
     public void create(Level level, BlockPos pos) {
         if (mainNode.getNode() == null) {
             mainNode.setIdlePowerUsage(idleMeDrain);
@@ -95,17 +117,36 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
         return drawn;
     }
 
+    public long chargeBuffer(MatrixEnergyBuffer buffer, long wanted) {
+        long room = buffer.receive(wanted, true);
+        if (room <= 0) {
+            return 0;
+        }
+        IGrid grid = mainNode.getGrid();
+        if (grid == null) {
+            return 0;
+        }
+        IEnergyService energy = grid.getEnergyService();
+        double spare = energy.getStoredPower() - energy.getMaxStoredPower() * NETWORK_ENERGY_RESERVE;
+        double wantedAe = Math.min(spare, PowerUnit.FE.convertTo(PowerUnit.AE, room));
+        if (wantedAe <= POWER_EPSILON) {
+            return 0;
+        }
+        double drawn = energy.extractAEPower(wantedAe, Actionable.MODULATE, PowerMultiplier.ONE);
+        return buffer.receive((long) PowerUnit.AE.convertTo(PowerUnit.FE, drawn), false);
+    }
+
     public List<GenericStack> restock(Level level, List<AEKey> keys, List<Long> targets) {
         List<GenericStack> unavailable = new ArrayList<>();
         IGrid grid = mainNode.getGrid();
         if (grid == null) {
             if (NepConfig.debugLogging()) {
-                Nep.LOGGER.info(
-                        "{} {}: not on a grid yet (node ready={}, active={})",
-                        label,
-                        owner.getBlockPos(),
-                        mainNode.isReady(),
-                        mainNode.isActive());
+                log(
+                        level,
+                        "grid",
+                        String.format(
+                                "%s %s: not on a grid yet (node ready=%s, active=%s)",
+                                label, owner.getBlockPos(), mainNode.isReady(), mainNode.isActive()));
             }
             for (int slot = 0; slot < keys.size() && slot < TRACKER_SIZE; slot++) {
                 AEKey key = keys.get(slot);
@@ -147,19 +188,29 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
                 }
             }
             if (NepConfig.debugLogging()) {
-                Nep.LOGGER.info(
-                        "{} {} slot {}: {} -> pulled {} from stock, still-missing {}, craftable={}, craftStarted={}",
-                        label,
-                        owner.getBlockPos(),
-                        slot,
-                        key,
-                        pulled,
-                        Math.max(0, missing),
-                        craftable,
-                        craftStarted);
+                log(
+                        level,
+                        key.toString(),
+                        String.format(
+                                "%s %s slot %d: %s -> pulled %d from stock, still-missing %d, craftable=%s,"
+                                        + " craftStarted=%s",
+                                label,
+                                owner.getBlockPos(),
+                                slot,
+                                key,
+                                pulled,
+                                Math.max(0, missing),
+                                craftable,
+                                craftStarted));
             }
         }
         return unavailable;
+    }
+
+    private void log(Level level, String subject, String message) {
+        if (restockLog.shouldLog(level.getGameTime(), subject, message)) {
+            Nep.LOGGER.info(message);
+        }
     }
 
     public void cancelRequests() {
@@ -175,6 +226,39 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
             return 0;
         }
         return grid.getStorageService().getInventory().insert(key, amount, Actionable.MODULATE, source);
+    }
+
+    public long extractFromNetwork(AEKey key, long amount) {
+        IGrid grid = mainNode.getGrid();
+        if (grid == null || amount <= 0) {
+            return 0;
+        }
+        return grid.getStorageService().getInventory().extract(key, amount, Actionable.MODULATE, source);
+    }
+
+    public long networkStock(AEKey key) {
+        IGrid grid = mainNode.getGrid();
+        return grid == null ? 0 : grid.getStorageService().getCachedInventory().get(key);
+    }
+
+    public boolean networkCanCraft(AEKey key) {
+        IGrid grid = mainNode.getGrid();
+        return grid != null && grid.getCraftingService().isCraftable(key);
+    }
+
+    /** Counts {@code output} across crafting CPUs' unpushed tasks, which a CPU still holds until each one is pushed. */
+    public long scheduledOutputs(AEKey output) {
+        IGrid grid = mainNode.getGrid();
+        if (grid == null) {
+            return 0;
+        }
+        long scheduled = 0;
+        for (ICraftingCPU cpu : grid.getCraftingService().getCpus()) {
+            if (cpu instanceof CraftingCPUCluster cluster && cluster.isBusy()) {
+                scheduled += cluster.craftingLogic.getPendingOutputs(output);
+            }
+        }
+        return scheduled;
     }
 
     public void destroy() {

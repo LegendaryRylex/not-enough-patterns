@@ -14,6 +14,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class RecipePattern implements NepPattern {
 
@@ -21,18 +22,21 @@ public abstract class RecipePattern implements NepPattern {
     private final ResourceLocation recipe;
     private final PatternInput[] inputs;
     private final List<GenericStack> consumed;
+    private final List<GenericStack> kept;
+    private final List<GenericStack> worn;
     private final List<GenericStack> retained;
     private final List<GenericStack> outputs;
 
     protected RecipePattern(AEItemKey definition, DataComponentType<EncodedRecipePattern> component, Level level) {
-        this(definition, component, level, UnaryOperator.identity());
+        this(definition, component, level, UnaryOperator.identity(), null);
     }
 
     protected RecipePattern(
             AEItemKey definition,
             DataComponentType<EncodedRecipePattern> component,
             Level level,
-            UnaryOperator<GenericStack> adapt) {
+            UnaryOperator<GenericStack> adapt,
+            @Nullable InputSubstitution substitution) {
         this.definition = definition;
         EncodedRecipePattern encoded = definition.get(component);
         if (encoded == null) {
@@ -58,22 +62,35 @@ public abstract class RecipePattern implements NepPattern {
                 throw new IllegalArgumentException("Pattern has an empty ingredient");
             }
         }
-        for (GenericStack kept : encoded.retained()) {
-            if (kept.amount() <= 0) {
+        for (GenericStack stack : encoded.retained()) {
+            if (stack.amount() <= 0) {
                 throw new IllegalArgumentException("Pattern has an empty kept ingredient");
+            }
+        }
+        for (GenericStack tool : encoded.worn()) {
+            if (tool.amount() <= 0) {
+                throw new IllegalArgumentException("Pattern has an empty worn ingredient");
             }
         }
 
         this.recipe = encoded.recipe();
         this.consumed = PatternContents.condense(adapt(encoded.inputs(), adapt));
-        this.retained = PatternContents.condense(adapt(encoded.retained(), adapt));
+        this.kept = PatternContents.condense(adapt(encoded.retained(), adapt));
+        this.worn = PatternContents.condense(adapt(encoded.worn(), adapt));
+        List<GenericStack> returned = new ArrayList<>(kept.size() + worn.size());
+        returned.addAll(kept);
+        returned.addAll(worn);
+        this.retained = List.copyOf(returned);
         this.inputs = new PatternInput[consumed.size() + retained.size()];
         int slot = 0;
         for (GenericStack input : consumed) {
-            inputs[slot++] = new PatternInput(input.what(), input.amount(), false);
+            inputs[slot++] = new PatternInput(input.what(), input.amount(), false, false, substitution);
         }
-        for (GenericStack kept : retained) {
-            inputs[slot++] = new PatternInput(kept.what(), kept.amount(), true);
+        for (GenericStack stack : kept) {
+            inputs[slot++] = new PatternInput(stack.what(), stack.amount(), true, false, substitution);
+        }
+        for (GenericStack tool : worn) {
+            inputs[slot++] = new PatternInput(tool.what(), tool.amount(), true, true, substitution);
         }
         this.outputs = List.of(adapt.apply(encoded.result()));
     }
@@ -102,8 +119,22 @@ public abstract class RecipePattern implements NepPattern {
             List<GenericStack> inputs,
             List<GenericStack> retained,
             GenericStack result) {
+        return encode(item, component, recipe, inputs, retained, List.of(), result);
+    }
+
+    protected static ItemStack encode(
+            Item item,
+            DataComponentType<EncodedRecipePattern> component,
+            ResourceLocation recipe,
+            List<GenericStack> inputs,
+            List<GenericStack> retained,
+            List<GenericStack> worn,
+            GenericStack result) {
         ItemStack stack = new ItemStack(item);
-        stack.set(component, new EncodedRecipePattern(recipe, List.copyOf(inputs), List.copyOf(retained), result));
+        stack.set(
+                component,
+                new EncodedRecipePattern(
+                        recipe, List.copyOf(inputs), List.copyOf(retained), List.copyOf(worn), result));
         return stack;
     }
 
@@ -113,6 +144,10 @@ public abstract class RecipePattern implements NepPattern {
 
     public List<GenericStack> retained() {
         return retained;
+    }
+
+    public List<GenericStack> worn() {
+        return worn;
     }
 
     @Override
@@ -149,7 +184,8 @@ public abstract class RecipePattern implements NepPattern {
         for (GenericStack input : consumed) {
             tooltip.addInput(input);
         }
-        RetainedInputs.describe(tooltip, retained);
+        RetainedInputs.describe(tooltip, kept);
+        RetainedInputs.describeWorn(tooltip, worn);
         return tooltip;
     }
 

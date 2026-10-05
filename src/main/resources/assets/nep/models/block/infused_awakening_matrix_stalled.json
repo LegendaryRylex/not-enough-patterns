@@ -1,8 +1,0 @@
-{
-  "parent": "nep:block/fusion_matrix_idle",
-  "textures": {
-    "main": "nep:block/matrix/main_stalled",
-    "middle": "nep:block/matrix/infused_awakening/middle_stalled",
-    "border": "nep:block/matrix/infused_awakening/border"
-  }
-}

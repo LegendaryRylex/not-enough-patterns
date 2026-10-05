@@ -11,15 +11,25 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 
 public record EncodedRecipePattern(
-        ResourceLocation recipe, List<GenericStack> inputs, List<GenericStack> retained, GenericStack result) {
+        ResourceLocation recipe,
+        List<GenericStack> inputs,
+        List<GenericStack> retained,
+        List<GenericStack> worn,
+        GenericStack result) {
 
     public EncodedRecipePattern {
         inputs = List.copyOf(inputs);
         retained = List.copyOf(retained);
+        worn = List.copyOf(worn);
     }
 
     public EncodedRecipePattern(ResourceLocation recipe, List<GenericStack> inputs, GenericStack result) {
-        this(recipe, inputs, List.of(), result);
+        this(recipe, inputs, List.of(), List.of(), result);
+    }
+
+    public EncodedRecipePattern(
+            ResourceLocation recipe, List<GenericStack> inputs, List<GenericStack> retained, GenericStack result) {
+        this(recipe, inputs, retained, List.of(), result);
     }
 
     public static final Codec<EncodedRecipePattern> CODEC = RecordCodecBuilder.create(builder -> builder.group(
@@ -28,6 +38,9 @@ public record EncodedRecipePattern(
                     GenericStack.FAULT_TOLERANT_LIST_CODEC
                             .optionalFieldOf("retained", List.of())
                             .forGetter(EncodedRecipePattern::retained),
+                    GenericStack.FAULT_TOLERANT_LIST_CODEC
+                            .optionalFieldOf("worn", List.of())
+                            .forGetter(EncodedRecipePattern::worn),
                     GenericStackCodecs.FAULT_TOLERANT.fieldOf("result").forGetter(EncodedRecipePattern::result))
             .apply(builder, EncodedRecipePattern::new));
 
@@ -38,6 +51,8 @@ public record EncodedRecipePattern(
             EncodedRecipePattern::inputs,
             GenericStack.STREAM_CODEC.apply(ByteBufCodecs.list()),
             EncodedRecipePattern::retained,
+            GenericStack.STREAM_CODEC.apply(ByteBufCodecs.list()),
+            EncodedRecipePattern::worn,
             GenericStack.STREAM_CODEC,
             EncodedRecipePattern::result,
             EncodedRecipePattern::new);
@@ -53,6 +68,11 @@ public record EncodedRecipePattern(
         }
         for (GenericStack kept : retained) {
             if (AEItems.MISSING_CONTENT.is(kept.what())) {
+                return true;
+            }
+        }
+        for (GenericStack tool : worn) {
+            if (AEItems.MISSING_CONTENT.is(tool.what())) {
                 return true;
             }
         }

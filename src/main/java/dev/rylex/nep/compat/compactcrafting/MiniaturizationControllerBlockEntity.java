@@ -15,6 +15,11 @@ import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.compactcrafting.MiniaturizationControllerBlock.ControllerStatus;
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
 import dev.rylex.nep.machine.MachineItemView;
+import dev.rylex.nep.machine.ManualCraftHost;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualCraftResult;
+import dev.rylex.nep.machine.ManualRequirement;
+import dev.rylex.nep.machine.ManualStaging;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.util.ItemCounts;
@@ -29,7 +34,6 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
@@ -57,7 +61,7 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEntity {
+public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEntity implements ManualCraftHost {
 
     static final int INPUT_SLOTS = 27;
     static final int OUTPUT_SLOTS = 9;
@@ -99,7 +103,7 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
     private static final String COLLECTED_KEY = "Collected";
     private static final String BUILT_KEY = "Built";
 
-    private final Map<Item, Template> templates = new HashMap<>();
+    private final Map<AEItemKey, Template> templates = new HashMap<>();
     private final IItemHandler outputView = new OutputView();
     private final IItemHandler machineView =
             MachineItemView.demandLimited(inputBuffer, outputView, this::manualDemandFor);
@@ -274,7 +278,7 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         }
 
         Stall reason = Stall.NONE;
-        for (Item wanted : List.copyOf(owed.keySet())) {
+        for (AEItemKey wanted : List.copyOf(owed.keySet())) {
             if (owed.getOrDefault(wanted, 0L) <= 0) {
                 continue;
             }
@@ -495,17 +499,23 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
             failCraft(level, "the field produced nothing this controller could collect");
             return;
         }
-        Item produced = activeResult.getItem();
+        AEItemKey produced = AEItemKey.of(activeResult);
         int amount = collected;
-        if (owed.getOrDefault(produced, 0L) > 0) {
+        if (produced != null && owed.getOrDefault(produced, 0L) > 0) {
+            boolean manual = isManualJob(produced);
             decrement(owed, produced, 1);
+            if (manual) {
+                decrement(manualOwed, produced, 1);
+            }
             if (!owed.containsKey(produced)) {
                 templates.remove(produced);
             }
             if (owed.isEmpty()) {
                 pushingCpus.clear();
             }
-            toReturn.merge(produced, (long) amount, Long::sum);
+            if (!manual) {
+                toReturn.merge(produced, (long) amount, Long::sum);
+            }
         }
         resetCraft();
         flushOutput(level);
@@ -708,7 +718,7 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
     }
 
     @Nullable
-    private RecipeHolder<MiniaturizationRecipe> recipeFor(Level level, Item output) {
+    private RecipeHolder<MiniaturizationRecipe> recipeFor(Level level, AEItemKey output) {
         Template template = templates.get(output);
         if (template != null && template.recipe() != null) {
             RecipeHolder<MiniaturizationRecipe> holder =
@@ -717,7 +727,7 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
                 return holder;
             }
         }
-        return MiniaturizationRecipeResolver.resolveByOutputItem(level, output);
+        return MiniaturizationRecipeResolver.resolveByOutputItem(level, output.getItem());
     }
 
     @Nullable
@@ -770,7 +780,10 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         if (holder == null) {
             return reject(Refusal.UNKNOWN_RECIPE, "no miniaturization recipe with id " + miniaturization.recipe());
         }
-        Item producedItem = outputKey.getItem();
+        AEItemKey producedItem = outputKey;
+        if (isManualJob(producedItem)) {
+            return reject(Refusal.MIXED_RECIPES, "a manual craft of " + producedItem + " is already queued");
+        }
         Template existing = templates.get(producedItem);
         if (existing != null && !miniaturization.recipe().equals(existing.recipe())) {
             return reject(
@@ -829,7 +842,61 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         refusalTicks = 0;
     }
 
-    private void captureTemplate(Item output, Map<AEItemKey, Long> items, ResourceLocation recipe) {
+    @Override
+    public ManualCraftOutcome startManualCraft(Player player, ResourceLocation recipe, int batches) {
+        Level level = getLevel();
+        if (level == null || level.isClientSide) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNKNOWN_RECIPE);
+        }
+        if (!NepConfig.manualCrafting() || !NepConfig.compactCraftingMiniaturizationController()) {
+            return ManualCraftOutcome.failed(ManualCraftResult.DISABLED);
+        }
+        if (FieldBinding.adjacentField(level, getBlockPos()) == null) {
+            return ManualCraftOutcome.failed(ManualCraftResult.NO_FIELD);
+        }
+        RecipeHolder<MiniaturizationRecipe> holder = MiniaturizationRecipeResolver.resolveById(level, recipe);
+        if (holder == null) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNKNOWN_RECIPE);
+        }
+        GenericStack output = MiniaturizationRecipeIngredients.singleOutput(holder.value());
+        List<ManualRequirement> requirements = MiniaturizationRecipeIngredients.manualRequirements(holder.value());
+        if (output == null || requirements == null || !(output.what() instanceof AEItemKey outputKey)) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNSUPPORTED);
+        }
+        ItemStack result = outputKey.toStack((int) output.amount());
+
+        AEItemKey produced = AEItemKey.of(result);
+        Template existing = templates.get(produced);
+        if (existing != null && !recipe.equals(existing.recipe())) {
+            return ManualCraftOutcome.failed(ManualCraftResult.BUSY);
+        }
+        if (owed.containsKey(produced) && !isManualJob(produced)) {
+            return ManualCraftOutcome.failed(ManualCraftResult.BUSY);
+        }
+
+        ManualStaging.Result staged = pullFromPlayer(player, requirements, batches);
+        if (staged.status() != ManualCraftResult.STARTED) {
+            return ManualCraftOutcome.failed(staged.status());
+        }
+
+        captureTemplate(produced, staged.perCraft(), recipe);
+        owed.merge(produced, (long) staged.batches(), Long::sum);
+        manualOwed.merge(produced, (long) staged.batches(), Long::sum);
+        clearRefusal();
+        markScanNeeded();
+        setChanged();
+        if (NepConfig.debugLogging()) {
+            Nep.LOGGER.info(
+                    "Miniaturization controller {} queued {} manual craft(s) of {} for {}",
+                    getBlockPos(),
+                    staged.batches(),
+                    produced,
+                    player.getName().getString());
+        }
+        return ManualCraftOutcome.started(staged.batches(), result);
+    }
+
+    private void captureTemplate(AEItemKey output, Map<AEItemKey, Long> items, ResourceLocation recipe) {
         List<AEKey> keys = new ArrayList<>(items.size());
         List<Long> counts = new ArrayList<>(items.size());
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
@@ -846,9 +913,9 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         }
         List<AEKey> keys = new ArrayList<>();
         List<Long> targets = new ArrayList<>();
-        for (Map.Entry<Item, Long> entry : owed.entrySet()) {
+        for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
             Template template = templates.get(entry.getKey());
-            if (template == null) {
+            if (template == null || isManualJob(entry.getKey())) {
                 continue;
             }
             for (int i = 0; i < template.keys().size(); i++) {
@@ -887,7 +954,7 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
 
     private int reportedDemandFor(AEKey key) {
         long target = 0;
-        for (Map.Entry<Item, Long> entry : owed.entrySet()) {
+        for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
             Template template = templates.get(entry.getKey());
             if (template == null) {
                 continue;
@@ -1017,6 +1084,7 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
                     cancelled);
         }
         owed.clear();
+        manualOwed.clear();
         templates.clear();
         pushingCpus.clear();
         power.cancelRequests();
@@ -1058,9 +1126,9 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         super.saveAdditional(tag, registries);
         tag.put(INPUT_KEY, inputBuffer.serializeNBT(registries));
         tag.put(OUTPUT_KEY, outputBuffer.serializeNBT(registries));
-        tag.put(OWED_KEY, ItemCounts.save(owed));
-        tag.put(RETURN_KEY, ItemCounts.save(toReturn));
-        tag.put(RETURN_DIRS_KEY, returnDirections.save());
+        tag.put(OWED_KEY, ItemCounts.save(owed, registries));
+        tag.put(RETURN_KEY, ItemCounts.save(toReturn, registries));
+        tag.put(RETURN_DIRS_KEY, returnDirections.save(registries));
         tag.put(TEMPLATE_KEY, saveTemplates(registries));
         if (!activeResult.isEmpty()) {
             tag.put(ACTIVE_KEY, activeResult.save(registries));
@@ -1114,9 +1182,9 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         super.loadAdditional(tag, registries);
         loadBuffer(inputBuffer, registries, tag.getCompound(INPUT_KEY));
         loadBuffer(outputBuffer, registries, tag.getCompound(OUTPUT_KEY));
-        ItemCounts.load(owed, tag, OWED_KEY);
-        ItemCounts.load(toReturn, tag, RETURN_KEY);
-        returnDirections.load(tag, RETURN_DIRS_KEY, "ReturnDir", toReturn.keySet());
+        ItemCounts.load(owed, tag, OWED_KEY, registries);
+        ItemCounts.load(toReturn, tag, RETURN_KEY, registries);
+        returnDirections.load(tag, RETURN_DIRS_KEY, "ReturnDir", toReturn.keySet(), registries);
         loadTemplates(tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND), registries);
         activeResult = tag.contains(ACTIVE_KEY)
                 ? ItemStack.parse(registries, tag.getCompound(ACTIVE_KEY)).orElse(ItemStack.EMPTY)
@@ -1176,9 +1244,9 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
 
     private ListTag saveTemplates(HolderLookup.Provider registries) {
         ListTag list = new ListTag();
-        for (Map.Entry<Item, Template> entry : templates.entrySet()) {
+        for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
             CompoundTag tag = new CompoundTag();
-            tag.putString("Id", BuiltInRegistries.ITEM.getKey(entry.getKey()).toString());
+            ItemCounts.putKey(tag, entry.getKey(), registries);
             ListTag stacks = new ListTag();
             for (int i = 0; i < entry.getValue().keys().size(); i++) {
                 stacks.add(GenericStack.writeTag(
@@ -1200,7 +1268,7 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         templates.clear();
         for (int i = 0; i < list.size(); i++) {
             CompoundTag tag = list.getCompound(i);
-            Item item = ItemCounts.item(tag.getString("Id"));
+            AEItemKey item = ItemCounts.key(tag, registries);
             if (item == null) {
                 continue;
             }
@@ -1255,7 +1323,8 @@ public class MiniaturizationControllerBlockEntity extends BufferedMatrixBlockEnt
         @Override
         public @NotNull ItemStack extractItem(int slot, int amount, boolean simulate) {
             ItemStack stack = outputBuffer.getStackInSlot(slot);
-            if (stack.isEmpty() || toReturn.getOrDefault(stack.getItem(), 0L) > 0) {
+            AEItemKey key = AEItemKey.of(stack);
+            if (key == null || toReturn.getOrDefault(key, 0L) > 0) {
                 return ItemStack.EMPTY;
             }
             return outputBuffer.extractItem(slot, amount, simulate);

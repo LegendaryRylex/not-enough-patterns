@@ -10,6 +10,7 @@ import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
 import dev.rylex.nep.pattern.GridPlan;
 import dev.rylex.nep.pattern.MechanicalCraftingPattern;
@@ -35,14 +36,18 @@ final class CreatePatternEncoders {
 
     static void register() {
         SyntheticRecipes.register((recipe, level) -> LogStripping.byId(recipe, level) != null);
-        PatternConverters.register(SequencedAssemblyRecipe.class, CreatePatternEncoders::sequencedAssembly);
-        PatternConverters.register(ItemApplicationRecipe.class, CreatePatternEncoders::itemApplication);
-        PatternConverters.register(SandPaperPolishingRecipe.class, CreatePatternEncoders::sandPaperPolishing);
-        PatternConverters.register(FillingRecipe.class, CreatePatternEncoders::filling);
-        PatternConverters.register(CraftingRecipe.class, CreatePatternEncoders::mechanicalCrafting);
-        PatternConverters.registerFallback(CreatePatternEncoders::mechanicalCraftingByResult);
-        PatternConverters.registerFallback(CreatePatternEncoders::andesiteCraftingByResult);
-        PatternConverters.registerFallback(CreatePatternEncoders::sequencedAssemblyByResult);
+        PatternConverters.register(
+                DecoderModule.CREATE, SequencedAssemblyRecipe.class, CreatePatternEncoders::sequencedAssembly);
+        PatternConverters.register(
+                DecoderModule.CREATE, ItemApplicationRecipe.class, CreatePatternEncoders::itemApplication);
+        PatternConverters.register(
+                DecoderModule.CREATE, SandPaperPolishingRecipe.class, CreatePatternEncoders::sandPaperPolishing);
+        PatternConverters.register(DecoderModule.CREATE, FillingRecipe.class, CreatePatternEncoders::filling);
+        PatternConverters.register(
+                DecoderModule.CREATE, CraftingRecipe.class, CreatePatternEncoders::mechanicalCrafting);
+        PatternConverters.registerFallback(DecoderModule.CREATE, CreatePatternEncoders::mechanicalCraftingByResult);
+        PatternConverters.registerFallback(DecoderModule.CREATE, CreatePatternEncoders::andesiteCraftingByResult);
+        PatternConverters.registerFallback(DecoderModule.CREATE, CreatePatternEncoders::sequencedAssemblyByResult);
     }
 
     @Nullable
@@ -116,10 +121,10 @@ final class CreatePatternEncoders {
         Split split = splitAndesite(expected, holder, inputs, result);
         return split == null
                 ? null
-                : AndesiteCraftingPattern.encode(holder.id(), split.consumed(), split.kept(), result);
+                : AndesiteCraftingPattern.encode(holder.id(), split.consumed(), split.kept(), split.worn(), result);
     }
 
-    private record Split(List<GenericStack> consumed, List<GenericStack> kept) {}
+    private record Split(List<GenericStack> consumed, List<GenericStack> kept, List<GenericStack> worn) {}
 
     @Nullable
     private static Split splitAndesite(
@@ -136,10 +141,17 @@ final class CreatePatternEncoders {
         }
         List<GenericStack> consumed = new ArrayList<>();
         List<GenericStack> kept = new ArrayList<>();
+        List<GenericStack> worn = new ArrayList<>();
         for (int slot = 0; slot < chosen.length; slot++) {
-            (expected.isRetained(slot) ? kept : consumed).add(chosen[slot]);
+            if (expected.isWorn(slot)) {
+                worn.add(chosen[slot]);
+            } else if (expected.isRetained(slot)) {
+                kept.add(chosen[slot]);
+            } else {
+                consumed.add(chosen[slot]);
+            }
         }
-        return consumed.isEmpty() ? null : new Split(List.copyOf(consumed), List.copyOf(kept));
+        return consumed.isEmpty() ? null : new Split(List.copyOf(consumed), List.copyOf(kept), List.copyOf(worn));
     }
 
     @Nullable
@@ -183,8 +195,8 @@ final class CreatePatternEncoders {
 
         return only == null
                 ? null
-                : PatternFallback.Result.of(
-                        AndesiteCraftingPattern.encode(only.id(), split.consumed(), split.kept(), result));
+                : PatternFallback.Result.of(AndesiteCraftingPattern.encode(
+                        only.id(), split.consumed(), split.kept(), split.worn(), result));
     }
 
     @Nullable

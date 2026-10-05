@@ -10,9 +10,11 @@ Pattern providers only cope with machines shaped like a furnace: items in, items
 | -------------------- | :----: | :----: | ----------------------------------------------------------- |
 | Actually Additions   |   ✅   |   ❌   | Empowering, Atomic Reconstruction                           |
 | Apothic Enchanting   |   ✅   |   ✅   | Enchantment Infusion                                        |
+| Ars Nouveau          |   ✅   |   ❌   | Enchanting Apparatus, Imbuement Chamber, Rituals            |
 | Compact Crafting     |   ✅   |   ❌   | Miniaturization                                             |
 | Create               |   ✅   |   ❌   | Mechanical Crafting, Deploying, Filling, Sequenced Assembly |
 | Draconic Evolution   |   ✅   |   ❌   | Fusion Crafting                                             |
+| Malum                |   ✅   |   ❌   | Spirit Infusion, Spirit Focusing                            |
 | Mystical Agriculture |   ✅   |   ✅   | Infusion, Awakening                                         |
 
 Look a recipe up in JEI, hit the **+** button at a Pattern Encoding Terminal, and the right pattern comes back with the ingredients already worked out.
@@ -50,14 +52,12 @@ NEP is built with pack devs in mind: `nep-server.toml` is fully modular. Every i
 
 | Mod                    |Processes                                       |
 | ---------------------- |----------------------------------------------- |
-| Ars Nouveau            |Enchanting Core, Scribe's Table, Rituals(maybe) |
 | Cooking for Blockheads |Kitchen Suite                                   |
 | Enchanted              |Distillery, Kettle, Witch's Oven                |
 | Excessive Utilities    |QED(maybe), Rainbow Generator Controller(maybe) |
 | Farmer's Delight       |Cooking Pot, Skillet, Cutting Board             |
 | Farming For Blockheads |Market Trades                                   |
 | Iron's Spellbooks      |Alchemist Cauldron                              |
-| Malum                  |Spirit Altar                                    |
 | Mekanism               |Metallurgic Infuser                             |
 | Occultism              |Rituals                                         |
 | Oritech                |Particle Accelerator, Fluid Centrifuge, Cyber Station |

@@ -1,7 +1,0 @@
-{
-  "variants": {
-    "status=idle": { "model": "nep:block/miniaturization_controller_idle" },
-    "status=running": { "model": "nep:block/miniaturization_controller_running" },
-    "status=stalled": { "model": "nep:block/miniaturization_controller_stalled" }
-  }
-}

@@ -1,0 +1,10 @@
+{
+    "parent": "nep:block/matrix/cage_core",
+    "textures": {
+        "core": "nep:block/matrix/core/focused_spirit",
+        "corner": "nep:block/matrix/focused_spirit/corner",
+        "particle": "nep:block/matrix/focused_spirit/border",
+        "ring": "nep:block/matrix/focused_spirit/ring",
+        "strut": "nep:block/matrix/focused_spirit/strut"
+    }
+}

@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=east": {
+            "model": "nep:block/pattern_decoder",
+            "y": 90
+        },
+        "facing=north": {
+            "model": "nep:block/pattern_decoder"
+        },
+        "facing=south": {
+            "model": "nep:block/pattern_decoder",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "nep:block/pattern_decoder",
+            "y": 270
+        }
+    }
+}

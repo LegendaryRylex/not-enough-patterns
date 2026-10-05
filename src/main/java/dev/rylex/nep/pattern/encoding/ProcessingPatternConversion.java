@@ -25,7 +25,7 @@ public final class ProcessingPatternConversion {
 
     @Nullable
     public static Conversion of(EncodedRecipePattern encoded) {
-        if (!encoded.retained().isEmpty()) {
+        if (!encoded.retained().isEmpty() || !encoded.worn().isEmpty()) {
             return null;
         }
         return build(encoded.inputs(), encoded.result(), encoded.containsMissingContent(), encoded.recipe());

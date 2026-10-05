@@ -116,7 +116,7 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
         Component queuedText = queued > 0
                 ? Component.translatable("gui.nep.miniaturization_controller.queued", queued)
                 : Component.empty();
-        int nameLimit = READOUT_RIGHT - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
+        int nameLimit = readoutRight() - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
         Component craftingName = making.isEmpty()
                 ? Component.translatable("gui.nep.miniaturization_controller.crafting.idle")
                 : making.getHoverName();
@@ -258,7 +258,7 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
     @Override
     protected void renderReadoutTooltips(GuiGraphics graphics, int mouseX, int mouseY) {
         MiniaturizationControllerBlockEntity controller = menu.controller();
-        if (controller == null || !within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, 32)) {
+        if (controller == null || !within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), 32)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

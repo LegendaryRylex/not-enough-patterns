@@ -13,15 +13,18 @@ repo/
 *.iml
 *.ipr
 *.iws
+*.bat
 
 .classpath
 .project
 .settings/
 .metadata
 *.launch
-.vscode/launch.json
 
+.vscode/
 .editorconfig
+
 skip_mods.local
 /src/main/resources/data/nep/recipe/dev_test
+/src/generated/resources/.cache/
 /art

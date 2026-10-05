@@ -1,11 +1,13 @@
 package dev.rylex.nep.compat.create;
 
+import appeng.api.stacks.AEItemKey;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.processing.sequenced.IAssemblyRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedRecipe;
 import dev.rylex.nep.compat.create.newage.CreateNewAgeCompat;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.util.RecipeCache;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,7 +21,6 @@ import java.util.Optional;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -46,7 +47,7 @@ final class SequencedAssemblyResolver {
 
     record Demand(List<ItemDemand> items, List<FluidDemand> fluids, long energy) {}
 
-    private static final RecipeCache<Map<Item, Optional<SequencedAssemblyRecipe>>> CACHE =
+    private static final RecipeCache<Map<AEItemKey, Optional<SequencedAssemblyRecipe>>> CACHE =
             RecipeCache.of(level -> Collections.synchronizedMap(new HashMap<>()));
     private static final Map<SequencedAssemblyRecipe, Requirements> REQ_CACHE =
             Collections.synchronizedMap(new IdentityHashMap<>());
@@ -113,8 +114,12 @@ final class SequencedAssemblyResolver {
         if (target.isEmpty()) {
             return null;
         }
+        AEItemKey key = AEItemKey.of(target);
+        if (key == null) {
+            return null;
+        }
         return CACHE.get(level)
-                .computeIfAbsent(target.getItem(), item -> Optional.ofNullable(compute(level, target)))
+                .computeIfAbsent(key, ignored -> Optional.ofNullable(compute(level, target)))
                 .orElse(null);
     }
 
@@ -249,6 +254,22 @@ final class SequencedAssemblyResolver {
         return new Demand(List.copyOf(items), List.copyOf(fluids), energy);
     }
 
+    @Nullable
+    static List<ManualRequirement> manualRequirements(SequencedAssemblyRecipe recipe) {
+        Demand demand = demandOf(recipe);
+        if (!demand.fluids().isEmpty()) {
+            return null;
+        }
+        List<ManualRequirement> requirements = new ArrayList<>(demand.items().size());
+        for (ItemDemand item : demand.items()) {
+            if (item.ingredient().isEmpty() || item.count() <= 0) {
+                return null;
+            }
+            requirements.add(new ManualRequirement(item.ingredient(), item.count(), true));
+        }
+        return requirements.isEmpty() ? null : List.copyOf(requirements);
+    }
+
     private static Requirements requirements(SequencedAssemblyRecipe recipe) {
         List<Ingredient> orderedTools = new ArrayList<>();
         List<StationKind> order = new ArrayList<>();
@@ -295,7 +316,7 @@ final class SequencedAssemblyResolver {
         return layout;
     }
 
-    private static List<RecipeHolder<SequencedAssemblyRecipe>> all(Level level) {
+    static List<RecipeHolder<SequencedAssemblyRecipe>> all(Level level) {
         return level.getRecipeManager()
                 .getAllRecipesFor(AllRecipeTypes.SEQUENCED_ASSEMBLY.<RecipeWrapper, SequencedAssemblyRecipe>getType());
     }

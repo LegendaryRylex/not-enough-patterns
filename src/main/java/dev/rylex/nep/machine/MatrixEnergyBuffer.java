@@ -6,6 +6,8 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 
 public final class MatrixEnergyBuffer implements IEnergyStorage {
 
+    public static final int SYNC_STEPS = 1000;
+
     private static final String STORED_KEY = "Stored";
     private static final String LEGACY_STORED_KEY = "Energy";
 
@@ -28,6 +30,16 @@ public final class MatrixEnergyBuffer implements IEnergyStorage {
 
     public long maxReceive() {
         return maxReceive;
+    }
+
+    public int syncLevel() {
+        if (capacity <= 0L || stored <= 0L) {
+            return 0;
+        }
+        if (stored >= capacity) {
+            return SYNC_STEPS;
+        }
+        return (int) Math.min(SYNC_STEPS - 1L, stored / Math.max(1L, capacity / SYNC_STEPS));
     }
 
     public long receive(long toReceive, boolean simulate) {

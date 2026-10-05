@@ -12,6 +12,10 @@ import dev.compactmods.crafting.core.CCBlocks;
 import dev.compactmods.crafting.projector.FieldProjectorBlock;
 import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.machine.ManualCraftFixtures;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualCraftResult;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import java.util.ArrayList;
@@ -20,6 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -356,5 +361,43 @@ public final class MiniaturizationControllerGameTest {
                     "the controller built over a block that was already in the field");
             helper.succeed();
         });
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void queuesAMiniaturizationCraftFromThePlayersInventory(GameTestHelper helper) {
+        MiniaturizationControllerBlockEntity controller = place(helper);
+        powerUp(helper);
+        formField(helper);
+        RecipeHolder<MiniaturizationRecipe> holder = smallFieldRecipe(helper);
+        List<ManualRequirement> requirements = MiniaturizationRecipeIngredients.manualRequirements(holder.value());
+        helper.assertTrue(requirements != null, "the recipe cannot be expressed as manual requirements");
+        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+
+        ManualCraftOutcome outcome = controller.startManualCraft(player, holder.id(), 1);
+
+        ManualCraftFixtures.assertQueued(helper, outcome, "the Miniaturization Controller");
+        helper.assertTrue(
+                ManualCraftFixtures.inventoryCount(player) == 0, "the Controller left ingredients in the inventory");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void refusesAManualCraftWithNoFieldBesideIt(GameTestHelper helper) {
+        MiniaturizationControllerBlockEntity controller = place(helper);
+        powerUp(helper);
+        RecipeHolder<MiniaturizationRecipe> holder = smallFieldRecipe(helper);
+        List<ManualRequirement> requirements = MiniaturizationRecipeIngredients.manualRequirements(holder.value());
+        helper.assertTrue(requirements != null, "the recipe cannot be expressed as manual requirements");
+        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+
+        ManualCraftOutcome outcome = controller.startManualCraft(player, holder.id(), 1);
+
+        helper.assertTrue(
+                outcome.status() == ManualCraftResult.NO_FIELD,
+                "a Controller with no field did not say so: " + outcome.status());
+        helper.assertTrue(
+                ManualCraftFixtures.inventoryCount(player) > 0,
+                "the Controller took ingredients for a craft it refused");
+        helper.succeed();
     }
 }

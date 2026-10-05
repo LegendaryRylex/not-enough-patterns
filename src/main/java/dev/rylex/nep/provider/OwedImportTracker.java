@@ -5,7 +5,7 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.crafting.ICraftingService;
 import appeng.api.networking.security.IActionSource;
-import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import dev.rylex.nep.NepConfig;
@@ -43,9 +43,9 @@ public final class OwedImportTracker {
     }
 
     public boolean record(IPatternDetails pattern, @Nullable KeyCounter[] inputs, OwedSource source) {
-        Map<AEItemKey, Long> owed = new LinkedHashMap<>();
+        Map<AEKey, Long> owed = new LinkedHashMap<>();
         for (var output : pattern.getOutputs()) {
-            if (output.amount() > 0 && output.what() instanceof AEItemKey key) {
+            if (output.amount() > 0 && output.what() instanceof AEKey key) {
                 owed.merge(key, output.amount(), Long::sum);
             }
         }
@@ -56,8 +56,8 @@ public final class OwedImportTracker {
         return true;
     }
 
-    private static Map<AEItemKey, Long> parkedItems(@Nullable KeyCounter[] inputs) {
-        Map<AEItemKey, Long> parked = new LinkedHashMap<>();
+    private static Map<AEKey, Long> parkedItems(@Nullable KeyCounter[] inputs) {
+        Map<AEKey, Long> parked = new LinkedHashMap<>();
         if (inputs == null) {
             return parked;
         }
@@ -66,7 +66,7 @@ public final class OwedImportTracker {
                 continue;
             }
             for (var entry : counter) {
-                if (entry.getLongValue() > 0 && entry.getKey() instanceof AEItemKey key) {
+                if (entry.getLongValue() > 0 && entry.getKey() instanceof AEKey key) {
                     parked.merge(key, entry.getLongValue(), Long::sum);
                 }
             }
@@ -91,8 +91,8 @@ public final class OwedImportTracker {
             OwedSource source = sourceEntry.getKey();
             List<OwedDispatch> live = sourceEntry.getValue();
 
-            for (Map.Entry<AEItemKey, Long> budgeted : budgets(live).entrySet()) {
-                AEItemKey key = budgeted.getKey();
+            for (Map.Entry<AEKey, Long> budgeted : budgets(live).entrySet()) {
+                AEKey key = budgeted.getKey();
                 var context = new OwedImportContext(
                         storage, energy, actionSource, key, (int) Math.min(budgeted.getValue(), Integer.MAX_VALUE));
                 strategyFor(level, providerPos, source).transfer(context);
@@ -134,14 +134,14 @@ public final class OwedImportTracker {
         return new ImportResult(moved, changed);
     }
 
-    private static Map<AEItemKey, Long> budgets(List<OwedDispatch> live) {
-        Map<AEItemKey, Long> owed = new LinkedHashMap<>();
-        Map<AEItemKey, Long> reserved = new HashMap<>();
+    private static Map<AEKey, Long> budgets(List<OwedDispatch> live) {
+        Map<AEKey, Long> owed = new LinkedHashMap<>();
+        Map<AEKey, Long> reserved = new HashMap<>();
         for (OwedDispatch dispatch : live) {
-            for (Map.Entry<AEItemKey, Long> entry : dispatch.owed().entrySet()) {
+            for (Map.Entry<AEKey, Long> entry : dispatch.owed().entrySet()) {
                 owed.merge(entry.getKey(), entry.getValue(), Long::sum);
             }
-            for (AEItemKey key : dispatch.parked().keySet()) {
+            for (AEKey key : dispatch.parked().keySet()) {
                 long amount = dispatch.reserved(key);
                 if (amount > 0) {
                     reserved.merge(key, amount, Long::sum);
@@ -156,7 +156,7 @@ public final class OwedImportTracker {
         return owed;
     }
 
-    private static void settle(List<OwedDispatch> live, AEItemKey key, long imported) {
+    private static void settle(List<OwedDispatch> live, AEKey key, long imported) {
         long remaining = imported;
         for (OwedDispatch dispatch : live) {
             if (remaining <= 0) {
@@ -167,7 +167,7 @@ public final class OwedImportTracker {
     }
 
     private static boolean isRequested(ICraftingService crafting, OwedDispatch dispatch) {
-        for (AEItemKey key : dispatch.owed().keySet()) {
+        for (AEKey key : dispatch.owed().keySet()) {
             if (crafting.getRequestedAmount(key) > 0) {
                 return true;
             }
@@ -201,12 +201,12 @@ public final class OwedImportTracker {
             var list = tag.getList(DISPATCHES_KEY, Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) {
                 var entryTag = list.getCompound(i);
-                Map<AEItemKey, Long> owed = new LinkedHashMap<>();
+                Map<AEKey, Long> owed = new LinkedHashMap<>();
                 readStacks(registries, entryTag.getList("owed", Tag.TAG_COMPOUND), owed);
                 if (owed.isEmpty()) {
                     continue;
                 }
-                Map<AEItemKey, Long> parked = new LinkedHashMap<>();
+                Map<AEKey, Long> parked = new LinkedHashMap<>();
                 readStacks(registries, entryTag.getList("parked", Tag.TAG_COMPOUND), parked);
                 long deadline = entryTag.contains("grace") ? entryTag.getLong("grace") : OwedDispatch.NO_DEADLINE;
                 add(OwedSource.readFromNBT(entryTag), new OwedDispatch(parked, owed, deadline));
@@ -218,11 +218,13 @@ public final class OwedImportTracker {
         for (int i = 0; i < legacy.size(); i++) {
             var entryTag = legacy.getCompound(i);
             var stack = GenericStack.readTag(registries, entryTag.getCompound("stack"));
-            if (stack == null || stack.amount() <= 0 || !(stack.what() instanceof AEItemKey key)) {
+            if (stack == null || stack.amount() <= 0 || !(stack.what() instanceof AEKey key)) {
                 continue;
             }
             long deadline = entryTag.contains("grace") ? entryTag.getLong("grace") : OwedDispatch.NO_DEADLINE;
-            add(OwedSource.readFromNBT(entryTag), new OwedDispatch(Map.of(), Map.of(key, stack.amount()), deadline));
+            add(
+                    OwedSource.readFromNBT(entryTag),
+                    new OwedDispatch(Map.of(), Map.of(stack.what(), stack.amount()), deadline));
         }
     }
 
@@ -230,18 +232,18 @@ public final class OwedImportTracker {
         dispatches.computeIfAbsent(source, s -> new ArrayList<>()).add(dispatch);
     }
 
-    private static ListTag writeStacks(HolderLookup.Provider registries, Map<AEItemKey, Long> stacks) {
+    private static ListTag writeStacks(HolderLookup.Provider registries, Map<AEKey, Long> stacks) {
         var list = new ListTag();
-        for (Map.Entry<AEItemKey, Long> entry : stacks.entrySet()) {
+        for (Map.Entry<AEKey, Long> entry : stacks.entrySet()) {
             list.add(GenericStack.writeTag(registries, new GenericStack(entry.getKey(), entry.getValue())));
         }
         return list;
     }
 
-    private static void readStacks(HolderLookup.Provider registries, ListTag list, Map<AEItemKey, Long> into) {
+    private static void readStacks(HolderLookup.Provider registries, ListTag list, Map<AEKey, Long> into) {
         for (int i = 0; i < list.size(); i++) {
             var stack = GenericStack.readTag(registries, list.getCompound(i));
-            if (stack != null && stack.amount() > 0 && stack.what() instanceof AEItemKey key) {
+            if (stack != null && stack.amount() > 0 && stack.what() instanceof AEKey key) {
                 into.merge(key, stack.amount(), Long::sum);
             }
         }

@@ -1,7 +1,11 @@
 package dev.rylex.nep.compat.apothic;
 
 import appeng.api.AECapabilities;
+import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.decoder.DecoderContent;
+import dev.rylex.nep.decoder.DecoderModule;
+import dev.rylex.nep.decoder.EncodingModuleItem;
 import dev.rylex.nep.guide.NepModules;
 import dev.shadowsoffire.apothic_enchanting.Ench;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -10,13 +14,21 @@ import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class ApothicCompat {
     private ApothicCompat() {}
 
+    private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Nep.MOD_ID);
+
+    static final DeferredItem<EncodingModuleItem> ENCODING_MODULE =
+            DecoderContent.registerModule(ITEMS, DecoderModule.APOTHIC_ENCHANTING);
+
     public static void init(IEventBus modBus) {
         NepModules.register("apothic_enchanting", NepConfig::apothicOverride);
         NepModules.register("enchantment_infusion", NepConfig::apothicInfusion);
+        ITEMS.register(modBus);
         ApothicPatternEncoders.register();
         modBus.addListener(ApothicCompat::registerCapabilities);
         modBus.addListener(ModConfigEvent.Reloading.class, ApothicCompat::onConfigReload);

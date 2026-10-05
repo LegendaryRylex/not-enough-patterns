@@ -1,0 +1,30 @@
+{
+  "type": "nep:decoder_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "malum"
+    }
+  ],
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "LBL",
+    " S "
+  ],
+  "key": {
+    "S": {
+      "item": "malum:hallowed_gold_ingot"
+    },
+    "L": {
+      "item": "ae2:logic_processor"
+    },
+    "B": {
+      "item": "ae2:blank_pattern"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:malum_encoding_module"
+  }
+}

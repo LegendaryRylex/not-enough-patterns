@@ -3,8 +3,14 @@ package dev.rylex.nep.net;
 import dev.rylex.nep.client.MachineHubStateClient;
 import dev.rylex.nep.hub.MachineHubMenu;
 import dev.rylex.nep.hub.MachineHubState;
+import dev.rylex.nep.machine.ManualCraftHost;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualPull;
+import dev.rylex.nep.menu.ManualCraftMenu;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
 import dev.rylex.nep.pattern.encoding.RetainedSlotHolder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -18,6 +24,10 @@ public final class NepNetwork {
                         PatternRecipePayload.TYPE,
                         PatternRecipePayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() -> handleRecipe(payload, context)))
+                .playToServer(
+                        ManualCraftPayload.TYPE,
+                        ManualCraftPayload.STREAM_CODEC,
+                        (payload, context) -> context.enqueueWork(() -> handleManualCraft(payload, context)))
                 .playToServer(
                         HubLinkEditPayload.TYPE,
                         HubLinkEditPayload.STREAM_CODEC,
@@ -36,6 +46,24 @@ public final class NepNetwork {
         Player player = context.player();
         if (player.containerMenu instanceof PatternRecipeHolder holder) {
             holder.nep$setOrigin(payload.origin());
+        }
+    }
+
+    private static void handleManualCraft(ManualCraftPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (!(player.containerMenu instanceof ManualCraftMenu menu)
+                || !menu.machinePos().equals(payload.pos())
+                || !player.containerMenu.stillValid(player)) {
+            return;
+        }
+        if (!(player.level().getBlockEntity(payload.pos()) instanceof ManualCraftHost host)) {
+            return;
+        }
+        ManualCraftOutcome outcome = host.startManualCraft(
+                player, payload.recipe(), Mth.clamp(payload.batches(), 1, ManualPull.MAXIMUM_BATCHES));
+        Component message = outcome.message();
+        if (message != null) {
+            player.displayClientMessage(message, true);
         }
     }
 

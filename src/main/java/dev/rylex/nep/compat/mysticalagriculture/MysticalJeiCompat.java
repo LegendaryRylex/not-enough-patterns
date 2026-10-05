@@ -4,9 +4,12 @@ import com.blakebr0.mysticalagriculture.api.crafting.IAwakeningRecipe;
 import com.blakebr0.mysticalagriculture.api.crafting.IInfusionRecipe;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.jei.JeiTransferSource;
+import dev.rylex.nep.compat.jei.ManualTransferHandler;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -21,6 +24,28 @@ public final class MysticalJeiCompat {
 
     private static final RecipeType<IAwakeningRecipe> AWAKENING =
             RecipeType.create("mysticalagriculture", "awakening", IAwakeningRecipe.class);
+
+    public static void addManualTransfers(
+            IRecipeTransferRegistration registration, IRecipeTransferHandlerHelper helper) {
+        registration.addRecipeTransferHandler(
+                new ManualTransferHandler<>(
+                        InfusedAwakeningMatrixMenu.class,
+                        NepMysticalContent.MATRIX_MENU.get(),
+                        INFUSION,
+                        helper,
+                        (recipe, level) -> MysticalRecipeIngredients.manualInfusionRequirements(recipe),
+                        MysticalJeiCompat::infusionId),
+                INFUSION);
+        registration.addRecipeTransferHandler(
+                new ManualTransferHandler<>(
+                        InfusedAwakeningMatrixMenu.class,
+                        NepMysticalContent.MATRIX_MENU.get(),
+                        AWAKENING,
+                        helper,
+                        (recipe, level) -> MysticalRecipeIngredients.manualAwakeningRequirements(recipe),
+                        MysticalJeiCompat::awakeningId),
+                AWAKENING);
+    }
 
     public static JeiTransferSource source() {
         return new JeiTransferSource() {

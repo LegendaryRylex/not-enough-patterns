@@ -19,6 +19,8 @@ item_ids:
 
 <Recipe id="nep:module_status/fusion_matrix"/>
 
+> <Color id="yellow">The block reads its own state.</Color> The Matrix is an open frame with a faceted core turning inside it, visible through every face. The core drifts while the Matrix is idle, spins up and brightens as a craft runs, and flares when the craft lands. A stalled Matrix dims and judders in place, and its frame goes dark. Neighbouring Matrices are offset from one another, so a wall of them never turns in lockstep.
+
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 ***
@@ -43,6 +45,7 @@ item_ids:
 
 * Put a Pattern Provider against any face and drop <ItemLink id="nep:fusion_crafting_pattern"/> patterns in it. The Matrix buffers the ingredients as they arrive.
 * Feed it **FE** on any face, or Draconic Evolution's own OP, which counts the same. This is the energy the craft is made of, and it replaces the Injectors entirely.
+* With nothing feeding it, a charging craft draws on the ME network's own power instead, down to the last tenth the network keeps in reserve. The `Charge From ME Network` config turns that off.
 * The Matrix is also an ME machine: it joins the network through its own grid connection, draws a small standing power cost, and returns finished items to the Provider on its own. It needs **no Import Card**.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
@@ -64,9 +67,32 @@ A craft goes through two phases, shown on the bar in the Matrix's screen.
 
 Charging is where nearly all the time goes, and it is entirely down to how much power you can push at the Matrix. A recipe costs exactly what Draconic Evolution says it costs, so a Chaotic recipe still wants the same hundred million FE the real multiblock would have burned.
 
-> <Color id="yellow">Gear upgrades automate, and keep what the old item held.</Color> The Matrix assembles gear the same way a Crafting Core does, carrying the catalyst's energy, modules and enchantments onto the result. The network sources a fresh, empty tool for the job, so an upgrade requested through the ME system never reaches for the loaded one you are carrying.
+> <Color id="yellow">Gear upgrades automate, and keep what the old item held.</Color> The Matrix assembles gear the same way a Crafting Core does, carrying the catalyst's energy, modules and enchantments onto the result. The network spends an item it already has wherever the recipe itself accepts one, so a charged, module-fitted or enchanted capacitor sitting in storage is upgraded in place instead of a blank one being crafted first.
 
 > <Color id="yellow">Kept ingredients come and go.</Color> If a recipe keeps an ingredient instead of consuming it, the pattern carries it like any other input: the Matrix borrows one for the craft and returns it untouched when the craft ends. One is enough for a job of any size, because the network gets it back before the next execution starts. A pattern encoded without it works too, from a copy you load into the input buffer by hand.
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Crafting By Hand</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+A fusion recipe can also be started out of your own inventory, with no pattern and no Provider anywhere near it. Open the Matrix, find the recipe in the recipe viewer, and press its transfer button: every ingredient leaves your inventory in one go and the craft queues up like any other.
+
+* It is all or nothing. Come up short and nothing moves: the button says so and the recipe marks the ingredients you are missing in red.
+* Holding shift queues as many crafts as your inventory can pay for, up to sixty-four, trimmed to what the input buffer has room to stage.
+* The finished item waits in the output buffer for you to take. Nothing goes to the network, and no crafting job is created.
+* An ingredient the recipe keeps rather than consumes is asked for once however many crafts you queue, and is still there when they are done.
+* Fusion builds its result out of the catalyst it was handed, so an upgrade keeps the wear and the enchantments of the tool you fed it. Where the catalyst is a tool rather than a plain item the Matrix spends the one you are holding, and the recipe viewer names it on the transfer button before you press it.
+* Energy comes from outside as always, so the Matrix still has to be powered and on a network for a hand-started craft to move.
+
+> <Color id="yellow">One result at a time.</Color> A hand-started craft and a pattern for the same result cannot queue together: whichever arrives second is refused, so the Matrix never has to guess who a finished item belongs to.
+
+Turn **Manual Crafting** off under Machines in the config to leave the Matrix crafting only what a Pattern Provider pushes to it.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 
@@ -106,6 +132,7 @@ Wyvern Cores fill the buffer in a straight line, while Draconic and Chaotic Core
 
 * The top readout names what is being fused, the phase, and how much of the energy cost is banked.
 * The input buffer only accepts items a pending craft still needs, so loose items cannot clog it.
+* Each buffer slot holds up to 64 of any item, whatever that item normally stacks to, so a recipe wanting a pile of tools or potions still fits.
 * The upgrade slot on the right holds the cores. The gauge beside it is the energy buffer, and it grows as cores go in.
 * **Clear Pending Recipes** drops every craft the Matrix still owes, cancels ingredients it has on request, and cancels the crafting jobs on the network that were waiting on it.
 * **Empty Buffers** returns everything staged to your inventory.

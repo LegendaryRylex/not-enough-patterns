@@ -82,7 +82,7 @@ A <ItemLink id="nep:fusion_crafting_pattern"/>. Look the recipe up in JEI, open 
 
 A plain processing pattern with the same inputs and result still works; the Core simply has to search the recipe list for a match instead of being told which one to run.
 
-> <Color id="yellow">Gear upgrades automate, and keep what the old item held.</Color> A fusion upgrade carries the catalyst's energy, modules and enchantments onto the new item, exactly as a hand craft does. The network sources a fresh, empty tool for the job, so an upgrade requested through the ME system never reaches for the loaded one you are carrying. If you want your own tool upgraded, put it in the Core yourself.
+> <Color id="yellow">Gear upgrades automate, and keep what the old item held.</Color> A fusion upgrade carries the catalyst's energy, modules and enchantments onto the new item, exactly as a hand craft does. The network spends an item it already has wherever the recipe itself accepts one, so a charged, module-fitted or enchanted capacitor sitting in storage is upgraded in place instead of a blank one being crafted first, and everything it carried rides along onto the result. A tier upgrade only builds a fresh lower tier when storage holds nothing the recipe would take.
 
 > <Color id="yellow">Kept ingredients are borrowed, not spent.</Color> If a recipe keeps an ingredient instead of consuming it, the pattern carries it like any other input: the Core loads it into an Injector for the craft and hands it straight back to the Pattern Provider once the craft finishes. One is enough for a job of any size. A pattern encoded without it still works from a copy you load into an Injector yourself, which is then checked and left alone.
 

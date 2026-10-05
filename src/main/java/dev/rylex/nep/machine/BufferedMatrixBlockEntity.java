@@ -5,6 +5,7 @@ import appeng.api.networking.IInWorldGridNodeHost;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
+import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,16 +31,19 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class BufferedMatrixBlockEntity extends BlockEntity implements MenuProvider, MatrixHost, Clearable {
+public abstract class BufferedMatrixBlockEntity extends BlockEntity
+        implements MenuProvider, MatrixHost, MatrixRenderHost, Clearable {
 
     private static final String CHANNEL_FAULT_KEY = "ChannelFault";
+    private static final String MANUAL_OWED_KEY = "ManualOwed";
 
     protected final ItemStackHandler inputBuffer;
     protected final ItemStackHandler outputBuffer;
     protected final MatrixGridNode power;
 
-    protected final Map<Item, Long> owed = new HashMap<>();
-    protected final Map<Item, Long> toReturn = new HashMap<>();
+    protected final Map<AEItemKey, Long> owed = new HashMap<>();
+    protected final Map<AEItemKey, Long> manualOwed = new HashMap<>();
+    protected final Map<AEItemKey, Long> toReturn = new HashMap<>();
     protected final List<GenericStack> missingInputs = new ArrayList<>();
     protected final List<ItemStack> claimedItems = new ArrayList<>();
     protected final PushingCpus pushingCpus = new PushingCpus();
@@ -53,6 +57,8 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
     protected int lastComparator = -1;
     protected int syncedSignature = Integer.MIN_VALUE;
     protected int runningGrace;
+
+    private final MatrixRenderState renderState = new MatrixRenderState();
 
     protected BufferedMatrixBlockEntity(
             BlockEntityType<?> type,
@@ -90,6 +96,18 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
 
     public abstract float craftProgress();
 
+    @Override
+    public void advanceRender(float partialTick) {
+        if (level != null) {
+            renderState.advance(level.getGameTime(), partialTick, craftProgress());
+        }
+    }
+
+    @Override
+    public MatrixRenderState renderState() {
+        return renderState;
+    }
+
     public void markScanNeeded() {
         scanNeeded = true;
     }
@@ -101,6 +119,7 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         claimedItems.clear();
         missingInputs.clear();
         owed.clear();
+        manualOwed.clear();
         toReturn.clear();
         activeResult = ItemStack.EMPTY;
     }
@@ -109,6 +128,10 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         for (int slot = 0; slot < handler.getSlots(); slot++) {
             handler.setStackInSlot(slot, ItemStack.EMPTY);
         }
+    }
+
+    protected boolean isManualJob(AEItemKey key) {
+        return manualOwed.getOrDefault(key, 0L) > 0;
     }
 
     public boolean hasPending() {
@@ -217,6 +240,10 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         return true;
     }
 
+    protected ManualStaging.Result pullFromPlayer(Player player, List<ManualRequirement> requirements, int wanted) {
+        return ManualStaging.pull(player, requirements, wanted, this::bufferAll);
+    }
+
     @Override
     public long bufferedAmount(AEKey key) {
         long total = 0;
@@ -273,14 +300,15 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         }
         for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
             ItemStack stack = outputBuffer.getStackInSlot(slot);
-            if (stack.isEmpty()) {
+            AEItemKey key = AEItemKey.of(stack);
+            if (key == null) {
                 continue;
             }
-            long pending = toReturn.getOrDefault(stack.getItem(), 0L);
+            long pending = toReturn.getOrDefault(key, 0L);
             if (pending <= 0) {
                 continue;
             }
-            IItemHandler target = returnDirections.targetFor(level, getBlockPos(), stack.getItem());
+            IItemHandler target = returnDirections.targetFor(level, getBlockPos(), key);
             if (target == null) {
                 continue;
             }
@@ -289,9 +317,9 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
             int moved = want - remainder.getCount();
             if (moved > 0) {
                 outputBuffer.extractItem(slot, moved, false);
-                decrement(toReturn, stack.getItem(), moved);
-                if (!toReturn.containsKey(stack.getItem()) && !owed.containsKey(stack.getItem())) {
-                    returnDirections.forget(stack.getItem());
+                decrement(toReturn, key, moved);
+                if (!toReturn.containsKey(key) && !owed.containsKey(key)) {
+                    returnDirections.forget(key);
                 }
             }
         }
@@ -316,12 +344,12 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         }
     }
 
-    protected static void decrement(Map<Item, Long> map, Item item, long amount) {
-        long remaining = map.getOrDefault(item, 0L) - amount;
+    protected static void decrement(Map<AEItemKey, Long> map, AEItemKey key, long amount) {
+        long remaining = map.getOrDefault(key, 0L) - amount;
         if (remaining > 0) {
-            map.put(item, remaining);
+            map.put(key, remaining);
         } else {
-            map.remove(item);
+            map.remove(key);
         }
     }
 
@@ -329,12 +357,14 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putBoolean(CHANNEL_FAULT_KEY, channelFault);
+        tag.put(MANUAL_OWED_KEY, ItemCounts.save(manualOwed, registries));
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         channelFault = tag.getBoolean(CHANNEL_FAULT_KEY);
+        ItemCounts.load(manualOwed, tag, MANUAL_OWED_KEY, registries);
     }
 
     @Override

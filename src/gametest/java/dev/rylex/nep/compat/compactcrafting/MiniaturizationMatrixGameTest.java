@@ -10,6 +10,10 @@ import appeng.core.definitions.AEBlocks;
 import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
 import dev.rylex.nep.ConfigOverrides;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.machine.ManualCraftFixtures;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualCraftResult;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
@@ -20,6 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -318,6 +323,40 @@ public final class MiniaturizationMatrixGameTest {
         IPatternDetails details = PatternDetailsHelper.decodePattern(converted, helper.getLevel());
         helper.assertTrue(
                 details instanceof MiniaturizationPattern, "the converted pattern is not a miniaturization pattern");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void queuesAMiniaturizationCraftFromThePlayersInventory(GameTestHelper helper) {
+        MiniaturizationMatrixBlockEntity matrix = place(helper);
+        powerUp(helper);
+        RecipeHolder<MiniaturizationRecipe> holder = matrixRecipe(helper);
+        List<ManualRequirement> requirements = MiniaturizationRecipeIngredients.manualRequirements(holder.value());
+        helper.assertTrue(requirements != null, "the Matrix recipe cannot be expressed as manual requirements");
+        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+
+        ManualCraftOutcome outcome = matrix.startManualCraft(player, holder.id(), 1);
+
+        ManualCraftFixtures.assertQueued(helper, outcome, "the Miniaturization Matrix");
+        helper.assertTrue(
+                ManualCraftFixtures.inventoryCount(player) == 0, "the Matrix left ingredients in the inventory");
+        helper.assertTrue(
+                ManualCraftFixtures.bufferedCount(matrix.getInputBuffer()) > 0,
+                "the Matrix took the ingredients without staging them");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void refusesAMiniaturizationCraftTheInventoryCannotPayFor(GameTestHelper helper) {
+        MiniaturizationMatrixBlockEntity matrix = place(helper);
+        powerUp(helper);
+        RecipeHolder<MiniaturizationRecipe> holder = matrixRecipe(helper);
+
+        ManualCraftOutcome outcome = matrix.startManualCraft(helper.makeMockPlayer(GameType.SURVIVAL), holder.id(), 1);
+
+        helper.assertTrue(
+                outcome.status() == ManualCraftResult.MISSING_ITEMS,
+                "an empty inventory did not read as missing items: " + outcome.status());
         helper.succeed();
     }
 }

@@ -1,0 +1,6 @@
+{
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "nep:item/compact_crafting_encoding_module"
+    }
+}

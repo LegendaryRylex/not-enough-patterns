@@ -1,7 +1,0 @@
-{
-  "variants": {
-    "status=off": { "model": "nep:block/sequenced_assembly_controller_off" },
-    "status=on": { "model": "nep:block/sequenced_assembly_controller_on" },
-    "status=halted": { "model": "nep:block/sequenced_assembly_controller_halted" }
-  }
-}

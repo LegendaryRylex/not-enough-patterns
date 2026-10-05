@@ -4,6 +4,7 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.GenericStack;
 import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
@@ -21,8 +22,9 @@ final class DraconicPatternEncoders {
     private DraconicPatternEncoders() {}
 
     static void register() {
-        PatternConverters.register(IFusionRecipe.class, DraconicPatternEncoders::fusion);
-        PatternConverters.registerFallback(DraconicPatternEncoders::fusionByResult);
+        PatternConverters.register(
+                DecoderModule.DRACONIC_EVOLUTION, IFusionRecipe.class, DraconicPatternEncoders::fusion);
+        PatternConverters.registerFallback(DecoderModule.DRACONIC_EVOLUTION, DraconicPatternEncoders::fusionByResult);
     }
 
     @Nullable

@@ -62,6 +62,10 @@ A plain processing pattern with the same inputs and result still works; the Depo
 
 If the Deployer is already holding a matching tool, that one is used and the lent copy goes straight back to the Provider untouched. A pattern with the tool left out still works too, but then the Deployer has to be loaded by hand and pushes are rejected until it is.
 
+> <Color id="yellow">Tools a Deployer wears down are returned used.</Color> Sand paper, and any tool a recipe deploys without keeping, loses a point of durability per craft rather than being spent whole. Those patterns ask for the tool back one point worse, so the network can lend a part-used one and gets that same one back. A tool on its last point breaks in the Deployer and nothing comes back, which is exactly what the pattern asked for.
+
+A worn tool is always lent fresh for each craft, so the Deployer has to be empty when the pattern arrives. Pushes are turned away while it is still holding something, because the network is owed back the tool the pattern handed over, not whatever was left in the Deployer.
+
 An [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) takes the same pattern and deploys inside itself, with no Depot and no Deployer. It holds nothing by hand, so there the tool must be in the pattern, and it turns down the rare recipe whose tool a Deployer wears down instead of consuming.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
@@ -83,9 +87,9 @@ An [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) takes the same pa
 A Deployer holding <ItemLink id="create:sand_paper"/> polishes whatever is on the Depot, but Create files those recipes under their own `create:sandpaper_polishing` type rather than Deploying, so a pattern had nothing to name and the **+** in JEI handed back a plain processing pattern that no Depot would take. NEP now reads every polishing recipe as a Deploying one, and the **+** on Create's **Sandpaper Polishing** entry gives an <ItemLink id="nep:andesite_crafting_pattern"/> like any other.
 
 * The pattern holds the base item and one sheet, with the sheet <Color id="yellow">retained</Color>. Either <ItemLink id="create:sand_paper"/> or <ItemLink id="create:red_sand_paper"/> satisfies it.
-* A Deployer sands its sheet down a point per polish, unlike the axes it strips with. The sheet loaded into an empty Deployer is therefore spent over its lifetime, and the network is asked for a fresh one only once the old one wears through.
-* While the Deployer still holds a usable sheet, the lent one goes straight back to the Provider untouched, so a long job costs one sheet per run of polishes rather than one per craft.
-* A part-used sheet is left in the Deployer rather than returned. Nothing could ask for it back: a pattern names the pristine sheet, so a worn one would only sit in storage.
+* A Deployer sands its sheet down a point per polish, unlike the axes it strips with. The pattern therefore names the sheet as a tool that comes back one point worse, and the Deployer is emptied again after every polish.
+* Any damage level satisfies the pattern, so a part-used sheet in storage is stock like any other and the network only makes a fresh one once every sheet it holds has worn through. A sheet still costs one polish per point, eight in all.
+* The polish that spends a sheet's last point breaks it in the Deployer, and the pattern asked for nothing back, so the craft settles with the base item alone.
 * An [Assembly Matrix](/nep/create/sequenced-assembly-matrix.md) turns polishing down for the same reason it turns down any recipe that wears its tool: it hands retained inputs back exactly as they arrived.
 
 <ItemImage id="minecraft:air" scale="0.5"/>

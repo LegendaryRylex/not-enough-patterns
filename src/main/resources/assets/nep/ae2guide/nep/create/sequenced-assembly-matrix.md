@@ -21,6 +21,8 @@ item_ids:
 
 <Recipe id="nep:module_status/sequenced_assembly_matrix"/>
 
+> <Color id="yellow">The block reads its own state.</Color> The Matrix is an open frame with a faceted core turning inside it, visible through every face. The core drifts while the Matrix is idle, spins up and brightens as a craft runs, and flares when the craft lands. A stalled Matrix dims and judders in place, and its frame goes dark. Neighbouring Matrices are offset from one another, so a wall of them never turns in lockstep.
+
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 ***
@@ -47,7 +49,7 @@ item_ids:
 
 * Rotational power on either end of the axis it was placed along. The four side faces transmit nothing, so a cogwheel there does nothing at all. Placing the Matrix against an existing shaft snaps it to that axis, and a <ItemLink id="create:wrench"/> turns it afterwards without disturbing anything inside it. Sneak and wrench to pick it up.
 * A connection to your ME network for power. It idles at <Color id="aqua"><nep:ConfigValue name="sequencedAssemblyMatrixIdleMeDrain"/> AE/t</Color> and draws <Color id="aqua"><nep:ConfigValue name="sequencedAssemblyMatrixMeDrain"/> AE/t</Color> while assembling. The readout shows which it is doing.
-* With Create: New Age installed, recipes with an energising step also cost Forge Energy. The Matrix grows an internal FE buffer for exactly that case; wire any FE source to any face and it charges at up to <nep:ConfigValue name="sequencedAssemblyMatrixChargeRate"/> FE/t. Recipes without an energising step never touch it.
+* With Create: New Age installed, recipes with an energising step also cost Forge Energy. The Matrix grows an internal FE buffer for exactly that case; wire any FE source to any face and it charges at up to <nep:ConfigValue name="sequencedAssemblyMatrixChargeRate"/> FE/t. Short of FE, it draws on the ME network's own power instead, down to the last tenth the network keeps in reserve. Recipes without an energising step never touch it.
 * A Pattern Provider on any face. Every craft begins with a pattern pushed to the Matrix, so without one it sits idle no matter what you put inside it.
 * A Comparator beside it reads how full the output buffer is. See Comparator below.
 
@@ -181,6 +183,7 @@ A Comparator beside the Matrix reads how full its output buffer is: nothing whil
 * **Crafting** lists what the Matrix owes right now, each with its count. It reads *Nothing* when the Matrix has been asked for nothing, which is not the same as being unable to run.
 * The readouts beside it show the AE/t being drawn, the current RPM against Create's maximum, and the stress being taken.
 * The input grid stages the items a pending craft needs, and the output buffer holds what is finished. Neither accepts items a pending craft does not use.
+* Each slot in both holds up to 64 of any item, whatever that item normally stacks to, so a recipe wanting a pile of tools or potions still fits.
 * The four tanks sit beside the grid. Hover one to see what it holds against its capacity, or click it holding a filled bucket or tank to pour that fluid in by hand.
 * <Color id="red">✗</Color> **Clear Pending Recipes** drops every craft the Matrix still owes, cancels ingredients it has on request, and cancels the crafting jobs waiting on it. Items already made are still returned. It greys out when nothing is pending.
 * <Color id="aqua">?</Color> **Guide** opens this page. It is always the rightmost button, on every machine in the mod.
@@ -228,6 +231,24 @@ The universal upgrade component shared by every Matrix, built entirely from ME p
 Starts from a <ItemLink id="nep:sequenced_assembly_controller"/> and loops <Color id="red">four</Color> times, so multiply every deployed item by four when you encode the pattern. That means four each of the Matrix Circuitry, Printed Silicon, and Hardened Obsidian Plate.
 
 <RecipeFor id="nep:sequenced_assembly_matrix" fallbackText="Saw, deploy Matrix Circuitry, deploy Printed Silicon, deploy Hardened Obsidian Plate, then Press. Four loops."/>
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Crafting By Hand</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+A sequenced assembly recipe can also be started out of your own inventory, with no pattern and no Provider anywhere near it. Open the Matrix, find the recipe in the recipe viewer, and press its transfer button: every ingredient leaves your inventory in one go and the craft queues up like any other.
+
+* It is all or nothing. Come up short and nothing moves: the button says so and the recipe marks the ingredients you are missing in red.
+* Holding shift queues as many crafts as your inventory can pay for, up to sixty-four, trimmed to what the input buffer has room to stage.
+* The finished item waits in the output buffer for you to take. Nothing goes to the network, and no crafting job is created.
+* A recipe with a fluid step cannot be started by hand, since no fluid comes out of an inventory.
+* Stress comes from your kinetic drive as always, so the Matrix still has to be turning for a hand-started craft to move.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 

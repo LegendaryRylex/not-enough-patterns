@@ -7,6 +7,7 @@ import com.brandon3055.draconicevolution.init.DEContent;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
+import dev.rylex.nep.provider.MachineImports;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -25,6 +26,8 @@ public final class DraconicCompat {
         NepDraconicContent.register(modBus);
         DraconicPatternEncoders.register();
         FusionCraftingPattern.canonicalizeWith(FusionResults::canonical);
+        FusionCraftingPattern.substituteInputsWith(FusionInputSubstitution::of);
+        MachineImports.register(MachineImports.DRACONIC_FUSION_CORE, FusionCoreImport::create);
         modBus.addListener(DraconicCompat::registerCapabilities);
         NeoForge.EVENT_BUS.addListener(DraconicCompat::onReload);
         NeoForge.EVENT_BUS.addListener(DraconicCompat::onBlockBroken);

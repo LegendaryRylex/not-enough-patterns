@@ -4,15 +4,20 @@ import com.simibubi.create.AllItems;
 import com.simibubi.create.content.equipment.wrench.IWrenchable;
 import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
 import com.simibubi.create.foundation.block.IBE;
+import dev.rylex.nep.machine.MatrixStatus;
+import java.util.List;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
-import net.minecraft.util.StringRepresentable;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
@@ -25,7 +30,7 @@ import net.minecraft.world.phys.BlockHitResult;
 public class SequencedAssemblyMatrixBlock extends RotatedPillarKineticBlock
         implements IBE<SequencedAssemblyMatrixBlockEntity>, IWrenchable {
 
-    public static final EnumProperty<MatrixStatus> STATUS = EnumProperty.create("status", MatrixStatus.class);
+    public static final EnumProperty<MatrixStatus> STATUS = MatrixStatus.PROPERTY;
 
     public SequencedAssemblyMatrixBlock(Properties properties) {
         super(properties);
@@ -103,20 +108,10 @@ public class SequencedAssemblyMatrixBlock extends RotatedPillarKineticBlock
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    public enum MatrixStatus implements StringRepresentable {
-        IDLE("idle"),
-        RUNNING("running"),
-        STALLED("stalled");
-
-        private final String name;
-
-        MatrixStatus(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public String getSerializedName() {
-            return name;
-        }
+    @Override
+    public void appendHoverText(
+            ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(
+                Component.translatable("tooltip.nep.sequenced_assembly_matrix").withStyle(ChatFormatting.GRAY));
     }
 }

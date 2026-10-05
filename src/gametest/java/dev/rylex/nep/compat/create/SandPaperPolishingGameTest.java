@@ -5,6 +5,7 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import com.simibubi.create.AllBlocks;
@@ -45,6 +46,8 @@ public final class SandPaperPolishingGameTest {
 
     private static final ResourceLocation POLISHING =
             ResourceLocation.fromNamespaceAndPath("create", "sandpaper_polishing/rose_quartz");
+
+    private static final int LAST_POINT = 7;
 
     private static final int SETUP_TICKS = 5;
 
@@ -93,6 +96,15 @@ public final class SandPaperPolishingGameTest {
         helper.assertTrue(rejected.isEmpty(), "the deployer would not take " + tool);
     }
 
+    private static void wearHeldSheet(GameTestHelper helper, DeployerBlockEntity deployer, int damage) {
+        IItemHandler handler = deployerHandler(helper, deployer);
+        int heldSlot = handler.getSlots() - 1;
+        ItemStack lent = handler.extractItem(heldSlot, 1, false);
+        helper.assertTrue(!lent.isEmpty(), "the deployer was holding nothing to wear down");
+        lent.setDamageValue(damage);
+        handler.insertItem(heldSlot, lent, false);
+    }
+
     private static ItemStack stagedOnDepot(GameTestHelper helper) {
         BlockEntity be = helper.getBlockEntity(DEPOT);
         helper.assertTrue(be instanceof DepotBlockEntity, "the depot did not create its block entity");
@@ -110,10 +122,27 @@ public final class SandPaperPolishingGameTest {
         return found;
     }
 
+    private static ItemStack firstIn(IItemHandler handler, net.minecraft.world.item.Item item) {
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            ItemStack stack = handler.getStackInSlot(slot);
+            if (stack.is(item)) {
+                return stack;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    private static AEItemKey sheet(int damage) {
+        ItemStack stack = AllItems.SAND_PAPER.asStack();
+        stack.setDamageValue(damage);
+        return AEItemKey.of(stack);
+    }
+
     private static IPatternDetails polishingPattern(GameTestHelper helper) {
         ItemStack encoded = AndesiteCraftingPattern.encode(
                 POLISHING,
                 List.of(new GenericStack(AEItemKey.of(AllItems.ROSE_QUARTZ.get()), 1)),
+                List.of(),
                 List.of(new GenericStack(AEItemKey.of(AllItems.SAND_PAPER.get()), 1)),
                 new GenericStack(AEItemKey.of(AllItems.POLISHED_ROSE_QUARTZ.get()), 1));
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
@@ -122,17 +151,23 @@ public final class SandPaperPolishingGameTest {
     }
 
     private static KeyCounter[] inputsOf(IPatternDetails details) {
+        return inputsWith(details, null);
+    }
+
+    private static KeyCounter[] inputsWith(IPatternDetails details, AEKey tool) {
         KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
         for (int slot = 0; slot < inputs.length; slot++) {
             inputs[slot] = new KeyCounter();
             IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
+            AEKey template = input.getPossibleInputs()[0].what();
+            boolean isTool = input.getRemainingKey(template) != null;
+            inputs[slot].add(tool != null && isTool ? tool : template, input.getMultiplier());
         }
         return inputs;
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
-    public static void polishingReadsAsADeployerRecipeThatKeepsItsPaper(GameTestHelper helper) {
+    public static void polishingReadsAsADeployerRecipeThatWearsItsPaper(GameTestHelper helper) {
         SandPaperPolishing.clearCache();
         RecipeHolder<DeployerApplicationRecipe> holder = SandPaperPolishing.byId(POLISHING, helper.getLevel());
         helper.assertTrue(
@@ -152,12 +187,34 @@ public final class SandPaperPolishingGameTest {
                 !recipe.getRequiredHeldItem().test(new ItemStack(Items.IRON_AXE)),
                 "the polishing recipe accepts an axe as the held item");
         helper.assertTrue(
-                recipe.shouldKeepHeldItem(),
-                "the polishing recipe consumes the sand paper outright, so a whole sheet would go per polish");
-        helper.assertTrue(
                 recipe.getRollableResults().size() == 1
                         && recipe.getRollableResults().get(0).getStack().is(AllItems.POLISHED_ROSE_QUARTZ.get()),
                 "the polishing recipe did not produce polished rose quartz");
+        helper.assertTrue(
+                DeployerToolFate.of(POLISHING, recipe, helper.getLevel()) == DeployerToolFate.WORN,
+                "the synthesised polishing recipe claims keep_held_item, but Create only honours that for an item"
+                        + " application recipe and sands the sheet down every polish");
+        helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void theSheetInputTakesAnyDamageValueAndComesBackOnePointWorse(GameTestHelper helper) {
+        IPatternDetails details = polishingPattern(helper);
+        IPatternDetails.IInput tool = details.getInputs()[details.getInputs().length - 1];
+
+        helper.assertTrue(
+                tool.isValid(sheet(3), helper.getLevel()),
+                "a part-used sheet is not a valid input, so every sheet the network already sanded with is dead stock");
+        helper.assertTrue(
+                !tool.isValid(AEItemKey.of(Items.IRON_AXE), helper.getLevel()),
+                "the sheet input accepted an unrelated item");
+        helper.assertTrue(
+                sheet(4).equals(tool.getRemainingKey(sheet(3))),
+                "the pattern does not ask for the sheet back one point worse, so the crafting job waits on a sheet the"
+                        + " deployer will never hand over");
+        helper.assertTrue(
+                tool.getRemainingKey(sheet(LAST_POINT)) == null,
+                "a sheet on its last point still declares a remainder, so the job waits on a sheet that broke");
         helper.succeed();
     }
 
@@ -180,13 +237,36 @@ public final class SandPaperPolishingGameTest {
                     "the polishing push did not stage the rose quartz on the depot");
             helper.assertTrue(
                     heldByDeployer(helper, deployer).is(AllItems.SAND_PAPER.get()),
-                    "the push did not load the retained sand paper, so the polish would never run");
+                    "the push did not load the lent sand paper, so the polish would never run");
             helper.succeed();
         });
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
-    public static void aWornSheetStaysInTheDeployerAndTheSpareGoesBack(GameTestHelper helper) {
+    public static void aPartUsedSheetDrawnFromStockRunsThePolish(GameTestHelper helper) {
+        DepotCraftingMachine.clearCache();
+        ICraftingMachine machine = placeDepot(helper);
+        DeployerBlockEntity deployer = placeDeployer(helper);
+        placeProvider(helper);
+
+        helper.runAfterDelay(SETUP_TICKS, () -> {
+            deployer.setSpeed(32);
+
+            IPatternDetails details = polishingPattern(helper);
+            helper.assertTrue(
+                    machine.pushPattern(details, inputsWith(details, sheet(5)), PROVIDER_SIDE),
+                    "the depot refused a polishing push carrying a part-used sheet, so sanded sheets pile up in the"
+                            + " network unusable");
+            ItemStack held = heldByDeployer(helper, deployer);
+            helper.assertTrue(
+                    held.is(AllItems.SAND_PAPER.get()) && held.getDamageValue() == 5,
+                    "the push loaded " + held + " rather than the part-used sheet it was handed");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
+    public static void aDeployerStillHoldingASheetTurnsThePushAway(GameTestHelper helper) {
         DepotCraftingMachine.clearCache();
         ICraftingMachine machine = placeDepot(helper);
         DeployerBlockEntity deployer = placeDeployer(helper);
@@ -200,22 +280,20 @@ public final class SandPaperPolishingGameTest {
 
             IPatternDetails details = polishingPattern(helper);
             helper.assertTrue(
-                    machine.pushPattern(details, inputsOf(details), PROVIDER_SIDE),
-                    "a deployer holding a part-used sheet refused a polishing pattern it can still run");
-
-            ItemStack held = heldByDeployer(helper, deployer);
+                    !machine.pushPattern(details, inputsOf(details), PROVIDER_SIDE),
+                    "the depot ran a polish on a sheet it had not been lent; the network is owed the sheet the pattern"
+                            + " handed over, not whatever was already in the deployer");
             helper.assertTrue(
-                    held.is(AllItems.SAND_PAPER.get()) && held.getDamageValue() == 1 && held.getCount() == 1,
-                    "the push disturbed the part-used sheet the deployer was already sanding with");
+                    countIn(provider, AllItems.SAND_PAPER.get()) == 0,
+                    "a refused push still moved a sheet into the provider");
             helper.assertTrue(
-                    countIn(provider, AllItems.SAND_PAPER.get()) == 1,
-                    "the spare sheet was neither used nor handed back, so the network lost it");
+                    stagedOnDepot(helper).isEmpty(), "a refused push still staged the base item on the depot");
             helper.succeed();
         });
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
-    public static void aSheetWornByTheCraftIsNotHandedBack(GameTestHelper helper) {
+    public static void aSheetWornByTheCraftIsHandedBackOnePointWorse(GameTestHelper helper) {
         DepotCraftingMachine.clearCache();
         ICraftingMachine machine = placeDepot(helper);
         DeployerBlockEntity deployer = placeDeployer(helper);
@@ -229,21 +307,43 @@ public final class SandPaperPolishingGameTest {
                     machine.pushPattern(details, inputsOf(details), PROVIDER_SIDE),
                     "a depot refused a polishing pattern carrying its own sand paper");
 
-            IItemHandler handler = deployerHandler(helper, deployer);
-            int heldSlot = handler.getSlots() - 1;
-            ItemStack lent = handler.extractItem(heldSlot, 1, false);
-            lent.setDamageValue(1);
-            handler.insertItem(heldSlot, lent, false);
-
+            wearHeldSheet(helper, deployer, 1);
             DeployerReclaimer.onCrafted(deployer);
 
             helper.assertTrue(
-                    heldByDeployer(helper, deployer).getDamageValue() == 1,
-                    "the sheet the polish wore down was pulled out of the deployer, so the next craft would draw a"
-                            + " fresh one and this one would be lost");
+                    heldByDeployer(helper, deployer).isEmpty(),
+                    "the worn sheet was left in the deployer, so the network never gets it back and the crafting job"
+                            + " waits forever on the remainder the pattern declared");
+            ItemStack returned = firstIn(provider, AllItems.SAND_PAPER.get());
+            helper.assertTrue(
+                    returned.getCount() == 1 && returned.getDamageValue() == 1,
+                    "the provider was handed " + returned + " rather than the sheet one point worse");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
+    public static void aSheetOnItsLastPointBreaksAndNothingComesBack(GameTestHelper helper) {
+        DepotCraftingMachine.clearCache();
+        ICraftingMachine machine = placeDepot(helper);
+        DeployerBlockEntity deployer = placeDeployer(helper);
+        IItemHandler provider = placeProvider(helper);
+
+        helper.runAfterDelay(SETUP_TICKS, () -> {
+            deployer.setSpeed(32);
+
+            IPatternDetails details = polishingPattern(helper);
+            helper.assertTrue(
+                    machine.pushPattern(details, inputsWith(details, sheet(LAST_POINT)), PROVIDER_SIDE),
+                    "the depot refused a polishing push carrying a sheet on its last point of use");
+
+            IItemHandler handler = deployerHandler(helper, deployer);
+            handler.extractItem(handler.getSlots() - 1, 1, false);
+            DeployerReclaimer.onCrafted(deployer);
+
             helper.assertTrue(
                     countIn(provider, AllItems.SAND_PAPER.get()) == 0,
-                    "a part-used sheet was handed back to the network, where no pattern can ask for it again");
+                    "a sheet that broke on its last polish was still handed back to the network");
             helper.succeed();
         });
     }

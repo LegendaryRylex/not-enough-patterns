@@ -1,0 +1,6 @@
+{
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "nep:item/actually_additions_encoding_module"
+    }
+}

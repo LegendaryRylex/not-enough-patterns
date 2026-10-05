@@ -1,0 +1,6 @@
+{
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "nep:item/mechanical_crafting_pattern"
+    }
+}

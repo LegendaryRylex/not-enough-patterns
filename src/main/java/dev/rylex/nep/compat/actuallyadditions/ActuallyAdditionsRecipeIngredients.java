@@ -4,6 +4,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import de.ellpeck.actuallyadditions.mod.crafting.EmpowererRecipe;
 import de.ellpeck.actuallyadditions.mod.crafting.LaserRecipe;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import java.util.ArrayList;
@@ -65,5 +66,21 @@ final class ActuallyAdditionsRecipeIngredients {
 
     static List<Demand> laserDemand(LaserRecipe recipe) {
         return List.of(new Demand(recipe.getInput(), 1));
+    }
+
+    static List<ManualRequirement> empoweringRequirements(EmpowererRecipe recipe) {
+        return requirementsOf(empoweringDemand(recipe));
+    }
+
+    static List<ManualRequirement> laserRequirements(LaserRecipe recipe) {
+        return requirementsOf(laserDemand(recipe));
+    }
+
+    private static List<ManualRequirement> requirementsOf(List<Demand> demands) {
+        List<ManualRequirement> requirements = new ArrayList<>(demands.size());
+        for (Demand demand : demands) {
+            requirements.add(new ManualRequirement(demand.ingredient(), demand.count(), true));
+        }
+        return List.copyOf(requirements);
     }
 }

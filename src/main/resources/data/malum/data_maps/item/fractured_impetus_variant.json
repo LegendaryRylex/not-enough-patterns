@@ -1,0 +1,7 @@
+{
+  "values": {
+    "nep:matrix_impetus": {
+      "other_impetus": "nep:fractured_matrix_impetus"
+    }
+  }
+}

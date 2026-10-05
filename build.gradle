@@ -24,6 +24,10 @@ sourceSets {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
     }
+    dev {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
 }
 
 repositories {
@@ -69,10 +73,15 @@ var skippableRuntimeMods = [
         aatiers: [[group: 'curse.maven', module: 'actually-additions-tiers-1549640']],
         ma     : [[group: 'curse.maven', module: 'mystical-agriculture-246640'],
                   [group: 'curse.maven', module: 'cucumber-272335']],
+        malum  : [[group: 'curse.maven', module: 'malum-484064'],
+                  [group: 'curse.maven', module: 'lodestone-616457'],
+                  [group: 'curse.maven', module: 'curios-309927']],
+        ars    : [[group: 'curse.maven', module: 'ars-nouveau-401955'],
+                  [group: 'curse.maven', module: 'curios-309927']],
+        arseng : [[group: 'curse.maven', module: 'ars-energistique-905641']],
         sable  : [[group: 'curse.maven', module: 'sable-1312371'],
                   [group: 'curse.maven', module: 'create-aeronautics-676721']],
         aae    : [[group: 'curse.maven', module: 'advancedae-1084104'],
-                  [group: 'curse.maven', module: 'geckolib-388172'],
                   [group: 'curse.maven', module: 'ae2addonlib-1366135']],
         eae    : [[group: 'curse.maven', module: 'ex-pattern-provider-892005'],
                   [group: 'curse.maven', module: 'glodium-957920']],
@@ -84,13 +93,18 @@ var skippableRuntimeMods = [
         dfa    : [[group: 'curse.maven', module: 'ae2-draconic-fusion-autocrafter-1521464']],
         wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
         tb     : [[group: 'curse.maven', module: 'thunderbolt-1631756']],
+        ae2lt  : [[group: 'curse.maven', module: 'ae2-lightning-tech-1527395']],
 ]
 
 var impliedSkips = [
         create: ['sable', 'ac', 'cna'],
+        aa    : ['aatiers'],
+        ars   : ['arseng'],
         de    : ['dfa'],
+        tb    : ['ae2lt'],
         wtlib : ['aae', 'eae', 'appflux', 'expae'],
         eae   : ['appflux'],
+        aae   : ['expae'],
 ]
 
 var skipModsLocal = file('skip_mods.local')
@@ -111,10 +125,40 @@ if (unknownSkips) {
 }
 skippedMods = (skippedMods + skippedMods.collectMany { impliedSkips[it] ?: [] }).unique()
 if (skippedMods) {
-    skippedMods.each { key -> skippableRuntimeMods[key].each { configurations.runtimeClasspath.exclude(it) } }
+    // Curios and the AA tier jar are listed under two families each, so a module is only dropped once every family that needs it is skipped.
+    var keptCoordinates = (skippableRuntimeMods.keySet() - skippedMods).collectMany { skippableRuntimeMods[it] }
+    skippedMods.collectMany { skippableRuntimeMods[it] }.unique()
+            .findAll { !keptCoordinates.contains(it) }
+            .each { configurations.runtimeClasspath.exclude(it) }
     logger.lifecycle("run classpath is missing: ${skippedMods.join(', ')}")
 } else if (skipModsLocal.exists() && fullClasspathRequested) {
     logger.lifecycle("skip_mods.local ignored: requested tasks run the full classpath")
+}
+
+// The GuideMe live preview reads pages straight from the source folder, which bypasses the
+// resource pack layer that `guide_filters` uses to hide pages for absent mods, so it can only
+// run when every mod that owns guide pages is on the classpath. Skipping anything else, Applied
+// Create included, leaves the preview on.
+var guidePageOwners = [
+        create : 'create',
+        de     : 'draconicevolution',
+        cc     : 'compactcrafting',
+        aa     : 'actuallyadditions',
+        ma     : 'mysticalagriculture',
+        apothic: 'apothic_enchanting',
+        malum  : 'malum',
+        ars    : 'ars_nouveau',
+]
+var guideFilterMods = (file('src/main/resources/guide_filters').listFiles() ?: [])
+        .findAll { it.directory && it.name.startsWith('no_') }
+        .collect { it.name.substring(3) }
+var unmappedGuideFilters = guideFilterMods - guidePageOwners.values()
+if (unmappedGuideFilters) {
+    throw new GradleException("guide_filters covers ${unmappedGuideFilters.join(', ')} with no matching skip key; add it to guidePageOwners in build.gradle")
+}
+var guidePageSkips = skippedMods.intersect(guidePageOwners.keySet())
+if (guidePageSkips) {
+    logger.lifecycle("guide live preview off: ${guidePageSkips.join(', ')} owns guide pages that guide_filters must hide")
 }
 
 neoForge {
@@ -129,7 +173,7 @@ neoForge {
         client {
             client()
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-            if (!skippedMods) {
+            if (!guidePageSkips) {
                 systemProperty 'guideme.ae2.guide.sources', file('src/main/resources/assets/nep/ae2guide').absolutePath
                 systemProperty 'guideme.ae2.guide.sourcesNamespace', project.mod_id
             }
@@ -138,7 +182,7 @@ neoForge {
         clientAlt {
             client()
             programArguments.addAll '--username', 'Dev2'
-            if (!skippedMods) {
+            if (!guidePageSkips) {
                 systemProperty 'guideme.ae2.guide.sources', file('src/main/resources/assets/nep/ae2guide').absolutePath
                 systemProperty 'guideme.ae2.guide.sourcesNamespace', project.mod_id
             }
@@ -163,7 +207,7 @@ neoForge {
 
         data {
             data()
-            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath(), '--existing-mod', 'create'
         }
 
         configureEach {
@@ -183,10 +227,13 @@ neoForge {
             if (!skippedMods) {
                 sourceSet(sourceSets.gametest)
             }
+            // Dev-only content: never in `jar`, but loaded on every run including skip_mods boots.
+            sourceSet(sourceSets.dev)
         }
     }
 
     addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.dev)
 
     unitTest {
         enable()
@@ -194,13 +241,19 @@ neoForge {
     }
 }
 
-sourceSets.main.resources { srcDir 'src/generated/resources' }
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+    exclude '.cache', '.cache/**'
+}
 
 configurations {
     runtimeClasspath.extendsFrom localRuntime
     gametestImplementation.extendsFrom implementation
     gametestCompileOnly.extendsFrom compileOnly
     gametestRuntimeOnly.extendsFrom runtimeOnly
+    devImplementation.extendsFrom implementation
+    devCompileOnly.extendsFrom compileOnly
+    devRuntimeOnly.extendsFrom runtimeOnly
     compactCraftingJar
 }
 
@@ -220,6 +273,7 @@ var extractCompactCraftingApi = tasks.register('extractCompactCraftingApi', Sync
 dependencies {
     implementation "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     compileOnly "org.appliedenergistics:guideme:${guideme_version}"
+    localRuntime "curse.maven:guideme-recipe-compat-1722328:${gmrecipes_file}"
 
     implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
     implementation "net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}"
@@ -236,17 +290,23 @@ dependencies {
     compileOnly "curse.maven:thunderbolt-1631756:${thunderbolt_file}"
     localRuntime "curse.maven:thunderbolt-1631756:${thunderbolt_file}"
 
+    compileOnly "curse.maven:ae2-lightning-tech-1527395:${ae2lt_file}"
+    localRuntime "curse.maven:ae2-lightning-tech-1527395:${ae2lt_file}"
+
     compileOnly "curse.maven:advancedae-1084104:${advanced_ae_file}"
     localRuntime "curse.maven:advancedae-1084104:${advanced_ae_file}"
     localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
     localRuntime "curse.maven:ae2addonlib-1366135:${ae2addonlib_file}"
 
+    compileOnly "curse.maven:ae2-draconic-fusion-autocrafter-1521464:${ae2_draconic_fusion_autocrafter_file}"
     localRuntime "curse.maven:ae2-draconic-fusion-autocrafter-1521464:${ae2_draconic_fusion_autocrafter_file}"
+    compileOnly "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
     localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
     localRuntime "curse.maven:glodium-957920:${glodium_file}"
     localRuntime "curse.maven:applied-flux-965012:${appliedflux_file}"
     localRuntime "curse.maven:expanded-ae-1213351:${expandedae_file}"
     localRuntime "curse.maven:mega-cells-622112:${megacells_file}"
+    compileOnly "curse.maven:applied-create-1474758:${appliedcreate_file}"
     localRuntime "curse.maven:applied-create-1474758:${appliedcreate_file}"
     localRuntime "curse.maven:kotlin-for-forge-351264:${kotlinforforge_file}"
 
@@ -267,10 +327,25 @@ dependencies {
     localRuntime "curse.maven:actually-additions-228404:${actually_additions_file}"
     localRuntime "curse.maven:actually-additions-tiers-1549640:${actually_additions_tiers_file}"
 
+    compileOnly "curse.maven:ars-nouveau-401955:${ars_nouveau_file}"
+    compileOnly "curse.maven:curios-309927:${curios_file}"
+    compileOnly "curse.maven:geckolib-388172:${geckolib_file}"
+    localRuntime "curse.maven:ars-nouveau-401955:${ars_nouveau_file}"
+    localRuntime "curse.maven:curios-309927:${curios_file}"
+    localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
+    compileOnly "curse.maven:ars-energistique-905641:${arseng_file}"
+    localRuntime "curse.maven:ars-energistique-905641:${arseng_file}"
+
     compileOnly "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
     compileOnly "curse.maven:cucumber-272335:${cucumber_file}"
     localRuntime "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
     localRuntime "curse.maven:cucumber-272335:${cucumber_file}"
+
+    compileOnly "curse.maven:malum-484064:${malum_file}"
+    compileOnly "curse.maven:lodestone-616457:${lodestone_file}"
+    localRuntime "curse.maven:malum-484064:${malum_file}"
+    localRuntime "curse.maven:lodestone-616457:${lodestone_file}"
+    localRuntime "curse.maven:curios-309927:${curios_file}"
 
     // transitive = false: their poms pull in Curios from a maven we do not carry
     compileOnly("dev.shadowsoffire:ApothicEnchanting:${minecraft_version}-${apothic_enchanting_version}") { transitive = false }
@@ -294,8 +369,8 @@ dependencies {
     compileOnly "curse.maven:emi-580555:${emi_file}"
     localRuntime "curse.maven:emi-580555:${emi_file}"
 
-    compileOnly "curse.maven:jade-324717:7545219"
-    localRuntime "curse.maven:jade-324717:7545219"
+    compileOnly "curse.maven:jade-324717:8591319"
+    localRuntime "curse.maven:jade-324717:8591319"
 
     compileOnly "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}"
     localRuntime "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}"
@@ -332,6 +407,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
             ae2_version_range      : ae2_version_range,
+            gmrecipes_version_range: gmrecipes_version_range,
             create_version_range   : create_version_range,
             create_new_age_version_range: create_new_age_version_range,
             jei_version_range      : jei_version_range,
@@ -341,10 +417,14 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             extendedae_version_range: extendedae_version_range,
             expandedae_version_range: expandedae_version_range,
             megacells_version_range: megacells_version_range,
+            ae2lt_version_range     : ae2lt_version_range,
             draconic_evolution_version_range: draconic_evolution_version_range,
             compact_crafting_version_range: compact_crafting_version_range,
             actually_additions_version_range: actually_additions_version_range,
             mysticalagriculture_version_range: mysticalagriculture_version_range,
+            malum_version_range    : malum_version_range,
+            ars_nouveau_version_range: ars_nouveau_version_range,
+            arseng_version_range: arseng_version_range,
             jade_version_range     : jade_version_range,
             sable_version_range    : sable_version_range,
             apothic_enchanting_version_range: apothic_enchanting_version_range,
@@ -398,6 +478,10 @@ publishMods {
             optional(*optionalDependencies)
         }
     }
+}
+
+tasks.named('check') {
+    dependsOn 'devClasses'
 }
 
 tasks.named('publishMods') {

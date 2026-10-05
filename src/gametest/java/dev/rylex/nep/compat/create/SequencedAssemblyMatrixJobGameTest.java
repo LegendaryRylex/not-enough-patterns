@@ -50,6 +50,10 @@ public final class SequencedAssemblyMatrixJobGameTest {
             ResourceLocation.fromNamespaceAndPath("test", "matrix_deploying_kept_tool");
     private static final ResourceLocation WORN_TOOL =
             ResourceLocation.fromNamespaceAndPath("test", "matrix_deploying_worn_tool");
+    private static final ResourceLocation COMPONENT_FILLING =
+            ResourceLocation.fromNamespaceAndPath("test", "matrix_filling_components");
+
+    private static final int PICKAXE_DAMAGE = 7;
 
     private SequencedAssemblyMatrixJobGameTest() {}
 
@@ -139,6 +143,23 @@ public final class SequencedAssemblyMatrixJobGameTest {
                 "the matrix refused the " + what + " pattern");
     }
 
+    private static ItemStack damagedPickaxe() {
+        ItemStack stack = new ItemStack(Items.IRON_PICKAXE);
+        stack.setDamageValue(PICKAXE_DAMAGE);
+        return stack;
+    }
+
+    private static int outputCount(SequencedAssemblyMatrixBlockEntity matrix, ItemStack wanted) {
+        int total = 0;
+        for (int slot = 0; slot < matrix.getOutputBuffer().getSlots(); slot++) {
+            ItemStack stack = matrix.getOutputBuffer().getStackInSlot(slot);
+            if (ItemStack.isSameItemSameComponents(stack, wanted)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
     private static int outputCount(SequencedAssemblyMatrixBlockEntity matrix, Item item) {
         int total = 0;
         for (int slot = 0; slot < matrix.getOutputBuffer().getSlots(); slot++) {
@@ -205,9 +226,9 @@ public final class SequencedAssemblyMatrixJobGameTest {
                 helper,
                 AndesiteCraftingPattern.encode(
                         WORN_TOOL,
-                        List.of(
-                                new GenericStack(AEItemKey.of(Items.OAK_PLANKS), 1),
-                                new GenericStack(AEItemKey.of(Items.WOODEN_SHOVEL), 1)),
+                        List.of(new GenericStack(AEItemKey.of(Items.OAK_PLANKS), 1)),
+                        List.of(),
+                        List.of(new GenericStack(AEItemKey.of(Items.WOODEN_SHOVEL), 1)),
                         new GenericStack(AEItemKey.of(Items.STICK), 1)));
 
         helper.assertTrue(
@@ -215,6 +236,29 @@ public final class SequencedAssemblyMatrixJobGameTest {
                 "the matrix accepted a deploying recipe whose tool a Deployer only damages; running it would eat a "
                         + "whole shovel per craft and hand the network back an item its pattern never named");
         helper.succeed();
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
+    public static void theMatrixFillsAnOutputThatCarriesDataComponents(GameTestHelper helper) {
+        SequencedAssemblyMatrixBlockEntity matrix = powered(helper);
+        IPatternDetails details = decode(
+                helper,
+                AndesiteCraftingPattern.encode(
+                        COMPONENT_FILLING,
+                        List.of(
+                                new GenericStack(AEItemKey.of(Items.APPLE), 1),
+                                new GenericStack(AEFluidKey.of(Fluids.WATER), WATER_PER_CRAFT)),
+                        new GenericStack(AEItemKey.of(damagedPickaxe()), 1)));
+        push(helper, details, "component-carrying filling");
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(
+                    outputCount(matrix, damagedPickaxe()) == 1,
+                    "the matrix produced no pickaxe at the damage its pattern named " + describe(matrix));
+            helper.assertTrue(
+                    !matrix.hasPending(),
+                    "the matrix still owes the component-carrying output it already made " + describe(matrix));
+        });
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)

@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
@@ -31,16 +32,20 @@ public class SequencedAssemblyControllerBlock extends Block implements EntityBlo
 
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<ControllerStatus> STATUS = EnumProperty.create("status", ControllerStatus.class);
+    public static final BooleanProperty WORKING = BooleanProperty.create("working");
 
     public SequencedAssemblyControllerBlock(Properties properties) {
         super(properties);
-        registerDefaultState(
-                stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(STATUS, ControllerStatus.OFF));
+        registerDefaultState(stateDefinition
+                .any()
+                .setValue(FACING, Direction.NORTH)
+                .setValue(STATUS, ControllerStatus.OFF)
+                .setValue(WORKING, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, STATUS);
+        builder.add(FACING, STATUS, WORKING);
     }
 
     @Nullable

@@ -1,0 +1,99 @@
+{
+    "parent": "minecraft:block/block",
+    "elements": [
+        {
+            "faces": {
+                "down": {
+                    "texture": "#shaft_end"
+                },
+                "east": {
+                    "texture": "#shaft_side",
+                    "uv": [
+                        6.0,
+                        0.0,
+                        10.0,
+                        1.75
+                    ]
+                },
+                "north": {
+                    "texture": "#shaft_side",
+                    "uv": [
+                        6.0,
+                        0.0,
+                        10.0,
+                        1.75
+                    ]
+                },
+                "south": {
+                    "texture": "#shaft_side",
+                    "uv": [
+                        6.0,
+                        0.0,
+                        10.0,
+                        1.75
+                    ]
+                },
+                "up": {
+                    "texture": "#shaft_end"
+                },
+                "west": {
+                    "texture": "#shaft_side",
+                    "uv": [
+                        6.0,
+                        0.0,
+                        10.0,
+                        1.75
+                    ]
+                }
+            },
+            "from": [
+                6,
+                0,
+                6
+            ],
+            "to": [
+                10,
+                1.75,
+                10
+            ]
+        },
+        {
+            "faces": {
+                "down": {
+                    "texture": "#shaft_end"
+                },
+                "east": {
+                    "texture": "#shaft_side"
+                },
+                "north": {
+                    "texture": "#shaft_side"
+                },
+                "south": {
+                    "texture": "#shaft_side"
+                },
+                "up": {
+                    "texture": "#shaft_end"
+                },
+                "west": {
+                    "texture": "#shaft_side"
+                }
+            },
+            "from": [
+                6,
+                14.25,
+                6
+            ],
+            "to": [
+                10,
+                16,
+                10
+            ]
+        }
+    ],
+    "render_type": "minecraft:cutout_mipped",
+    "textures": {
+        "particle": "create:block/axis",
+        "shaft_end": "create:block/axis_top",
+        "shaft_side": "create:block/axis"
+    }
+}

@@ -1,0 +1,11 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "dev.rylex.nep.compat.ars.mixin",
+  "plugin": "dev.rylex.nep.compat.ars.mixin.ArsMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

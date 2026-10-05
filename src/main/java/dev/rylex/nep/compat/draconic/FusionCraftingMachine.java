@@ -13,6 +13,7 @@ import com.brandon3055.draconicevolution.blocks.tileentity.TileFusionCraftingCor
 import com.brandon3055.draconicevolution.init.DEContent;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.machine.CraftedOutputs;
 import dev.rylex.nep.machine.PushOutcome;
 import dev.rylex.nep.machine.RejectLog;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
@@ -100,8 +101,16 @@ public class FusionCraftingMachine implements ICraftingMachine {
             }
         }
         if (!provided.equals(plan.expectedItems())) {
-            return PushOutcome.unsatisfiable(
-                    "pushed items " + provided + " do not match the recipe's inputs " + plan.expectedItems());
+            FusionRecipeResolver.Plan reassigned = FusionRecipeResolver.planFromProvided(plan, provided, level);
+            if (reassigned == null) {
+                return PushOutcome.retry(
+                        "pushed items " + provided + " do not match the recipe's inputs " + plan.expectedItems());
+            }
+            if (reassigned.result().what() instanceof AEItemKey crafted
+                    && plan.result().what() instanceof AEItemKey declared) {
+                CraftedOutputs.expect(crafted, declared);
+            }
+            plan = reassigned;
         }
 
         if (core.isCrafting()) {

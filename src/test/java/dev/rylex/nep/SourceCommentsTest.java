@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,50 +15,50 @@ import org.junit.jupiter.api.Test;
 
 class SourceCommentsTest {
 
-    private static final List<Path> SOURCE_SETS = List.of(
-            Paths.get("src", "main", "java"), Paths.get("src", "test", "java"), Paths.get("src", "gametest", "java"));
-
-    private static final List<Allowance> ALLOWED = List.of(new Allowance(
-            "src/main/java/dev/rylex/nep/client/NepGuidePacks.java", "GuideMe has no conditional frontmatter"));
-
     @Test
-    void sourceCarriesNoCommentsBeyondTheAllowedOnes() {
+    void sourceCarriesNoCommentsBeyondJavadocOnDeclarations() {
         List<String> violations = new ArrayList<>();
         forEachSourceFile((relative, source) -> {
             for (Comment comment : commentsIn(source)) {
-                if (isAllowed(relative, comment)) {
-                    continue;
+                String fault = faultIn(source, comment);
+                if (fault != null) {
+                    violations.add(relative + ":" + comment.line() + "  " + fault + " -- " + summarise(comment.text()));
                 }
-                violations.add(relative + ":" + comment.line() + "  " + summarise(comment.text()));
             }
         });
         assertTrue(
                 violations.isEmpty(),
-                "Source carries comments. Rationale belongs in the commit message, not the file. Delete these, or "
-                        + "add an ALLOWED entry if the comment documents something a reader cannot recover from the "
-                        + "code:\n  " + String.join("\n  ", violations));
+                "Only javadoc on a declaration is permitted, and only for what the code cannot say itself: an "
+                        + "ordering or lifecycle constraint, a fact about a foreign mod, a unit or a null case. "
+                        + "Everything else belongs in the commit message. There is no allowance list.\n  "
+                        + String.join("\n  ", violations));
     }
 
-    @Test
-    void everyAllowanceStillMatchesAComment() {
-        List<String> unmatched =
-                new ArrayList<>(ALLOWED.stream().map(Allowance::toString).toList());
-        forEachSourceFile((relative, source) -> {
-            for (Comment comment : commentsIn(source)) {
-                ALLOWED.stream()
-                        .filter(allowance -> allowance.matches(relative, comment))
-                        .map(Allowance::toString)
-                        .forEach(unmatched::remove);
+    private static String faultIn(String source, Comment comment) {
+        if (comment.text().startsWith("//")) {
+            return "line comment";
+        }
+        if (!comment.text().startsWith("/**")) {
+            return "block comment";
+        }
+        if (!comment.ownsItsLine()) {
+            return "javadoc trailing code";
+        }
+        if (!attachedToDeclaration(source, comment.end())) {
+            return "javadoc not on a declaration";
+        }
+        return null;
+    }
+
+    private static boolean attachedToDeclaration(String source, int end) {
+        for (String raw : source.substring(Math.min(end, source.length())).split("\n")) {
+            String line = raw.trim();
+            if (line.isEmpty() || line.startsWith("@")) {
+                continue;
             }
-        });
-        assertTrue(
-                unmatched.isEmpty(),
-                "An ALLOWED entry no longer matches any comment, so it is stale and silently permits nothing. "
-                        + "Remove it:\n  " + String.join("\n  ", unmatched));
-    }
-
-    private static boolean isAllowed(String relative, Comment comment) {
-        return ALLOWED.stream().anyMatch(allowance -> allowance.matches(relative, comment));
+            return !line.startsWith("}") && !line.startsWith("/*") && !line.startsWith("//");
+        }
+        return false;
     }
 
     private static String summarise(String text) {
@@ -95,7 +96,9 @@ class SourceCommentsTest {
                 while (index < length && source.charAt(index) != '\n') {
                     index++;
                 }
-                append(found, new Comment(line, source.substring(start, index).trim(), ownsItsLine(source, start)));
+                append(
+                        found,
+                        new Comment(line, source.substring(start, index).trim(), ownsItsLine(source, start), index));
             } else if (source.startsWith("/*", index)) {
                 int start = index;
                 int startLine = line;
@@ -107,7 +110,8 @@ class SourceCommentsTest {
                     index++;
                 }
                 index = Math.min(length, index + 2);
-                found.add(new Comment(startLine, source.substring(start, index).trim(), ownsItsLine(source, start)));
+                found.add(new Comment(
+                        startLine, source.substring(start, index).trim(), ownsItsLine(source, start), index));
             } else {
                 index++;
             }
@@ -143,13 +147,20 @@ class SourceCommentsTest {
     }
 
     private static void forEachSourceFile(SourceVisitor visitor) {
-        Path root = ProjectFiles.root();
-        for (Path sourceSet : SOURCE_SETS) {
-            Path directory = root.resolve(sourceSet);
-            if (!Files.isDirectory(directory)) {
-                continue;
-            }
-            try (Stream<Path> files = Files.walk(directory)) {
+        Path root = projectRoot();
+        Path src = root.resolve("src");
+        List<Path> sourceSets = new ArrayList<>();
+        try (Stream<Path> children = Files.list(src)) {
+            children.map(child -> child.resolve("java"))
+                    .filter(Files::isDirectory)
+                    .sorted()
+                    .forEach(sourceSets::add);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        assertTrue(!sourceSets.isEmpty(), "No java source sets found under " + src);
+        for (Path sourceSet : sourceSets) {
+            try (Stream<Path> files = Files.walk(sourceSet)) {
                 files.filter(file -> file.toString().endsWith(".java"))
                         .sorted()
                         .forEach(file ->
@@ -157,6 +168,31 @@ class SourceCommentsTest {
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
+        }
+    }
+
+    private static Path projectRoot() {
+        for (Path start : List.of(Paths.get("").toAbsolutePath(), classesRoot())) {
+            for (Path candidate = start; candidate != null; candidate = candidate.getParent()) {
+                if (Files.isDirectory(candidate.resolve(Paths.get("src", "main", "java")))) {
+                    return candidate.normalize();
+                }
+            }
+        }
+        throw new IllegalStateException(
+                "Could not locate the project root from " + Paths.get("").toAbsolutePath());
+    }
+
+    private static Path classesRoot() {
+        try {
+            return Paths.get(SourceCommentsTest.class
+                            .getProtectionDomain()
+                            .getCodeSource()
+                            .getLocation()
+                            .toURI())
+                    .toAbsolutePath();
+        } catch (URISyntaxException | NullPointerException e) {
+            return Paths.get("").toAbsolutePath();
         }
     }
 
@@ -168,22 +204,10 @@ class SourceCommentsTest {
         }
     }
 
-    private record Comment(int line, String text, boolean ownsItsLine) {
+    private record Comment(int line, String text, boolean ownsItsLine, int end) {
 
         Comment joinedWith(Comment next) {
-            return new Comment(line, text + "\n" + next.text(), ownsItsLine);
-        }
-    }
-
-    private record Allowance(String file, String fragment) {
-
-        boolean matches(String relative, Comment comment) {
-            return file.equals(relative) && comment.text().contains(fragment);
-        }
-
-        @Override
-        public String toString() {
-            return file + "  " + fragment;
+            return new Comment(line, text + "\n" + next.text(), ownsItsLine, next.end());
         }
     }
 }

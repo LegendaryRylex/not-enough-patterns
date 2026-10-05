@@ -5,8 +5,11 @@ import de.ellpeck.actuallyadditions.mod.crafting.LaserRecipe;
 import de.ellpeck.actuallyadditions.mod.jei.JEIActuallyAdditionsPlugin;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.jei.JeiTransferSource;
+import dev.rylex.nep.compat.jei.ManualTransferHandler;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -15,6 +18,28 @@ import org.jetbrains.annotations.Nullable;
 
 public final class ActuallyAdditionsJeiCompat {
     private ActuallyAdditionsJeiCompat() {}
+
+    public static void addManualTransfers(
+            IRecipeTransferRegistration registration, IRecipeTransferHandlerHelper helper) {
+        registration.addRecipeTransferHandler(
+                new ManualTransferHandler<>(
+                        AtomicEmpoweringMatrixMenu.class,
+                        NepActuallyAdditionsContent.MATRIX_MENU.get(),
+                        JEIActuallyAdditionsPlugin.EMPOWERER,
+                        helper,
+                        (recipe, level) -> ActuallyAdditionsRecipeIngredients.empoweringRequirements(recipe),
+                        ActuallyAdditionsJeiCompat::empoweringId),
+                JEIActuallyAdditionsPlugin.EMPOWERER);
+        registration.addRecipeTransferHandler(
+                new ManualTransferHandler<>(
+                        AtomicEmpoweringMatrixMenu.class,
+                        NepActuallyAdditionsContent.MATRIX_MENU.get(),
+                        JEIActuallyAdditionsPlugin.LASER,
+                        helper,
+                        (recipe, level) -> ActuallyAdditionsRecipeIngredients.laserRequirements(recipe),
+                        ActuallyAdditionsJeiCompat::laserId),
+                JEIActuallyAdditionsPlugin.LASER);
+    }
 
     public static JeiTransferSource source() {
         return new JeiTransferSource() {

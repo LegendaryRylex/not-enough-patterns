@@ -1,0 +1,57 @@
+{
+  "type": "malum:spirit_infusion",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "malum"
+    }
+  ],
+  "input": {
+    "count": 1,
+    "item": "malum:tuning_fork"
+  },
+  "extraInputs": [
+    {
+      "count": 1,
+      "item": "malum:mending_diffuser"
+    },
+    {
+      "count": 1,
+      "item": "malum:accelerating_inlay"
+    },
+    {
+      "count": 1,
+      "item": "malum:blazing_diode"
+    },
+    {
+      "count": 1,
+      "item": "malum:intricate_assembly"
+    },
+    {
+      "count": 2,
+      "item": "nep:matrix_circuitry"
+    }
+  ],
+  "spirits": [
+    {
+      "type": "nep:radiant",
+      "count": 1
+    },
+    {
+      "type": "malum:arcane",
+      "count": 8
+    },
+    {
+      "type": "malum:infernal",
+      "count": 8
+    },
+    {
+      "type": "malum:earthen",
+      "count": 4
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "nep:matrix_catalyzer"
+  }
+}

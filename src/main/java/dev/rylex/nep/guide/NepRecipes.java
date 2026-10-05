@@ -2,6 +2,7 @@ package dev.rylex.nep.guide;
 
 import com.mojang.serialization.MapCodec;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.decoder.DecoderShapedRecipe;
 import dev.rylex.nep.pattern.encoding.ProcessingPatternConversionRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -32,9 +33,24 @@ public final class NepRecipes {
                     "processing_pattern_conversion",
                     () -> new SimpleCraftingRecipeSerializer<>(ProcessingPatternConversionRecipe::new));
 
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<DecoderShapedRecipe>> DECODER_SHAPED =
+            SERIALIZERS.register("decoder_shaped", () -> new DecoderShapedSerializer());
+
     public static void init(IEventBus modBus) {
         TYPES.register(modBus);
         SERIALIZERS.register(modBus);
+    }
+
+    private static final class DecoderShapedSerializer implements RecipeSerializer<DecoderShapedRecipe> {
+        @Override
+        public MapCodec<DecoderShapedRecipe> codec() {
+            return DecoderShapedRecipe.CODEC;
+        }
+
+        @Override
+        public StreamCodec<RegistryFriendlyByteBuf, DecoderShapedRecipe> streamCodec() {
+            return DecoderShapedRecipe.STREAM_CODEC;
+        }
     }
 
     private static final class ModuleStatusSerializer implements RecipeSerializer<ModuleStatusRecipe> {

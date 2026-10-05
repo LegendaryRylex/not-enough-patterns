@@ -6,6 +6,10 @@
       "required": false
     },
     {
+      "id": "nep:pattern_decoder",
+      "required": false
+    },
+    {
       "id": "nep:sequenced_assembly_controller",
       "required": false
     },
@@ -31,6 +35,22 @@
     },
     {
       "id": "nep:miniaturization_controller",
+      "required": false
+    },
+    {
+      "id": "nep:focused_spirit_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:arcane_enchanting_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:arcane_lectern",
+      "required": false
+    },
+    {
+      "id": "nep:ritual_conductor",
       "required": false
     }
   ]

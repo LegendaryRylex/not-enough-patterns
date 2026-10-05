@@ -27,6 +27,8 @@ public final class NepGuidePacks {
         hidePagesWithout(event, "actuallyadditions", "no_actuallyadditions");
         hidePagesWithout(event, "mysticalagriculture", "no_mysticalagriculture");
         hidePagesWithout(event, "apothic_enchanting", "no_apothic_enchanting");
+        hidePagesWithout(event, "malum", "no_malum");
+        hidePagesWithout(event, "ars_nouveau", "no_ars_nouveau");
     }
 
     /**

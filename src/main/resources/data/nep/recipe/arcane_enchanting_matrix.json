@@ -1,0 +1,44 @@
+{
+  "type": "ars_nouveau:enchanting_apparatus",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ars_nouveau"
+    }
+  ],
+  "keepNbtOfReagent": false,
+  "pedestalItems": [
+    {
+      "item": "nep:matrix_circuitry"
+    },
+    {
+      "item": "nep:matrix_circuitry"
+    },
+    {
+      "item": "nep:matrix_circuitry"
+    },
+    {
+      "item": "nep:matrix_circuitry"
+    },
+    {
+      "item": "ars_nouveau:enchanting_apparatus"
+    },
+    {
+      "item": "ars_nouveau:imbuement_chamber"
+    },
+    {
+      "item": "ars_nouveau:source_gem_block"
+    },
+    {
+      "item": "ars_nouveau:source_gem_block"
+    }
+  ],
+  "reagent": {
+    "item": "ae2:molecular_assembler"
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:arcane_enchanting_matrix"
+  },
+  "sourceCost": 20000
+}

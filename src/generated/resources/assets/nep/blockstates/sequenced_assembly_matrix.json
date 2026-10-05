@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=x": {
+            "model": "nep:block/sequenced_assembly_matrix",
+            "x": 90,
+            "y": 90
+        },
+        "axis=y": {
+            "model": "nep:block/sequenced_assembly_matrix"
+        },
+        "axis=z": {
+            "model": "nep:block/sequenced_assembly_matrix",
+            "x": 90
+        }
+    }
+}

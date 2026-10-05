@@ -1,0 +1,22 @@
+{
+    "variants": {
+        "status=halted,working=false": {
+            "model": "nep:block/sequenced_assembly_controller_halted"
+        },
+        "status=halted,working=true": {
+            "model": "nep:block/sequenced_assembly_controller_working"
+        },
+        "status=off,working=false": {
+            "model": "nep:block/sequenced_assembly_controller_off"
+        },
+        "status=off,working=true": {
+            "model": "nep:block/sequenced_assembly_controller_working"
+        },
+        "status=on,working=false": {
+            "model": "nep:block/sequenced_assembly_controller_on"
+        },
+        "status=on,working=true": {
+            "model": "nep:block/sequenced_assembly_controller_working"
+        }
+    }
+}

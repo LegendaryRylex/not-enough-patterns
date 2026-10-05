@@ -4,6 +4,7 @@ import appeng.api.AECapabilities;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEBlocks;
@@ -11,9 +12,11 @@ import com.brandon3055.draconicevolution.api.DraconicAPI;
 import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import com.brandon3055.draconicevolution.init.DEContent;
 import com.brandon3055.draconicevolution.init.ItemData;
+import dev.rylex.nep.ConfigOverrides;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.machine.ComparatorSignal;
+import dev.rylex.nep.machine.CraftedOutputs;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
@@ -54,6 +57,7 @@ public final class FusionMatrixGameTest {
     private static final BlockPos ENERGY_CELL = ME_CONTROLLER.above();
 
     private static final int CHARGE_SLACK_TICKS = 20;
+    private static final String ME_CHARGE_FIELD = "DRACONIC_FUSION_MATRIX_ME_CHARGE";
 
     private FusionMatrixGameTest() {}
 
@@ -153,6 +157,63 @@ public final class FusionMatrixGameTest {
             }
         }
         return total;
+    }
+
+    private static KeyCounter[] inputsWithEnchantedCatalyst(
+            GameTestHelper helper, IPatternDetails details, RecipeHolder<IFusionRecipe> holder) {
+        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
+        boolean swapped = false;
+        for (int slot = 0; slot < inputs.length; slot++) {
+            inputs[slot] = new KeyCounter();
+            IPatternDetails.IInput input = details.getInputs()[slot];
+            AEKey key = input.getPossibleInputs()[0].what();
+            if (!swapped
+                    && key instanceof AEItemKey item
+                    && holder.value().getCatalyst().test(item.toStack())) {
+                key = FusionModifiedIngredientGameTest.enchant(helper.getLevel(), item);
+                swapped = true;
+            }
+            inputs[slot].add(key, input.getMultiplier());
+        }
+        helper.assertTrue(swapped, "the pattern has no slot the recipe would take as a catalyst");
+        return inputs;
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
+    public static void anEnchantedCatalystIsUpgradedInPlace(GameTestHelper helper) {
+        RecipeHolder<IFusionRecipe> holder = cheapestFusionRecipe(
+                helper,
+                candidate -> DraconicRecipeIngredients.carriesIngredientData(
+                        FusionResults.expectedResult(candidate.value(), helper.getLevel())));
+        helper.assertTrue(holder != null, "no fusion recipe carries catalyst data onto its result");
+        assertCompletesWithin(helper, holder, 300);
+
+        FusionMatrixBlockEntity matrix = place(helper);
+        powerUp(helper);
+        IPatternDetails details = patternFor(helper, holder);
+        AEItemKey declared = (AEItemKey) details.getOutputs().get(0).what();
+
+        helper.assertTrue(
+                matrix.pushMatrixPattern(details, inputsWithEnchantedCatalyst(helper, details, holder), Direction.UP),
+                "the matrix refused a pattern carrying an enchanted catalyst");
+        keepCharged(helper, matrix, 320);
+
+        helper.runAfterDelay(300, () -> {
+            ItemStack produced = ItemStack.EMPTY;
+            for (int slot = 0; slot < matrix.getOutputBuffer().getSlots(); slot++) {
+                ItemStack held = matrix.getOutputBuffer().getStackInSlot(slot);
+                if (!held.isEmpty()) {
+                    produced = held;
+                    break;
+                }
+            }
+            helper.assertTrue(!produced.isEmpty(), "the matrix never finished the enchanted catalyst's upgrade");
+            helper.assertTrue(produced.isEnchanted(), "the matrix stripped the catalyst's enchantment: " + produced);
+            helper.assertTrue(
+                    declared.equals(CraftedOutputs.declaredFor(AEItemKey.of(produced))),
+                    "a job waiting for " + declared + " would never settle on " + produced);
+            helper.succeed();
+        });
     }
 
     private static KeyCounter[] inputsOf(IPatternDetails details) {
@@ -728,6 +789,61 @@ public final class FusionMatrixGameTest {
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
+    public static void aMatrixWithNoFeSourceChargesItselfFromTheNetwork(GameTestHelper helper) {
+        FusionMatrixBlockEntity matrix = place(helper);
+        powerUp(helper);
+
+        RecipeHolder<IFusionRecipe> holder = anyFusionRecipe(helper);
+        assertCompletesWithin(helper, holder, 300);
+        IPatternDetails details = patternFor(helper, holder);
+        ItemStack wanted = holder.value().getResultItem(helper.getLevel().registryAccess());
+
+        helper.assertTrue(
+                matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP), "a fusion pattern was rejected");
+
+        helper.runAfterDelay(300, () -> {
+            ItemStack produced = ItemStack.EMPTY;
+            for (int slot = 0; slot < matrix.getOutputBuffer().getSlots(); slot++) {
+                ItemStack held = matrix.getOutputBuffer().getStackInSlot(slot);
+                if (!held.isEmpty()) {
+                    produced = held;
+                    break;
+                }
+            }
+            helper.assertTrue(
+                    !produced.isEmpty(),
+                    "a matrix with nothing feeding it FE never charged off its own network (charged "
+                            + matrix.chargedEnergy() + " of " + matrix.chargeCost() + " FE)");
+            helper.assertTrue(
+                    ItemStack.isSameItem(produced, wanted),
+                    "the matrix produced " + produced + " instead of " + wanted);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, batch = "nep_fusion_me_charge_off", timeoutTicks = 200)
+    public static void aMatrixWithNetworkChargingOffBanksNothing(GameTestHelper helper) {
+        ConfigOverrides.Restore restore = ConfigOverrides.override(ME_CHARGE_FIELD, false);
+        FusionMatrixBlockEntity matrix = place(helper);
+        powerUp(helper);
+
+        IPatternDetails details = patternFor(helper, anyFusionRecipe(helper));
+        helper.assertTrue(
+                matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP), "a fusion pattern was rejected");
+
+        helper.runAfterDelay(100, () -> {
+            long charged = matrix.chargedEnergy();
+            long stored = matrix.storedEnergy();
+            restore.undo();
+            helper.assertTrue(
+                    charged == 0 && stored == 0,
+                    "the matrix took " + stored + " FE into its buffer and banked " + charged
+                            + " of a craft with network charging turned off");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
     public static void aChargedMatrixCompletesAGearUpgrade(GameTestHelper helper) {
         RecipeHolder<IFusionRecipe> holder = cheapestFusionRecipe(
                 helper,
@@ -910,12 +1026,21 @@ public final class FusionMatrixGameTest {
         helper.assertTrue(
                 matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP), "a fusion pattern was rejected");
 
+        long[] claimed = new long[] {-1};
+        for (int tick = 1; tick <= 20; tick++) {
+            helper.runAtTickTime(tick, () -> {
+                if (claimed[0] < 0 && !matrix.activeResult().isEmpty()) {
+                    claimed[0] = matrix.chargeCost();
+                }
+            });
+        }
+
         helper.runAfterDelay(20, () -> {
-            helper.assertTrue(!matrix.activeResult().isEmpty(), "the matrix never claimed the craft");
+            helper.assertTrue(claimed[0] >= 0, "the matrix never claimed the craft");
             helper.assertTrue(
-                    matrix.chargeCost() < undiscounted,
-                    "a full slot of Chaotic Cores charged " + matrix.chargeCost() + " FE, no cheaper than the "
-                            + undiscounted + " FE an unupgraded Matrix pays");
+                    claimed[0] < undiscounted,
+                    "a full slot of Chaotic Cores charged " + claimed[0] + " FE, no cheaper than the " + undiscounted
+                            + " FE an unupgraded Matrix pays");
             helper.succeed();
         });
     }

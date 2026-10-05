@@ -2,6 +2,10 @@ package dev.rylex.nep.compat.compactcrafting;
 
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepCreativeTabs;
+import dev.rylex.nep.decoder.DecoderContent;
+import dev.rylex.nep.decoder.DecoderModule;
+import dev.rylex.nep.decoder.EncodingModuleItem;
+import dev.rylex.nep.machine.MatrixStatus;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
@@ -20,6 +24,9 @@ final class NepCompactCraftingContent {
 
     private static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(Nep.MOD_ID);
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Nep.MOD_ID);
+
+    static final DeferredItem<EncodingModuleItem> ENCODING_MODULE =
+            DecoderContent.registerModule(ITEMS, DecoderModule.COMPACT_CRAFTING);
     private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, Nep.MOD_ID);
     private static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(Registries.MENU, Nep.MOD_ID);
@@ -27,7 +34,11 @@ final class NepCompactCraftingContent {
     static final DeferredBlock<MiniaturizationMatrixBlock> MATRIX = BLOCKS.registerBlock(
             "miniaturization_matrix",
             MiniaturizationMatrixBlock::new,
-            BlockBehaviour.Properties.of().strength(3.0F).requiresCorrectToolForDrops());
+            BlockBehaviour.Properties.of()
+                    .strength(3.0F)
+                    .requiresCorrectToolForDrops()
+                    .noOcclusion()
+                    .lightLevel(MatrixStatus.LIGHT));
 
     static final DeferredItem<BlockItem> MATRIX_ITEM = ITEMS.registerSimpleBlockItem(MATRIX);
 
@@ -49,6 +60,7 @@ final class NepCompactCraftingContent {
             BlockBehaviour.Properties.of()
                     .strength(3.0F)
                     .requiresCorrectToolForDrops()
+                    .noOcclusion()
                     .isRedstoneConductor((state, level, pos) -> false));
 
     static final DeferredItem<BlockItem> CONTROLLER_ITEM = ITEMS.registerSimpleBlockItem(CONTROLLER);

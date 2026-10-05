@@ -1,0 +1,65 @@
+{
+  "type": "malum:spirit_infusion",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "malum"
+    }
+  ],
+  "input": {
+    "count": 1,
+    "item": "malum:stellar_mechanism"
+  },
+  "extraInputs": [
+    {
+      "count": 1,
+      "item": "malum:impurity_stabilizer"
+    },
+    {
+      "count": 4,
+      "item": "malum:paracausal_flame"
+    }
+  ],
+  "spirits": [
+    {
+      "type": "nep:pure",
+      "count": 4
+    },
+    {
+      "type": "malum:infernal",
+      "count": 32
+    },
+    {
+      "type": "malum:earthen",
+      "count": 32
+    },
+    {
+      "type": "malum:aqueous",
+      "count": 32
+    },
+    {
+      "type": "malum:aerial",
+      "count": 32
+    },
+    {
+      "type": "malum:arcane",
+      "count": 16
+    },
+    {
+      "type": "malum:eldritch",
+      "count": 16
+    },
+    {
+      "type": "malum:wicked",
+      "count": 16
+    },
+    {
+      "type": "malum:sacred",
+      "count": 16
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "nep:radiant_spirit"
+  }
+}

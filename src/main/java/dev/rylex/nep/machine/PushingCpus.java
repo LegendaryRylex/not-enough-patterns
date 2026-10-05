@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.Nullable;
 
 public final class PushingCpus {
@@ -37,7 +36,7 @@ public final class PushingCpus {
         partial = false;
     }
 
-    public int cancelJobsFor(@Nullable IGrid grid, Set<Item> outputs) {
+    public int cancelJobsFor(@Nullable IGrid grid, Set<AEItemKey> outputs) {
         if (grid == null || outputs.isEmpty()) {
             return 0;
         }
@@ -62,11 +61,11 @@ public final class PushingCpus {
         return cancelled;
     }
 
-    private static boolean waitsForAny(CraftingCPUCluster cluster, Set<Item> outputs) {
+    private static boolean waitsForAny(CraftingCPUCluster cluster, Set<AEItemKey> outputs) {
         Set<AEKey> waiting = new HashSet<>();
         cluster.craftingLogic.getAllWaitingFor(waiting);
         for (AEKey key : waiting) {
-            if (key instanceof AEItemKey item && outputs.contains(item.getItem())) {
+            if (key instanceof AEItemKey item && outputs.contains(item)) {
                 return true;
             }
         }

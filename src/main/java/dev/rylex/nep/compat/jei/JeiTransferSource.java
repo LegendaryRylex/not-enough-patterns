@@ -22,6 +22,10 @@ public interface JeiTransferSource {
         <R extends Recipe<?>> void add(
                 RecipeType<RecipeHolder<R>> recipeType, PatternTransferHandler.Extractor<RecipeHolder<R>> extractor);
 
+        <R extends Recipe<?>> void addViewing(
+                RecipeType<RecipeHolder<R>> recipeType,
+                PatternTransferHandler.ViewExtractor<RecipeHolder<R>> extractor);
+
         <T> void addUnwrapped(
                 RecipeType<T> recipeType,
                 PatternTransferHandler.Extractor<T> extractor,

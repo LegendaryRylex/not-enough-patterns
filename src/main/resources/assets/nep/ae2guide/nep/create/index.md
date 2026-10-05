@@ -39,4 +39,18 @@ navigation:
 
 ***
 
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Encoding Module</Color>
+
+  <ItemImage id="nep:create_encoding_module" scale="1.5"/>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+On a server that turns on **Require Decoder**, Create patterns only encode on a network whose [Pattern Decoder](/nep/pattern-decoder.md) carries this module. Without it they encode as plain Processing Patterns.
+
+<Recipe id="nep:create_encoding_module"/>
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
 <SubPages icons={true} />

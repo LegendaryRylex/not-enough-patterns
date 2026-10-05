@@ -1,0 +1,11 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "dev.rylex.nep.compat.ae2lt.mixin",
+  "plugin": "dev.rylex.nep.compat.ae2lt.mixin.Ae2LtMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

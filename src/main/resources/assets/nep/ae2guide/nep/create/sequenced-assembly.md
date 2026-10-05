@@ -128,6 +128,24 @@ If the network runs dry, the Controller halts and its face turns <Color id="red"
 ***
 
 <Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Crafting By Hand</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+A sequenced assembly recipe can also be started out of your own inventory, with no pattern and no Provider anywhere near it. Open the Controller, find the recipe in the recipe viewer, and press its transfer button: every ingredient leaves your inventory in one go and the line starts on it like any other job.
+
+* It is all or nothing. Come up short and nothing moves: the button says so and the recipe marks the ingredients you are missing in red.
+* Holding shift queues as many crafts as your inventory can pay for, up to sixty-four, trimmed to what the input buffer has room to stage.
+* The finished item waits in the output buffer for you to take. Nothing goes to the network, and no crafting job is created.
+* A recipe with a fluid step cannot be started by hand, since no fluid comes out of an inventory.
+* The linked line still has to carry that recipe's stations, or the Controller turns the craft down before anything leaves your inventory.
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
   ## <Color id="gold">If Nothing Happens</Color>
 </Column>
 

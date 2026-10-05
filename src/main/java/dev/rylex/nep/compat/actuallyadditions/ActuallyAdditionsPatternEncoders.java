@@ -5,6 +5,7 @@ import appeng.api.stacks.GenericStack;
 import de.ellpeck.actuallyadditions.mod.crafting.EmpowererRecipe;
 import de.ellpeck.actuallyadditions.mod.crafting.LaserRecipe;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.pattern.AtomicReconstructionPattern;
 import dev.rylex.nep.pattern.EmpoweringPattern;
 import dev.rylex.nep.pattern.PatternStacks;
@@ -22,9 +23,12 @@ final class ActuallyAdditionsPatternEncoders {
     private ActuallyAdditionsPatternEncoders() {}
 
     static void register() {
-        PatternConverters.register(EmpowererRecipe.class, ActuallyAdditionsPatternEncoders::empowering);
-        PatternConverters.register(LaserRecipe.class, ActuallyAdditionsPatternEncoders::laser);
-        PatternConverters.registerFallback(ActuallyAdditionsPatternEncoders::empoweringByResult);
+        PatternConverters.register(
+                DecoderModule.ACTUALLY_ADDITIONS, EmpowererRecipe.class, ActuallyAdditionsPatternEncoders::empowering);
+        PatternConverters.register(
+                DecoderModule.ACTUALLY_ADDITIONS, LaserRecipe.class, ActuallyAdditionsPatternEncoders::laser);
+        PatternConverters.registerFallback(
+                DecoderModule.ACTUALLY_ADDITIONS, ActuallyAdditionsPatternEncoders::empoweringByResult);
     }
 
     @Nullable

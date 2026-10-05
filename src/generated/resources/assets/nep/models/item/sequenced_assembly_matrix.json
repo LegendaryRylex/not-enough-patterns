@@ -1,0 +1,10 @@
+{
+    "parent": "nep:block/matrix/cage_ported_core",
+    "textures": {
+        "core": "nep:block/matrix/core/sequenced_assembler",
+        "corner": "nep:block/matrix/sequenced_assembler/corner",
+        "particle": "nep:block/matrix/sequenced_assembler/border",
+        "ring": "nep:block/matrix/sequenced_assembler/ring",
+        "strut": "nep:block/matrix/sequenced_assembler/strut"
+    }
+}

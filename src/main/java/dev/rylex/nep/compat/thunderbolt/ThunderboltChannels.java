@@ -11,6 +11,8 @@ import org.jetbrains.annotations.Nullable;
 
 public final class ThunderboltChannels {
 
+    private static final int MAX_ONE_AT_A_TIME_ROUNDS = 4;
+
     private static final Set<IGridNode> WITHDRAWN = new ReferenceOpenHashSet<>();
 
     private static int claimed;
@@ -35,23 +37,38 @@ public final class ThunderboltChannels {
         return claimed;
     }
 
+    /**
+     * Each {@code solve} call is a full Dinic max-flow over the whole grid inside Thunderbolt, so the
+     * round count is capped and the remaining part-fed machines are withdrawn together at the cap.
+     */
     @Nullable
     public static BorrowedCapacityCalculator.Result solveUntilNobodyIsPartFed(
             Supplier<BorrowedCapacityCalculator.Result> solve, Set<IGridNode> network) {
         WITHDRAWN.clear();
+        boolean refining = hasMultiChannelDemand(network);
         BorrowedCapacityCalculator.Result result;
-        while (true) {
+        for (int round = 0; ; round++) {
             claimed = 0;
             result = solve.get();
             if (result == null) {
                 WITHDRAWN.clear();
                 return null;
             }
-            IGridNode leastFed = leastFedPartFed(result, network);
-            if (leastFed == null) {
+            if (!refining) {
                 break;
             }
-            WITHDRAWN.add(leastFed);
+            if (round < MAX_ONE_AT_A_TIME_ROUNDS) {
+                IGridNode leastFed = leastFedPartFed(result, network);
+                if (leastFed == null) {
+                    break;
+                }
+                WITHDRAWN.add(leastFed);
+            } else {
+                if (!withdrawAllPartFed(result, network)) {
+                    break;
+                }
+                refining = false;
+            }
         }
         if (WITHDRAWN.isEmpty()) {
             fedDemand = totalDemandOf(result.channelNodes());
@@ -73,14 +90,37 @@ public final class ThunderboltChannels {
         return total;
     }
 
+    private static boolean hasMultiChannelDemand(Set<IGridNode> network) {
+        for (IGridNode node : network) {
+            if (ChannelDemand.of(node) >= 2) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isPartFed(BorrowedCapacityCalculator.Result result, IGridNode node) {
+        return !WITHDRAWN.contains(node)
+                && ChannelDemand.of(node) >= 2
+                && !result.channelNodes().contains(node);
+    }
+
+    private static boolean withdrawAllPartFed(BorrowedCapacityCalculator.Result result, Set<IGridNode> network) {
+        boolean withdrew = false;
+        for (IGridNode node : network) {
+            if (isPartFed(result, node)) {
+                withdrew |= WITHDRAWN.add(node);
+            }
+        }
+        return withdrew;
+    }
+
     @Nullable
     private static IGridNode leastFedPartFed(BorrowedCapacityCalculator.Result result, Set<IGridNode> network) {
         IGridNode leastFed = null;
         int leastFlow = Integer.MAX_VALUE;
         for (IGridNode node : network) {
-            if (WITHDRAWN.contains(node)
-                    || ChannelDemand.of(node) < 2
-                    || result.channelNodes().contains(node)) {
+            if (!isPartFed(result, node)) {
                 continue;
             }
             int flow = result.nodeFlow().getInt(node);

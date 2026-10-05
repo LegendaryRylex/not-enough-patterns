@@ -1,0 +1,30 @@
+{
+  "type": "nep:decoder_shaped",
+  "category": "misc",
+  "pattern": [
+    "ILI",
+    "EBE",
+    "ICI"
+  ],
+  "key": {
+    "I": {
+      "tag": "c:ingots/iron"
+    },
+    "L": {
+      "item": "ae2:logic_processor"
+    },
+    "E": {
+      "item": "ae2:engineering_processor"
+    },
+    "C": {
+      "item": "ae2:calculation_processor"
+    },
+    "B": {
+      "item": "ae2:blank_pattern"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:pattern_decoder"
+  }
+}

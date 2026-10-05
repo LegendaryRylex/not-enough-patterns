@@ -72,10 +72,28 @@ If the field refuses the layout, the blocks are taken back out and the ingredien
 
 * The top readout names the current stage and the size of the field it is bound to, or **No field** when it is not touching a live projector.
 * The input buffer only accepts items a pending craft still needs, so loose items cannot clog it.
+* Each buffer slot holds up to 64 of any item, whatever that item normally stacks to, so a recipe wanting a pile of tools or potions still fits.
 * **Clear Pending Recipes** drops every craft the Controller still owes, cancels ingredients it has on request, and cancels the crafting jobs on the network that were waiting on it.
 * **Empty Buffers** returns everything staged to your inventory.
 * **Guide** opens this page, and is always the rightmost button.
 * A Comparator beside the block reads the output buffer, empty for nothing staged up to a full 15.
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Crafting By Hand</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+A miniaturization recipe can also be started out of your own inventory, with no pattern and no Provider anywhere near it. Open the Controller, find the recipe in the recipe viewer, and press its transfer button: every ingredient leaves your inventory in one go and the craft queues up like any other.
+
+* It is all or nothing. Come up short and nothing moves: the button says so and the recipe marks the ingredients you are missing in red.
+* Holding shift queues as many crafts as your inventory can pay for, up to sixty-four, trimmed to what the input buffer has room to stage.
+* The finished item waits in the output buffer for you to take. Nothing goes to the network, and no crafting job is created.
+* The field still does the work, so a Controller with no field beside it turns a hand-started craft down.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 

@@ -4,6 +4,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import dev.compactmods.crafting.api.components.IRecipeBlockComponent;
 import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import java.util.ArrayList;
@@ -60,6 +61,19 @@ final class MiniaturizationRecipeIngredients {
     }
 
     @Nullable
+    static List<ManualRequirement> manualRequirements(MiniaturizationRecipe recipe) {
+        List<Demand> demands = demandOf(recipe);
+        if (demands == null) {
+            return null;
+        }
+        List<ManualRequirement> requirements = new ArrayList<>(demands.size());
+        for (Demand demand : demands) {
+            requirements.add(new ManualRequirement(demand.ingredient(), demand.count(), true));
+        }
+        return List.copyOf(requirements);
+    }
+
+    @Nullable
     private static Map<Item, Integer> itemCosts(MiniaturizationRecipe recipe) {
         Map<Item, Integer> costs = new LinkedHashMap<>();
         ItemStack catalyst = recipe.catalyst();
@@ -71,7 +85,7 @@ final class MiniaturizationRecipeIngredients {
         boolean anyComponent = false;
         for (Map.Entry<String, Integer> entry : new TreeMap<>(recipe.getComponentTotals()).entrySet()) {
             int needed = entry.getValue() == null ? 0 : entry.getValue();
-            if (needed <= 0 || recipe.getComponents().isEmptyBlock(entry.getKey())) {
+            if (needed <= 0 || MiniaturizationComponents.isEmpty(recipe, entry.getKey())) {
                 continue;
             }
             IRecipeBlockComponent component =

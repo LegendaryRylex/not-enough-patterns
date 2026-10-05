@@ -33,7 +33,7 @@ final class MiniaturizationLayout {
                 continue;
             }
             for (String component : layer.getComponents()) {
-                if (component == null || recipe.getComponents().isEmptyBlock(component)) {
+                if (component == null || MiniaturizationComponents.isEmpty(recipe, component)) {
                     continue;
                 }
                 IRecipeBlockComponent block =

@@ -2,6 +2,7 @@ package dev.rylex.nep.compat.compactcrafting;
 
 import dev.rylex.nep.menu.MachineMenu;
 import dev.rylex.nep.menu.MachineSlot;
+import dev.rylex.nep.menu.ManualCraftMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -11,7 +12,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class MiniaturizationControllerMenu extends MachineMenu {
+public class MiniaturizationControllerMenu extends MachineMenu implements ManualCraftMenu {
 
     static final int BUTTON_CLEAR_PENDING = 1;
     static final int BUTTON_CLEAR_BUFFER = 3;
@@ -82,6 +83,11 @@ public class MiniaturizationControllerMenu extends MachineMenu {
     @Nullable
     MiniaturizationControllerBlockEntity controller() {
         return controller;
+    }
+
+    @Override
+    public BlockPos machinePos() {
+        return pos;
     }
 
     BlockPos controllerPos() {

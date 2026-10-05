@@ -30,6 +30,8 @@ public final class NepConfigValues {
         values.put("importCardGrace", NepConfig::importCardGrace);
         values.put("machineHubChannels", NepConfig::machineHubChannels);
         values.put("machineHubChannelsPerLink", NepConfig::machineHubChannelsPerLink);
+        values.put("patternDecoderChannels", NepConfig::patternDecoderChannels);
+        values.put("patternDecoderIdleMeDrain", NepConfig::patternDecoderIdleMeDrain);
         values.put("atomicEmpoweringMatrixChannels", NepConfig::actuallyAdditionsMatrixChannels);
         values.put("infusionExperiencePerBottle", NepConfig::apothicInfusionExperiencePerBottle);
         values.put("infusionMillibucketsPerExperience", NepConfig::apothicInfusionMillibucketsPerExperience);
@@ -45,6 +47,17 @@ public final class NepConfigValues {
         values.put("sequencedAssemblyMatrixTankCapacity", NepConfig::createSequencedAssemblyMatrixTankCapacity);
         values.put("sequencedAssemblyMatrixChargeRate", NepConfig::createSequencedAssemblyMatrixChargeRate);
         values.put("fusionMatrixChannels", NepConfig::draconicFusionMatrixChannels);
+        values.put("focusedSpiritMatrixChannels", NepConfig::malumFocusedSpiritMatrixChannels);
+        values.put("matrixImpetusDurability", NepConfig::malumFocusedSpiritMatrixImpetusDurability);
+        values.put("arcaneLecternScribesRange", NepConfig::arsArcaneLecternScribesRange);
+        values.put("arcaneEnchantingMatrixChannels", NepConfig::arsMatrixChannels);
+        values.put("arcaneEnchantingMatrixSourceJarRange", NepConfig::arsMatrixSourceJarRange);
+        values.put("arcaneEnchantingMatrixApparatusCraftTicks", NepConfig::arsMatrixApparatusCraftTicks);
+        values.put("arcaneEnchantingMatrixImbuementCraftTicks", NepConfig::arsMatrixImbuementCraftTicks);
+        values.put("arcaneEnchantingMatrixMinimumCraftTicks", NepConfig::arsMatrixAccelerateMinimumCraftTicks);
+        values.put("arcaneEnchantingMatrixMaxAccelerate", NepConfig::arsMatrixMaxAccelerate);
+        values.put("arcaneEnchantingMatrixMaxDampen", NepConfig::arsMatrixMaxDampen);
+        values.put("arcaneEnchantingMatrixSourceDiscount", NepConfig::arsMatrixDampenSourceDiscountPercent);
         values.put("infusedAwakeningMatrixChannels", NepConfig::mysticalInfusedAwakeningMatrixChannels);
         values.put("infusedAwakeningMatrixTankCapacity", NepConfig::mysticalInfusedAwakeningMatrixTankCapacity);
         return Collections.unmodifiableMap(values);

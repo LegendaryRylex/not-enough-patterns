@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "nep:pure_spirit",
+      "required": false
+    },
+    {
+      "id": "nep:radiant_spirit",
+      "required": false
+    }
+  ]
+}

@@ -27,6 +27,12 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
     }
 
     @FunctionalInterface
+    public interface ViewExtractor<T> {
+        @Nullable
+        EncodedIngredients extract(T recipe, IRecipeSlotsView slots, Level level);
+    }
+
+    @FunctionalInterface
     public interface Identifier<T> {
         @Nullable
         ResourceLocation id(T recipe, Level level);
@@ -36,7 +42,7 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
     private final MenuType<M> menuType;
     private final RecipeType<T> recipeType;
     private final IRecipeTransferHandlerHelper helper;
-    private final Extractor<T> extractor;
+    private final ViewExtractor<T> extractor;
     private final Identifier<T> identifier;
 
     PatternTransferHandler(
@@ -44,7 +50,7 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
             MenuType<M> menuType,
             RecipeType<T> recipeType,
             IRecipeTransferHandlerHelper helper,
-            Extractor<T> extractor,
+            ViewExtractor<T> extractor,
             Identifier<T> identifier) {
         this.menuClass = menuClass;
         this.menuType = menuType;
@@ -74,7 +80,7 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
     public IRecipeTransferError transferRecipe(
             M menu, T recipe, IRecipeSlotsView recipeSlots, Player player, boolean maxTransfer, boolean doTransfer) {
 
-        EncodedIngredients encoded = extractor.extract(recipe, player.level());
+        EncodedIngredients encoded = extractor.extract(recipe, recipeSlots, player.level());
         if (encoded == null || encoded.inputs().isEmpty() || encoded.outputs().isEmpty()) {
             return helper.createInternalError();
         }
