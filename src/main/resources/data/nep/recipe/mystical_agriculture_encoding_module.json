@@ -1,0 +1,24 @@
+{
+  "type": "nep:decoder_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "mysticalagriculture"
+    }
+  ],
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "LBL",
+    " S "
+  ],
+  "key": {
+    "S": "mysticalagriculture:supremium_ingot",
+    "L": "ae2:logic_processor",
+    "B": "ae2:blank_pattern"
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:mystical_agriculture_encoding_module"
+  }
+}

@@ -18,6 +18,7 @@
     "UpgradeCardItemMixin"
   ],
   "client": [
+    "AbstractContainerScreenAccessor",
     "AEBaseScreenMixin",
     "EncodingHelperMixin",
     "GuideBuilderMixin",

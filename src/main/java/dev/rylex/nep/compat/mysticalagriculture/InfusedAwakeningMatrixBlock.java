@@ -1,9 +1,9 @@
 package dev.rylex.nep.compat.mysticalagriculture;
 
 import com.mojang.serialization.MapCodec;
+import dev.rylex.nep.machine.MatrixStatus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -23,7 +23,7 @@ public class InfusedAwakeningMatrixBlock extends BaseEntityBlock {
 
     public static final MapCodec<InfusedAwakeningMatrixBlock> CODEC = simpleCodec(InfusedAwakeningMatrixBlock::new);
 
-    public static final EnumProperty<MatrixStatus> STATUS = EnumProperty.create("status", MatrixStatus.class);
+    public static final EnumProperty<MatrixStatus> STATUS = MatrixStatus.PROPERTY;
 
     public InfusedAwakeningMatrixBlock(Properties properties) {
         super(properties);
@@ -81,22 +81,5 @@ public class InfusedAwakeningMatrixBlock extends BaseEntityBlock {
             player.openMenu(matrix, buffer -> buffer.writeBlockPos(pos));
         }
         return InteractionResult.SUCCESS;
-    }
-
-    public enum MatrixStatus implements StringRepresentable {
-        IDLE("idle"),
-        RUNNING("running"),
-        STALLED("stalled");
-
-        private final String name;
-
-        MatrixStatus(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public String getSerializedName() {
-            return name;
-        }
     }
 }

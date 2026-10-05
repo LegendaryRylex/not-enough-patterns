@@ -4,7 +4,9 @@ import appeng.api.upgrades.Upgrades;
 import appeng.core.definitions.AEBlocks;
 import dev.rylex.nep.client.NepClient;
 import dev.rylex.nep.compat.apothic.ApothicCompat;
+import dev.rylex.nep.compat.extendedae.ExtendedAeCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat;
+import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.guide.NepRecipes;
 import dev.rylex.nep.hub.NepContent;
 import dev.rylex.nep.net.NepNetwork;
@@ -36,6 +38,7 @@ public final class Nep {
         NepItems.ITEMS.register(modBus);
         NepCreativeTabs.TABS.register(modBus);
         NepContent.register(modBus);
+        DecoderContent.register(modBus);
         NepRecipes.init(modBus);
         modBus.addListener(NepNetwork::registerPayloads);
         modBus.addListener(this::commonSetup);
@@ -46,6 +49,10 @@ public final class Nep {
         if (ModList.get().isLoaded("mysticalagriculture")) {
             MysticalAgricultureCompat.init(modBus, dist);
             LOGGER.info("Mystical Agriculture integration enabled");
+        }
+        if (ModList.get().isLoaded("extendedae")) {
+            ExtendedAeCompat.init(modBus, dist);
+            LOGGER.info("ExtendedAE integration enabled");
         }
         if (dist.isClient()) {
             NepClient.init(container, modBus);

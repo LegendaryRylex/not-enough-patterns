@@ -23,7 +23,8 @@ class ItemModelsTest {
     private static final Path ITEMS = Paths.get("src", "main", "resources", "assets", "nep", "items");
     private static final Path MODELS = Paths.get("src", "main", "resources", "assets", "nep", "models");
 
-    private static final List<String> COMPAT_GATED = List.of("infused_awakening_matrix");
+    private static final List<String> COMPAT_GATED = List.of(
+            "infused_awakening_matrix", "apothic_enchanting_encoding_module", "mystical_agriculture_encoding_module");
 
     private static List<String> expectedItems() {
         List<String> paths = new ArrayList<>(COMPAT_GATED);

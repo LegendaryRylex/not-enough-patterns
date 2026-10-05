@@ -123,8 +123,8 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
-        data {
-            data()
+        clientData {
+            clientData()
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
         }
 
@@ -133,6 +133,7 @@ neoForge {
             jvmArgument '-Xmx8G'
             jvmArgument '-XX:MaxDirectMemorySize=2G'
             systemProperty 'forge.logging.markers', 'REGISTRIES'
+            systemProperty 'neoforge.warnings.onlyin.hide', 'true'
             logLevel = org.slf4j.event.Level.DEBUG
         }
     }
@@ -168,6 +169,7 @@ configurations {
 dependencies {
     implementation "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     compileOnly "org.appliedenergistics:guideme:${guideme_version}"
+    localRuntime "curse.maven:guideme-recipe-compat-1722328:${gmrecipes_file}"
 
     compileOnly "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
     localRuntime "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
@@ -180,6 +182,7 @@ dependencies {
     localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
     localRuntime "curse.maven:ae2addonlib-1366135:${ae2addonlib_file}"
 
+    compileOnly "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
     localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
     localRuntime "curse.maven:glodium-957920:${glodium_file}"
     localRuntime "curse.maven:applied-flux-965012:${appliedflux_file}"
@@ -231,6 +234,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
             ae2_version_range      : ae2_version_range,
+            gmrecipes_version_range: gmrecipes_version_range,
             jei_version_range      : jei_version_range,
             ae2wtlib_version_range : ae2wtlib_version_range,
             advanced_ae_version_range: advanced_ae_version_range,

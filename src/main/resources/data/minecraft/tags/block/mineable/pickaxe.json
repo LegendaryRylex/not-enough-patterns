@@ -6,6 +6,10 @@
       "required": false
     },
     {
+      "id": "nep:pattern_decoder",
+      "required": false
+    },
+    {
       "id": "nep:infused_awakening_matrix",
       "required": false
     }

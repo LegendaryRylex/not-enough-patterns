@@ -1,7 +1,10 @@
 package dev.rylex.nep;
 
+import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.hub.HubRules;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class NepConfig {
@@ -13,6 +16,7 @@ public final class NepConfig {
     private static final ModConfigSpec.BooleanValue DEBUG_LOGGING;
     private static final ModConfigSpec.IntValue IMPORT_CARD_GRACE;
     private static final ModConfigSpec.BooleanValue PROCESSING_PATTERN_CONVERSION;
+    private static final ModConfigSpec.BooleanValue MANUAL_CRAFTING;
     private static final ModConfigSpec.BooleanValue MACHINE_HUB;
     private static final ModConfigSpec.IntValue MACHINE_HUB_LINK_RANGE;
     private static final ModConfigSpec.IntValue MACHINE_HUB_MAXIMUM_LINKS;
@@ -23,6 +27,11 @@ public final class NepConfig {
     private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_LINK_BLACKLIST;
     private static final ModConfigSpec.IntValue MACHINE_HUB_CHANNELS;
     private static final ModConfigSpec.IntValue MACHINE_HUB_CHANNELS_PER_LINK;
+    private static final ModConfigSpec.BooleanValue REQUIRE_DECODER;
+    private static final ModConfigSpec.IntValue PATTERN_DECODER_CHANNELS;
+    private static final ModConfigSpec.IntValue PATTERN_DECODER_IDLE_ME_DRAIN;
+    private static final Map<DecoderModule, ModConfigSpec.BooleanValue> DECODER_MODULES =
+            new EnumMap<>(DecoderModule.class);
     private static final ModConfigSpec.BooleanValue APOTHIC_OVERRIDE;
     private static final ModConfigSpec.BooleanValue APOTHIC_INFUSION;
     private static final ModConfigSpec.IntValue APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE;
@@ -155,6 +164,17 @@ public final class NepConfig {
                 .define("processingPatternConversion", true);
         builder.pop();
 
+        builder.comment("Machine behaviour outside any one integration.")
+                .translation("nep.configuration.machines")
+                .push("machines");
+        MANUAL_CRAFTING = builder.comment(
+                        "Lets a recipe be started by hand from a machine's own screen, by pressing the recipe-viewer transfer button on a recipe that machine runs.",
+                        "The ingredients come out of your own inventory, all at once or not at all, and the result waits in the machine's output buffer instead of going back to the ME network.",
+                        "When disabled, a machine only ever crafts what a pattern provider pushes to it.")
+                .translation("nep.configuration.machines.manualCrafting")
+                .define("manualCrafting", true);
+        builder.pop();
+
         builder.comment("Machine Hub behaviour.")
                 .translation("nep.configuration.machineHub")
                 .push("machineHub");
@@ -210,6 +230,37 @@ public final class NepConfig {
                 .defineInRange("meNetworkChannelsPerLink", 1, 0, 128);
         builder.pop();
 
+        builder.comment("Pattern Decoder behaviour.")
+                .translation("nep.configuration.patternDecoder")
+                .push("patternDecoder");
+        REQUIRE_DECODER = builder.comment(
+                        "Makes NEP patterns depend on a Pattern Decoder. While enabled, a Pattern Encoding Terminal only encodes a NEP pattern for a mod switched on under mods when its network holds a powered Pattern Decoder carrying that mod's Encoding Module; anything else encodes as a plain Processing Pattern.",
+                        "When disabled, NEP patterns encode as usual and the Pattern Decoder does nothing. Patterns that were already encoded keep working either way.")
+                .translation("nep.configuration.patternDecoder.requireDecoder")
+                .define("requireDecoder", false);
+        PATTERN_DECODER_CHANNELS = builder.comment(
+                        "Channels a Pattern Decoder takes up on its ME network. A Decoder without its channel does not count towards encoding.",
+                        "This is read once when the Decoder joins a network, so changing it needs a world reload. Set to 0 for a Decoder that takes up no channel at all.")
+                .translation("nep.configuration.patternDecoder.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 1, 0, 128);
+        PATTERN_DECODER_IDLE_ME_DRAIN = builder.comment(
+                        "Energy a Pattern Decoder draws from its ME network, in AE per tick. This standing cost is read once when the Decoder joins a network, so changing it needs a world reload.")
+                .translation("nep.configuration.patternDecoder.idleMeNetworkDrain")
+                .defineInRange("idleMeNetworkDrain", 5, 0, 1_000_000);
+        builder.comment(
+                        "Which integrations need their Encoding Module in a Pattern Decoder while requireDecoder is enabled. A mod switched off here encodes its NEP patterns as usual.")
+                .translation("nep.configuration.patternDecoder.mods")
+                .push("mods");
+        for (DecoderModule module : DecoderModule.values()) {
+            DECODER_MODULES.put(
+                    module,
+                    builder.comment("Whether " + module.modId() + " patterns need their Encoding Module.")
+                            .translation("nep.configuration.patternDecoder.mods." + module.modId())
+                            .define(module.modId(), true));
+        }
+        builder.pop();
+        builder.pop();
+
         builder.comment("Pattern Provider behaviour.")
                 .translation("nep.configuration.provider")
                 .push("provider");
@@ -245,8 +296,28 @@ public final class NepConfig {
         return SPEC.isLoaded() && DEBUG_LOGGING.get();
     }
 
+    public static boolean manualCrafting() {
+        return !SPEC.isLoaded() || MANUAL_CRAFTING.get();
+    }
+
     public static boolean processingPatternConversion() {
         return SPEC.isLoaded() && PROCESSING_PATTERN_CONVERSION.get();
+    }
+
+    public static boolean requireDecoder() {
+        return SPEC.isLoaded() && REQUIRE_DECODER.get();
+    }
+
+    public static boolean decoderRequiredFor(DecoderModule module) {
+        return requireDecoder() && DECODER_MODULES.get(module).get();
+    }
+
+    public static int patternDecoderChannels() {
+        return SPEC.isLoaded() ? PATTERN_DECODER_CHANNELS.get() : 1;
+    }
+
+    public static int patternDecoderIdleMeDrain() {
+        return SPEC.isLoaded() ? PATTERN_DECODER_IDLE_ME_DRAIN.get() : 5;
     }
 
     public static boolean machineHubEnabled() {

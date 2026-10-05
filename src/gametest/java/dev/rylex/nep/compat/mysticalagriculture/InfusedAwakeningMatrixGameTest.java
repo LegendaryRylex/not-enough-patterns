@@ -10,10 +10,15 @@ import appeng.core.definitions.AEBlocks;
 import com.blakebr0.mysticalagriculture.api.crafting.IAwakeningRecipe;
 import com.blakebr0.mysticalagriculture.api.crafting.IInfusionRecipe;
 import dev.rylex.nep.NepGameTests;
+import dev.rylex.nep.machine.ManualCraftFixtures;
+import dev.rylex.nep.machine.ManualCraftOutcome;
+import dev.rylex.nep.machine.ManualCraftResult;
+import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.AwakeningPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
+import dev.rylex.nep.util.Recipes;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,10 +28,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -57,7 +64,17 @@ public final class InfusedAwakeningMatrixGameTest {
                 .add(
                         "breaking_the_matrix_mid_awakening_drops_the_claimed_essences",
                         400,
-                        InfusedAwakeningMatrixGameTest::breakingTheMatrixMidAwakeningDropsTheClaimedEssences);
+                        InfusedAwakeningMatrixGameTest::breakingTheMatrixMidAwakeningDropsTheClaimedEssences)
+                .add(
+                        "queues_an_infusion_craft_from_the_players_inventory",
+                        InfusedAwakeningMatrixGameTest::queuesAnInfusionCraftFromThePlayersInventory)
+                .add(
+                        "a_multi_batch_manual_awakening_gives_every_essence_its_own_tank",
+                        800,
+                        InfusedAwakeningMatrixGameTest::aMultiBatchManualAwakeningGivesEveryEssenceItsOwnTank)
+                .add(
+                        "refuses_an_infusion_craft_the_inventory_cannot_pay_for",
+                        InfusedAwakeningMatrixGameTest::refusesAnInfusionCraftTheInventoryCannotPayFor);
     }
 
     private static InfusedAwakeningMatrixBlockEntity placeMatrix(GameTestHelper helper) {
@@ -157,6 +174,16 @@ public final class InfusedAwakeningMatrixGameTest {
             total += matrix.tank(tank).amount();
         }
         return total;
+    }
+
+    private static int occupiedTanks(InfusedAwakeningMatrixBlockEntity matrix) {
+        int used = 0;
+        for (int tank = 0; tank < InfusedAwakeningMatrixBlockEntity.TANKS; tank++) {
+            if (!matrix.tank(tank).isEmpty()) {
+                used++;
+            }
+        }
+        return used;
     }
 
     private static Map<Item, Integer> essenceTotals(RecipeHolder<IAwakeningRecipe> holder, Level level) {
@@ -302,5 +329,67 @@ public final class InfusedAwakeningMatrixGameTest {
                 helper.assertItemEntityCountIs(essence.getKey(), MATRIX, 2.0, essence.getValue());
             }
         });
+    }
+
+    public static void queuesAnInfusionCraftFromThePlayersInventory(GameTestHelper helper) {
+        InfusedAwakeningMatrixBlockEntity matrix = placeMatrix(helper);
+        powerUp(helper);
+        RecipeHolder<IInfusionRecipe> holder = simplestInfusion(helper);
+        List<ManualRequirement> requirements = MysticalRecipeIngredients.manualInfusionRequirements(holder.value());
+        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+
+        ManualCraftOutcome outcome = matrix.startManualCraft(player, Recipes.idOf(holder), 1);
+
+        ManualCraftFixtures.assertQueued(helper, outcome, "the Infused Awakening Matrix");
+        helper.assertTrue(
+                ManualCraftFixtures.inventoryCount(player) == 0, "the Matrix left ingredients in the inventory");
+        helper.assertTrue(
+                ManualCraftFixtures.bufferedCount(matrix.getInputBuffer()) > 0,
+                "the Matrix took the ingredients without staging them");
+        helper.succeed();
+    }
+
+    public static void aMultiBatchManualAwakeningGivesEveryEssenceItsOwnTank(GameTestHelper helper) {
+        InfusedAwakeningMatrixBlockEntity matrix = placeMatrix(helper);
+        powerUp(helper);
+        RecipeHolder<IAwakeningRecipe> holder = simplestAwakening(helper);
+        List<ManualRequirement> requirements = MysticalRecipeIngredients.manualAwakeningRequirements(holder.value());
+        int batches = 3;
+        Player player = ManualCraftFixtures.playerWith(helper, requirements, batches);
+
+        ManualCraftOutcome outcome = matrix.startManualCraft(player, Recipes.idOf(holder), batches);
+
+        helper.assertTrue(
+                outcome.status() == ManualCraftResult.STARTED,
+                "the Matrix refused a multi-batch awakening it could pay for: " + outcome.status());
+        helper.assertTrue(
+                outcome.batches() == batches,
+                "the Matrix queued " + outcome.batches() + " crafts instead of " + batches);
+
+        int distinct = essenceTotals(holder, helper.getLevel()).size();
+        ItemStack result = MysticalRecipeResolver.resultOf(holder.value());
+        helper.runAtTickTime(
+                5,
+                () -> helper.assertTrue(
+                        occupiedTanks(matrix) <= distinct,
+                        "one essence spread over " + occupiedTanks(matrix) + " tanks for a recipe with " + distinct
+                                + " essences"));
+        helper.succeedWhen(() -> helper.assertTrue(
+                outputHolds(matrix, result, result.getCount() * batches),
+                "the Matrix never finished all " + batches + " hand-started awakening crafts"));
+    }
+
+    public static void refusesAnInfusionCraftTheInventoryCannotPayFor(GameTestHelper helper) {
+        InfusedAwakeningMatrixBlockEntity matrix = placeMatrix(helper);
+        powerUp(helper);
+        RecipeHolder<IInfusionRecipe> holder = simplestInfusion(helper);
+
+        ManualCraftOutcome outcome =
+                matrix.startManualCraft(helper.makeMockPlayer(GameType.SURVIVAL), Recipes.idOf(holder), 1);
+
+        helper.assertTrue(
+                outcome.status() == ManualCraftResult.MISSING_ITEMS,
+                "an empty inventory did not read as missing items: " + outcome.status());
+        helper.succeed();
     }
 }

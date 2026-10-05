@@ -1,6 +1,7 @@
 package dev.rylex.nep.guide;
 
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.decoder.DecoderShapedRecipe;
 import dev.rylex.nep.pattern.encoding.ProcessingPatternConversionRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -33,6 +34,11 @@ public final class NepRecipes {
                     name -> new RecipeSerializer<>(
                             ProcessingPatternConversionRecipe.MAP_CODEC,
                             ProcessingPatternConversionRecipe.STREAM_CODEC));
+
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<DecoderShapedRecipe>> DECODER_SHAPED =
+            SERIALIZERS.register(
+                    "decoder_shaped",
+                    name -> new RecipeSerializer<>(DecoderShapedRecipe.CODEC, DecoderShapedRecipe.STREAM_CODEC));
 
     public static void init(IEventBus modBus) {
         TYPES.register(modBus);

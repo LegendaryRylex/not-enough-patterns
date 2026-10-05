@@ -1,5 +1,6 @@
 package dev.rylex.nep.hub;
 
+import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,12 +16,15 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.tooltip.TooltipLocation;
+import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
+@EventBusSubscriber(modid = Nep.MOD_ID)
 public class HubLinkerItem extends Item {
 
     public HubLinkerItem(Properties properties) {
@@ -130,13 +134,16 @@ public class HubLinkerItem extends Item {
         return InteractionResult.SUCCESS_SERVER;
     }
 
-    @Override
-    public void appendHoverText(
-            ItemStack stack,
-            TooltipContext context,
-            TooltipDisplay display,
-            Consumer<Component> tooltip,
-            TooltipFlag flag) {
+    @SubscribeEvent
+    static void registerTooltipAppenders(RegisterTooltipAppendersEvent event) {
+        event.registerAppender(
+                TooltipLocation.POST_CUSTOM, (stack, _, _, _, _, tooltip) -> appendLinkerTooltip(stack, tooltip));
+    }
+
+    private static void appendLinkerTooltip(ItemStack stack, Consumer<Component> tooltip) {
+        if (!(stack.getItem() instanceof HubLinkerItem)) {
+            return;
+        }
         List<HubLink> plan = plan(stack);
         tooltip.accept(entry(
                 "tooltip.nep.hub_linker.mode", mode(stack).displayName().copy().withStyle(ChatFormatting.WHITE)));

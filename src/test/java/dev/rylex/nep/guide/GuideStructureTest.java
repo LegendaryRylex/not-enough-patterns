@@ -33,8 +33,13 @@ class GuideStructureTest {
     private static final Path FILTERS = RESOURCES.resolve("guide_filters");
     private static final Path SOURCE = RESOURCES.resolveSibling("java");
 
-    private static final Set<String> ALWAYS_PRESENT =
-            Set.of("nep-index.md", "getting-started.md", "import-card.md", "pattern-conversion.md", "machine-hub.md");
+    private static final Set<String> ALWAYS_PRESENT = Set.of(
+            "nep-index.md",
+            "getting-started.md",
+            "import-card.md",
+            "pattern-conversion.md",
+            "machine-hub.md",
+            "pattern-decoder.md");
     private static final String INDEX = "nep-index.md";
 
     private static final Pattern PARENT = Pattern.compile("(?m)^\\s*parent:\\s*(\\S+)\\s*$");

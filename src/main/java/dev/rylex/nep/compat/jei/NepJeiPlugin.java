@@ -16,6 +16,7 @@ import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
+import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.crafting.Recipe;
@@ -68,11 +69,19 @@ public final class NepJeiPlugin implements IModPlugin {
         if (ModList.get().isLoaded("ae2wtlib")) {
             Ae2WtLibJeiCompat.bindPatternMenus(binder);
         }
+        if (ModList.get().isLoaded("mysticalagriculture")) {
+            MysticalJeiCompat.addManualTransfers(registration, helper);
+        }
     }
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
         registration.addGhostIngredientHandler(MachineHubScreen.class, new HubGhostIngredientHandler());
+    }
+
+    @Override
+    public void onRuntimeAvailable(IJeiRuntime runtime) {
+        DecoderJeiVisibility.apply(runtime);
     }
 
     @Override

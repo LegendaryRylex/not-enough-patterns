@@ -30,6 +30,8 @@ public final class NepConfigValues {
         values.put("importCardGrace", NepConfig::importCardGrace);
         values.put("machineHubChannels", NepConfig::machineHubChannels);
         values.put("machineHubChannelsPerLink", NepConfig::machineHubChannelsPerLink);
+        values.put("patternDecoderChannels", NepConfig::patternDecoderChannels);
+        values.put("patternDecoderIdleMeDrain", NepConfig::patternDecoderIdleMeDrain);
         values.put("infusionExperiencePerBottle", NepConfig::apothicInfusionExperiencePerBottle);
         values.put("infusionMillibucketsPerExperience", NepConfig::apothicInfusionMillibucketsPerExperience);
         values.put("infusedAwakeningMatrixChannels", NepConfig::mysticalInfusedAwakeningMatrixChannels);

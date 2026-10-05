@@ -1,5 +1,6 @@
 package dev.rylex.nep.client;
 
+import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.hub.NepContent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -17,5 +18,6 @@ public final class NepClient {
 
     private static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(NepContent.MACHINE_HUB_MENU.get(), MachineHubScreen::new);
+        event.register(DecoderContent.PATTERN_DECODER_MENU.get(), PatternDecoderScreen::new);
     }
 }

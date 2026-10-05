@@ -11,6 +11,7 @@ import appeng.api.stacks.AEKeyType;
 import appeng.util.prioritylist.IPartitionList;
 import java.util.List;
 
+/** Operations are counted in the owed key's own units, so a budget of 1000 means 1000 mB rather than 1000 buckets. */
 public final class OwedImportContext implements StackTransferContext {
 
     private final IPartitionList filter = new IPartitionList() {
@@ -33,7 +34,7 @@ public final class OwedImportContext implements StackTransferContext {
     private final IStorageService internalStorage;
     private final IEnergySource energySource;
     private final IActionSource actionSource;
-    private final AEItemKey owed;
+    private final AEKey owed;
     private final int budget;
     private int operationsRemaining;
 
@@ -41,7 +42,7 @@ public final class OwedImportContext implements StackTransferContext {
             IStorageService internalStorage,
             IEnergySource energySource,
             IActionSource actionSource,
-            AEItemKey owed,
+            AEKey owed,
             int budget) {
         this.internalStorage = internalStorage;
         this.energySource = energySource;
@@ -92,7 +93,7 @@ public final class OwedImportContext implements StackTransferContext {
 
     @Override
     public boolean isKeyTypeEnabled(AEKeyType space) {
-        return space == AEKeyType.items();
+        return space == owed.getType();
     }
 
     @Override

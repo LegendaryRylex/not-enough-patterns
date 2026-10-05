@@ -47,6 +47,7 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
     private final int channels;
 
     private MultiCraftingTracker tracker;
+    private final ThrottledLog restockLog = new ThrottledLog();
 
     private boolean starved;
 
@@ -101,12 +102,12 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
         IGrid grid = mainNode.getGrid();
         if (grid == null) {
             if (NepConfig.debugLogging()) {
-                Nep.LOGGER.info(
-                        "{} {}: not on a grid yet (node ready={}, active={})",
-                        label,
-                        owner.getBlockPos(),
-                        mainNode.isReady(),
-                        mainNode.isActive());
+                log(
+                        level,
+                        "grid",
+                        String.format(
+                                "%s %s: not on a grid yet (node ready=%s, active=%s)",
+                                label, owner.getBlockPos(), mainNode.isReady(), mainNode.isActive()));
             }
             for (int slot = 0; slot < keys.size() && slot < TRACKER_SIZE; slot++) {
                 AEKey key = keys.get(slot);
@@ -148,19 +149,29 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
                 }
             }
             if (NepConfig.debugLogging()) {
-                Nep.LOGGER.info(
-                        "{} {} slot {}: {} -> pulled {} from stock, still-missing {}, craftable={}, craftStarted={}",
-                        label,
-                        owner.getBlockPos(),
-                        slot,
-                        key,
-                        pulled,
-                        Math.max(0, missing),
-                        craftable,
-                        craftStarted);
+                log(
+                        level,
+                        key.toString(),
+                        String.format(
+                                "%s %s slot %d: %s -> pulled %d from stock, still-missing %d, craftable=%s,"
+                                        + " craftStarted=%s",
+                                label,
+                                owner.getBlockPos(),
+                                slot,
+                                key,
+                                pulled,
+                                Math.max(0, missing),
+                                craftable,
+                                craftStarted));
             }
         }
         return unavailable;
+    }
+
+    private void log(Level level, String subject, String message) {
+        if (restockLog.shouldLog(level.getGameTime(), subject, message)) {
+            Nep.LOGGER.info(message);
+        }
     }
 
     public void cancelRequests() {

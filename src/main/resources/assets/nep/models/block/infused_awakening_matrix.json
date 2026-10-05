@@ -1,0 +1,9 @@
+{
+  "parent": "nep:block/matrix/cage",
+  "textures": {
+    "corner": "nep:block/matrix/infused_awakening/corner",
+    "particle": "nep:block/matrix/infused_awakening/border",
+    "ring": "nep:block/matrix/infused_awakening/ring",
+    "strut": "nep:block/matrix/infused_awakening/strut"
+  }
+}

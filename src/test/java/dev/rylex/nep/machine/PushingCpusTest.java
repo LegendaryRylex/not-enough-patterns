@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import appeng.api.stacks.AEItemKey;
 import com.mojang.serialization.Codec;
 import dev.rylex.nep.MinecraftBootstrap;
 import java.util.List;
@@ -102,7 +103,7 @@ class PushingCpusTest {
         PushingCpus cpus = new PushingCpus();
         cpus.record();
 
-        assertEquals(0, cpus.cancelJobsFor(null, Set.of(Items.DIAMOND)));
+        assertEquals(0, cpus.cancelJobsFor(null, Set.of(AEItemKey.of(Items.DIAMOND))));
         assertEquals(0, cpus.cancelJobsFor(null, Set.of()));
     }
 }

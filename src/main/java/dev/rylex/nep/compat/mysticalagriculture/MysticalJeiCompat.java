@@ -6,8 +6,12 @@ import com.blakebr0.mysticalagriculture.compat.jei.category.AwakeningCategory;
 import com.blakebr0.mysticalagriculture.compat.jei.category.InfusionCategory;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.jei.JeiTransferSource;
+import dev.rylex.nep.compat.jei.ManualTransferHandler;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
+import dev.rylex.nep.util.Recipes;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -15,6 +19,28 @@ import org.jetbrains.annotations.Nullable;
 
 public final class MysticalJeiCompat {
     private MysticalJeiCompat() {}
+
+    public static void addManualTransfers(
+            IRecipeTransferRegistration registration, IRecipeTransferHandlerHelper helper) {
+        registration.addRecipeTransferHandler(
+                new ManualTransferHandler<>(
+                        InfusedAwakeningMatrixMenu.class,
+                        NepMysticalContent.MATRIX_MENU.get(),
+                        InfusionCategory.RECIPE_TYPE,
+                        helper,
+                        (holder, level) -> MysticalRecipeIngredients.manualInfusionRequirements(holder.value()),
+                        (holder, level) -> Recipes.idOf(holder)),
+                InfusionCategory.RECIPE_TYPE);
+        registration.addRecipeTransferHandler(
+                new ManualTransferHandler<>(
+                        InfusedAwakeningMatrixMenu.class,
+                        NepMysticalContent.MATRIX_MENU.get(),
+                        AwakeningCategory.RECIPE_TYPE,
+                        helper,
+                        (holder, level) -> MysticalRecipeIngredients.manualAwakeningRequirements(holder.value()),
+                        (holder, level) -> Recipes.idOf(holder)),
+                AwakeningCategory.RECIPE_TYPE);
+    }
 
     public static JeiTransferSource source() {
         return new JeiTransferSource() {

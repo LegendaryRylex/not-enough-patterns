@@ -5,6 +5,7 @@ import appeng.api.networking.IInWorldGridNodeHost;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
+import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,20 +34,25 @@ import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class BufferedMatrixBlockEntity extends BlockEntity implements MenuProvider, MatrixHost, Clearable {
+public abstract class BufferedMatrixBlockEntity extends BlockEntity
+        implements MenuProvider, MatrixHost, MatrixRenderHost, Clearable {
 
     private static final String CHANNEL_FAULT_KEY = "ChannelFault";
+    private static final String MANUAL_OWED_KEY = "ManualOwed";
 
     protected final MatrixBuffer inputBuffer;
     protected final MatrixBuffer outputBuffer;
     protected final MatrixGridNode power;
 
-    protected final Map<Item, Long> owed = new HashMap<>();
-    protected final Map<Item, Long> toReturn = new HashMap<>();
+    protected final Map<AEItemKey, Long> owed = new HashMap<>();
+    protected final Map<AEItemKey, Long> manualOwed = new HashMap<>();
+    protected final Map<AEItemKey, Long> toReturn = new HashMap<>();
     protected final List<GenericStack> missingInputs = new ArrayList<>();
     protected final List<ItemStack> claimedItems = new ArrayList<>();
     protected final PushingCpus pushingCpus = new PushingCpus();
     protected final ReturnDirections returnDirections = new ReturnDirections();
+
+    private final MatrixRenderState renderState = new MatrixRenderState();
 
     protected ItemStack activeResult = ItemStack.EMPTY;
     protected boolean powerFault;
@@ -86,6 +92,18 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
 
     public abstract float craftProgress();
 
+    @Override
+    public void advanceRender(float partialTick) {
+        if (level != null) {
+            renderState.advance(level.getGameTime(), partialTick, craftProgress());
+        }
+    }
+
+    @Override
+    public MatrixRenderState renderState() {
+        return renderState;
+    }
+
     public void markScanNeeded() {
         scanNeeded = true;
     }
@@ -97,6 +115,7 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         claimedItems.clear();
         missingInputs.clear();
         owed.clear();
+        manualOwed.clear();
         toReturn.clear();
         activeResult = ItemStack.EMPTY;
     }
@@ -105,6 +124,10 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         for (int slot = 0; slot < handler.size(); slot++) {
             handler.clear(slot);
         }
+    }
+
+    protected boolean isManualJob(AEItemKey key) {
+        return manualOwed.getOrDefault(key, 0L) > 0;
     }
 
     public boolean hasPending() {
@@ -200,6 +223,10 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         }
     }
 
+    protected ManualStaging.Result pullFromPlayer(Player player, List<ManualRequirement> requirements, int wanted) {
+        return ManualStaging.pull(player, requirements, wanted, this::bufferAll);
+    }
+
     protected static ItemResource resourceOf(AEItemKey key) {
         return ItemResource.of(key.toStack(1));
     }
@@ -250,12 +277,12 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
             if (resource.isEmpty()) {
                 continue;
             }
-            Item item = resource.getItem();
-            long pending = toReturn.getOrDefault(item, 0L);
+            AEItemKey key = AEItemKey.of(resource);
+            long pending = toReturn.getOrDefault(key, 0L);
             if (pending <= 0) {
                 continue;
             }
-            ResourceHandler<ItemResource> target = returnDirections.targetFor(level, getBlockPos(), item);
+            ResourceHandler<ItemResource> target = returnDirections.targetFor(level, getBlockPos(), key);
             if (target == null) {
                 continue;
             }
@@ -269,9 +296,9 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
                 }
             }
             if (moved > 0) {
-                decrement(toReturn, item, moved);
-                if (!toReturn.containsKey(item) && !owed.containsKey(item)) {
-                    returnDirections.forget(item);
+                decrement(toReturn, key, moved);
+                if (!toReturn.containsKey(key) && !owed.containsKey(key)) {
+                    returnDirections.forget(key);
                 }
             }
         }
@@ -290,12 +317,12 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
         }
     }
 
-    protected static void decrement(Map<Item, Long> map, Item item, long amount) {
-        long remaining = map.getOrDefault(item, 0L) - amount;
+    protected static void decrement(Map<AEItemKey, Long> map, AEItemKey key, long amount) {
+        long remaining = map.getOrDefault(key, 0L) - amount;
         if (remaining > 0) {
-            map.put(item, remaining);
+            map.put(key, remaining);
         } else {
-            map.remove(item);
+            map.remove(key);
         }
     }
 
@@ -303,12 +330,14 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity implements M
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.putBoolean(CHANNEL_FAULT_KEY, channelFault);
+        ItemCounts.save(output, MANUAL_OWED_KEY, manualOwed);
     }
 
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         channelFault = input.getBooleanOr(CHANNEL_FAULT_KEY, false);
+        ItemCounts.load(manualOwed, input, MANUAL_OWED_KEY);
     }
 
     @Override

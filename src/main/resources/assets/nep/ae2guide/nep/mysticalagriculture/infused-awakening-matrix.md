@@ -19,6 +19,8 @@ item_ids:
 
 <Recipe id="nep:module_status/infused_awakening_matrix"/>
 
+> <Color id="yellow">The block reads its own state.</Color> The Matrix is an open frame with a faceted core turning inside it, visible through every face. The core drifts while the Matrix is idle, spins up and brightens as a craft runs, and flares when the craft lands. A stalled Matrix dims and judders in place, and its frame goes dark. Neighbouring Matrices are offset from one another, so a wall of them never turns in lockstep.
+
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 ***
@@ -88,6 +90,23 @@ A tank holds <nep:ConfigValue name="infusedAwakeningMatrixTankCapacity"/>, where
 * **Empty Buffers** returns everything staged, tanks included, to your inventory.
 * **Guide** opens this page, and is always the rightmost button.
 * A Comparator beside the block reads the output buffer, empty for nothing staged up to a full 15.
+
+<ItemImage id="minecraft:air" scale="0.5"/>
+
+***
+
+<Column alignItems="center" fullWidth={true}>
+  ## <Color id="gold">Crafting By Hand</Color>
+</Column>
+
+<ItemImage id="minecraft:air" scale="0.25"/>
+
+An infusion or awakening recipe can also be started out of your own inventory, with no pattern and no Provider anywhere near it. Open the Matrix, find the recipe in the recipe viewer, and press its transfer button: every ingredient leaves your inventory in one go and the craft queues up like any other.
+
+* It is all or nothing. Come up short and nothing moves: the button says so and the recipe marks the ingredients you are missing in red.
+* Holding shift queues as many crafts as your inventory can pay for, up to sixty-four, trimmed to what the input buffer has room to stage.
+* The finished item waits in the output buffer for you to take. Nothing goes to the network, and no crafting job is created.
+* An awakening recipe's essence is pulled from your inventory too, and settles into the tanks by itself once it is inside.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
 

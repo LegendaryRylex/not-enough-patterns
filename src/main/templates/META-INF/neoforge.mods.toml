@@ -70,6 +70,13 @@ ordering="AFTER"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
+modId="gmrecipes"
+type="required"
+versionRange="${gmrecipes_version_range}"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
 versionRange="${neo_version_range}"

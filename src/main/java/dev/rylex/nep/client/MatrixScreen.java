@@ -120,6 +120,10 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractBackground(graphics, mouseX, mouseY, partialTick);
+        extractPanel(graphics);
+    }
+
+    protected void extractPanel(GuiGraphicsExtractor graphics) {
         graphics.blit(
                 RenderPipelines.GUI_TEXTURED,
                 texture(),

@@ -19,9 +19,10 @@ repo/
 .settings/
 .metadata
 *.launch
-.vscode/launch.json
 
+.vscode/
 .editorconfig
+
 skip_mods.local
 /src/main/resources/data/nep/recipe/dev_test
 /art

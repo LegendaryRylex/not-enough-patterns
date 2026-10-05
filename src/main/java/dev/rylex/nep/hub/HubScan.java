@@ -82,7 +82,7 @@ public final class HubScan {
                 return;
             }
             BlockState state = level.getBlockState(at);
-            if (state.isAir() || state.liquid() || rules.blocked(state)) {
+            if (state.isAir() || liquid(state) || rules.blocked(state)) {
                 return;
             }
             BlockEntity be = level.getBlockEntity(at);
@@ -138,6 +138,15 @@ public final class HubScan {
     private static String namespace(BlockState state) {
         Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         return id == null ? VANILLA : id.getNamespace();
+    }
+
+    /**
+     * Mojang deprecates {@link net.minecraft.world.level.block.state.BlockBehaviour.BlockStateBase#liquid()} without
+     * naming a replacement, and it stays the only accessor for the property water, lava and bubble columns set.
+     */
+    @SuppressWarnings("deprecation")
+    private static boolean liquid(BlockState state) {
+        return state.liquid();
     }
 
     public static boolean networkBlock(Level level, BlockPos pos) {

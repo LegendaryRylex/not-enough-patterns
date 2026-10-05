@@ -6,6 +6,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.parts.encoding.EncodingMode;
 import appeng.parts.encoding.PatternEncodingLogic;
 import appeng.util.ConfigInventory;
+import dev.rylex.nep.decoder.PatternDecoding;
 import dev.rylex.nep.pattern.RecipePattern;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
 public final class RetainedSlots {
     private RetainedSlots() {}
 
-    public static List<Integer> compute(PatternEncodingLogic logic, PatternOrigin origin, Level level) {
+    public static List<Integer> compute(PatternEncodingLogic logic, PatternOrigin origin, Level level, int unlocked) {
         if (logic.getMode() != EncodingMode.PROCESSING) {
             return List.of();
         }
@@ -28,8 +29,11 @@ public final class RetainedSlots {
         if (encoded == null) {
             return List.of();
         }
-        ItemStack converted = PatternConverters.convertQuietly(origin, encoded, level);
-        if (converted == null || !(PatternDetailsHelper.decodePattern(converted, level) instanceof RecipePattern p)) {
+        PatternConverters.Claim claim = PatternConverters.claim(origin, encoded, level, null);
+        if (claim == null || !PatternDecoding.allows(unlocked, claim.module())) {
+            return List.of();
+        }
+        if (!(PatternDetailsHelper.decodePattern(claim.stack(), level) instanceof RecipePattern p)) {
             return List.of();
         }
         if (p.retained().isEmpty()) {

@@ -23,8 +23,12 @@ public sealed interface OwedSource {
 
         @Override
         public StackImportStrategy createStrategy(ServerLevel level, BlockPos providerPos) {
-            return StackWorldBehaviors.createImportFacade(
-                    level, providerPos.relative(side), side.getOpposite(), type -> type == AEKeyType.items());
+            BlockPos from = providerPos.relative(side);
+            Direction face = side.getOpposite();
+            StackImportStrategy items =
+                    StackWorldBehaviors.createImportFacade(level, from, face, type -> type == AEKeyType.items());
+            StackImportStrategy fluids = new OwedFluidImport(level, from, face);
+            return context -> items.transfer(context) | fluids.transfer(context);
         }
 
         @Override

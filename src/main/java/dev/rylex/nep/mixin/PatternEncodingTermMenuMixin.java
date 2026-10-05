@@ -6,6 +6,8 @@ import appeng.parts.encoding.EncodingMode;
 import appeng.parts.encoding.PatternEncodingLogic;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import dev.rylex.nep.NepComponents;
+import dev.rylex.nep.decoder.DecoderNotices;
+import dev.rylex.nep.decoder.PatternDecoding;
 import dev.rylex.nep.net.PatternRecipePayload;
 import dev.rylex.nep.net.RetainedSlotsPayload;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
@@ -48,6 +50,9 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
     @Unique
     private int nep$syncedVersion = Integer.MIN_VALUE;
 
+    @Unique
+    private int nep$syncedUnlocked;
+
     @Override
     public PatternOrigin nep$origin() {
         return ((PatternRecipeHolder) encodingLogic).nep$origin();
@@ -88,11 +93,13 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
             return;
         }
         int version = ((PatternRecipeHolder) encodingLogic).nep$encodingVersion();
-        if (version == nep$syncedVersion) {
+        int unlocked = PatternDecoding.unlocked(menu.getGridNode());
+        if (version == nep$syncedVersion && unlocked == nep$syncedUnlocked) {
             return;
         }
         nep$syncedVersion = version;
-        List<Integer> slots = RetainedSlots.compute(encodingLogic, nep$origin(), player.level());
+        nep$syncedUnlocked = unlocked;
+        List<Integer> slots = RetainedSlots.compute(encodingLogic, nep$origin(), player.level(), unlocked);
         if (slots.equals(nep$retainedSlots)) {
             return;
         }
@@ -132,10 +139,17 @@ public abstract class PatternEncodingTermMenuMixin implements PatternRecipeHolde
         if (player.level().isClientSide()) {
             return encoded;
         }
-        ItemStack converted = PatternConverters.convert(nep$origin(), encoded, player);
-        if (converted == null) {
+        PatternConverters.Claim claim = PatternConverters.claim(nep$origin(), encoded, player.level(), player);
+        if (claim == null) {
             return encoded;
         }
+        if (!PatternDecoding.allows(PatternDecoding.unlocked(menu.getGridNode()), claim.module())) {
+            if (player instanceof ServerPlayer serverPlayer) {
+                DecoderNotices.plainFallback(serverPlayer, claim.module());
+            }
+            return encoded;
+        }
+        ItemStack converted = claim.stack();
         PatternGrid grid = PatternGrid.capture(encodingLogic.getEncodedInputInv(), encodingLogic.getEncodedOutputInv());
         if (!grid.isEmpty()) {
             converted.set(NepComponents.PATTERN_GRID.get(), grid);

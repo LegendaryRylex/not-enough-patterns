@@ -2,10 +2,12 @@ package dev.rylex.nep;
 
 import dev.rylex.nep.compat.advancedae.AdvancedAeMixinGameTest;
 import dev.rylex.nep.compat.apothic.InfusionCraftingMachineGameTest;
+import dev.rylex.nep.compat.extendedae.ExtendedAePatternViewGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.AwakeningAltarCraftingMachineGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.InfusedAwakeningMatrixGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.InfusionAltarCraftingMachineGameTest;
 import dev.rylex.nep.compat.thunderbolt.ThunderboltChannelGameTest;
+import dev.rylex.nep.decoder.PatternDecoderGameTest;
 import dev.rylex.nep.hub.ChannelModeGameTest;
 import dev.rylex.nep.hub.MachineHubGameTest;
 import dev.rylex.nep.machine.PushingCpuMixinGameTest;
@@ -64,11 +66,13 @@ public final class NepGameTests {
                 new Batch(event, "nep_machine_hub_adhoc", SMALL),
                 new Batch(event, "nep_machine_hub_rules", SMALL));
         ChannelModeGameTest.register(new Batch(event, "nep_channel_modes", SMALL));
+        PatternDecoderGameTest.register(new Batch(event, "nep_pattern_decoder", SMALL));
         ThunderboltChannelGameTest.register(new Batch(event, "nep_thunderbolt_channels", LARGE));
         InfusionCraftingMachineGameTest.register(new Batch(event, "nep_infusion", LARGE));
         InfusedAwakeningMatrixGameTest.register(new Batch(event, "nep_infused_awakening_matrix", SMALL));
         AwakeningAltarCraftingMachineGameTest.register(new Batch(event, "nep_awakening_altar", LARGE));
         InfusionAltarCraftingMachineGameTest.register(new Batch(event, "nep_infusion_altar", LARGE));
+        ExtendedAePatternViewGameTest.register(new Batch(event, "nep_extendedae", SMALL));
     }
 
     static Consumer<GameTestHelper> body(Identifier name) {

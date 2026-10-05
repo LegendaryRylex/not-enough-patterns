@@ -1,5 +1,6 @@
 package dev.rylex.nep.util;
 
+import appeng.api.stacks.AEItemKey;
 import java.util.Map;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -11,25 +12,46 @@ import org.jetbrains.annotations.Nullable;
 public final class ItemCounts {
     private ItemCounts() {}
 
-    public static void save(ValueOutput output, String key, Map<Item, Long> map) {
+    private static final String KEY_TAG = "Key";
+    private static final String LEGACY_ID_TAG = "Id";
+    private static final String COUNT_TAG = "Count";
+
+    public static void save(ValueOutput output, String key, Map<AEItemKey, Long> map) {
         ValueOutput.ValueOutputList list = output.childrenList(key);
-        for (Map.Entry<Item, Long> entry : map.entrySet()) {
+        for (Map.Entry<AEItemKey, Long> entry : map.entrySet()) {
             ValueOutput entryOutput = list.addChild();
-            entryOutput.putString(
-                    "Id", BuiltInRegistries.ITEM.getKey(entry.getKey()).toString());
-            entryOutput.putLong("Count", entry.getValue());
+            putKey(entryOutput, entry.getKey());
+            entryOutput.putLong(COUNT_TAG, entry.getValue());
         }
     }
 
-    public static void load(Map<Item, Long> map, ValueInput input, String key) {
+    public static void load(Map<AEItemKey, Long> map, ValueInput input, String key) {
         map.clear();
         for (ValueInput entryInput : input.childrenListOrEmpty(key)) {
-            long count = entryInput.getLongOr("Count", 0L);
-            Item item = item(entryInput.getStringOr("Id", ""));
-            if (count > 0 && item != null) {
-                map.merge(item, count, Long::sum);
+            long count = entryInput.getLongOr(COUNT_TAG, 0L);
+            AEItemKey itemKey = key(entryInput);
+            if (count > 0 && itemKey != null) {
+                map.merge(itemKey, count, Long::sum);
             }
         }
+    }
+
+    /**
+     * Reads the item key an entry was written with, falling back to the bare item id written before matrix
+     * bookkeeping carried data components.
+     */
+    @Nullable
+    public static AEItemKey key(ValueInput entryInput) {
+        AEItemKey stored = entryInput.read(KEY_TAG, AEItemKey.CODEC).orElse(null);
+        if (stored != null) {
+            return stored;
+        }
+        Item item = item(entryInput.getStringOr(LEGACY_ID_TAG, ""));
+        return item == null ? null : AEItemKey.of(item);
+    }
+
+    public static void putKey(ValueOutput entryOutput, AEItemKey key) {
+        entryOutput.store(KEY_TAG, AEItemKey.CODEC, key);
     }
 
     @Nullable
