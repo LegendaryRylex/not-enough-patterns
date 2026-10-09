@@ -183,4 +183,44 @@ public final class FocusedSpiritMatrixStorageGameTest {
                         + "than it was before the chunk unloaded");
         helper.succeed();
     }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aBankPastTheVanillaStackCapSyncsAndSurvivesASaveAndLoad(GameTestHelper helper) {
+        FocusedSpiritMatrixBlockEntity matrix = placeMatrix(helper);
+        int obelisks = FocusedSpiritMatrixUpgrades.maxObelisks();
+        int sacredSlot = 0;
+        int banked = Item.ABSOLUTE_MAX_STACK_SIZE + 85;
+
+        ItemStack leftover = matrix.getSpiritBank()
+                .insertItem(sacredSlot, new ItemStack(MalumItems.SACRED_SPIRIT.get(), banked), false);
+        helper.assertTrue(leftover.isEmpty(), "the bank refused spirits within its own slot limit");
+        matrix.getUpgradeSlot().insertItem(0, new ItemStack(MalumBlocks.RUNEWOOD_OBELISK.get(), obelisks), false);
+
+        CompoundTag update = matrix.getUpdateTag(helper.getLevel().registryAccess());
+        FocusedSpiritMatrixBlockEntity synced = new FocusedSpiritMatrixBlockEntity(
+                NepMalumContent.MATRIX_BLOCK_ENTITY.get(),
+                helper.absolutePos(MATRIX),
+                NepMalumContent.MATRIX.get().defaultBlockState());
+        synced.loadWithComponents(update, helper.getLevel().registryAccess());
+        CompoundTag saved = matrix.saveWithFullMetadata(helper.getLevel().registryAccess());
+        FocusedSpiritMatrixBlockEntity reloaded = new FocusedSpiritMatrixBlockEntity(
+                NepMalumContent.MATRIX_BLOCK_ENTITY.get(),
+                helper.absolutePos(MATRIX),
+                NepMalumContent.MATRIX.get().defaultBlockState());
+        reloaded.loadWithComponents(saved, helper.getLevel().registryAccess());
+
+        helper.assertValueEqual(
+                (long) countIn(synced.getSpiritBank(), MalumItems.SACRED_SPIRIT.get()),
+                (long) banked,
+                "the overstacked spirits a client receives");
+        helper.assertValueEqual(
+                (long) countIn(reloaded.getSpiritBank(), MalumItems.SACRED_SPIRIT.get()),
+                (long) banked,
+                "the overstacked spirits read back from disk");
+        helper.assertValueEqual(
+                (long) reloaded.getUpgradeSlot().getStackInSlot(0).getCount(),
+                (long) obelisks,
+                "the obelisks beside an overstacked bank read back from disk");
+        helper.succeed();
+    }
 }

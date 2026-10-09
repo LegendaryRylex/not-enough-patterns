@@ -1404,7 +1404,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         ListTag claimed = new ListTag();
         for (ItemStack stack : claimedItems) {
             if (!stack.isEmpty()) {
-                claimed.add(stack.save(registries));
+                claimed.add(OverstackedItemHandler.saveStack(stack, registries));
             }
         }
         tag.put(CLAIMED_KEY, claimed);
@@ -1450,7 +1450,8 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         claimedItems.clear();
         ListTag claimed = tag.getList(CLAIMED_KEY, Tag.TAG_COMPOUND);
         for (int i = 0; i < claimed.size(); i++) {
-            ItemStack.parse(registries, claimed.getCompound(i)).ifPresent(claimedItems::add);
+            OverstackedItemHandler.parseStack(registries, claimed.getCompound(i))
+                    .ifPresent(claimedItems::add);
         }
         progress = tag.getInt(PROGRESS_KEY);
         chainedCrafts = tag.getInt(CHAINING_KEY);
