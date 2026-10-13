@@ -1,6 +1,8 @@
 package dev.rylex.nep.compat.mysticalagriculture;
 
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepConfigGates;
 import dev.rylex.nep.NepCreativeTabs;
 import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.decoder.DecoderModule;
@@ -60,6 +62,7 @@ final class NepMysticalContent {
         BLOCK_ENTITIES.register(modBus);
         MENUS.register(modBus);
         modBus.addListener(NepMysticalContent::onBuildCreativeTab);
+        NepConfigGates.register(MATRIX_ITEM, NepConfig::mysticalInfusedAwakeningMatrix);
     }
 
     private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {

@@ -1,6 +1,8 @@
 package dev.rylex.nep.compat.actuallyadditions;
 
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepConfigGates;
 import dev.rylex.nep.NepCreativeTabs;
 import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.decoder.DecoderModule;
@@ -66,6 +68,8 @@ final class NepActuallyAdditionsContent {
         BLOCK_ENTITIES.register(modBus);
         MENUS.register(modBus);
         modBus.addListener(NepActuallyAdditionsContent::onBuildCreativeTab);
+        NepConfigGates.register(MATRIX_ITEM, NepConfig::actuallyAdditionsMatrix);
+        NepConfigGates.register(EMPOWERED_MATRIX_CIRCUITRY, NepConfig::actuallyAdditionsMatrix);
     }
 
     private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {

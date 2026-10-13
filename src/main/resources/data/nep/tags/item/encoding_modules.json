@@ -1,0 +1,41 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "nep:actually_additions_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:apothic_enchanting_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:ars_nouveau_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:compact_crafting_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:create_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:draconic_evolution_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:malum_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:mystical_agriculture_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:oritech_encoding_module",
+      "required": false
+    }
+  ]
+}

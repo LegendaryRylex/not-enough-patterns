@@ -42,6 +42,10 @@ class CompatIsolationTest {
                     List.of("com.sammy.malum", "team.lodestar.lodestone")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ars"), List.of("com.hollingsworth.arsnouveau")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ars", "arseng"), List.of("gripe._90.arseng")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "oritech"), List.of("rearth.oritech")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "oritech", "oritechthings"),
+                    List.of("com.lumengrid.oritechthings")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "extendedae"), List.of("com.glodblock.github")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "emi"), List.of("dev.emi")),
             new ForeignRule(
@@ -63,6 +67,7 @@ class CompatIsolationTest {
             "dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat",
             "dev.rylex.nep.compat.malum.MalumCompat",
             "dev.rylex.nep.compat.ars.ArsCompat",
+            "dev.rylex.nep.compat.oritech.OritechCompat",
             "dev.rylex.nep.compat.extendedae.ExtendedAeCompat",
             "dev.rylex.nep.compat.sable.SableSubLevels");
 

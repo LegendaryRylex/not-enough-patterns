@@ -13,6 +13,7 @@ import dev.rylex.nep.compat.create.CreateJeiCompat;
 import dev.rylex.nep.compat.draconic.DraconicJeiCompat;
 import dev.rylex.nep.compat.malum.MalumJeiCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalJeiCompat;
+import dev.rylex.nep.compat.oritech.OritechJeiCompat;
 import dev.rylex.nep.compat.viewer.EncodableCategories;
 import java.util.ArrayList;
 import java.util.List;
@@ -119,6 +120,9 @@ public final class NepJeiPlugin implements IModPlugin {
         if (ModList.get().isLoaded("ars_nouveau")) {
             ArsJeiCompat.addManualTransfers(registration, helper);
         }
+        if (ModList.get().isLoaded("oritech")) {
+            OritechJeiCompat.addManualTransfers(registration, helper);
+        }
     }
 
     @Override
@@ -146,10 +150,15 @@ public final class NepJeiPlugin implements IModPlugin {
 
     @Override
     public void onRuntimeAvailable(IJeiRuntime runtime) {
-        DecoderJeiVisibility.apply(runtime);
+        ConfigJeiVisibility.attach(runtime);
         if (ModList.get().isLoaded("malum")) {
             MalumJeiCompat.onRuntimeAvailable(runtime);
         }
+    }
+
+    @Override
+    public void onRuntimeUnavailable() {
+        ConfigJeiVisibility.detach();
     }
 
     @Override
@@ -184,6 +193,9 @@ public final class NepJeiPlugin implements IModPlugin {
         }
         if (ModList.get().isLoaded("ars_nouveau")) {
             sources.add(ArsJeiCompat.source());
+        }
+        if (ModList.get().isLoaded("oritech")) {
+            sources.add(OritechJeiCompat.source());
         }
         return List.copyOf(sources);
     }

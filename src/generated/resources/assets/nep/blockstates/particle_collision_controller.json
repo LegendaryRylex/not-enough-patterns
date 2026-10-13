@@ -1,0 +1,13 @@
+{
+    "variants": {
+        "status=idle": {
+            "model": "nep:block/particle_collision_controller_idle"
+        },
+        "status=running": {
+            "model": "nep:block/particle_collision_controller_running"
+        },
+        "status=stalled": {
+            "model": "nep:block/particle_collision_controller_stalled"
+        }
+    }
+}

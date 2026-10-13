@@ -7,12 +7,12 @@ import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.upgrades.IUpgradeInventory;
 import appeng.api.upgrades.UpgradeInventories;
-import appeng.core.definitions.AEBlocks;
 import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.rylex.nep.NepItems;
+import dev.rylex.nep.provider.ImportCardUpgrades;
 import dev.rylex.nep.provider.ImportTrackerHost;
 import dev.rylex.nep.provider.ImportUpgradeHost;
 import dev.rylex.nep.provider.OwedImportTracker;
@@ -62,8 +62,7 @@ public abstract class PatternProviderLogicMixin implements ImportUpgradeHost, Im
             at = @At("RETURN"))
     private void nep$createUpgradeInventory(
             IManagedGridNode mainNode, PatternProviderLogicHost host, int patternInventorySize, CallbackInfo ci) {
-        this.nep$upgrades =
-                UpgradeInventories.forMachine(AEBlocks.PATTERN_PROVIDER.block(), 1, this::nep$onUpgradesChanged);
+        this.nep$upgrades = ImportCardUpgrades.create(this::nep$onUpgradesChanged);
     }
 
     @Override

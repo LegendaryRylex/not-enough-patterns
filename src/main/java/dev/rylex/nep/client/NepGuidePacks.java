@@ -29,6 +29,7 @@ public final class NepGuidePacks {
         hidePagesWithout(event, "apothic_enchanting", "no_apothic_enchanting");
         hidePagesWithout(event, "malum", "no_malum");
         hidePagesWithout(event, "ars_nouveau", "no_ars_nouveau");
+        hidePagesWithout(event, "oritech", "no_oritech");
     }
 
     /**

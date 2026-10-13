@@ -10,7 +10,8 @@ public enum DecoderModule {
     CREATE("create", "create"),
     DRACONIC_EVOLUTION("draconicevolution", "draconic_evolution"),
     MALUM("malum", "malum"),
-    MYSTICAL_AGRICULTURE("mysticalagriculture", "mystical_agriculture");
+    MYSTICAL_AGRICULTURE("mysticalagriculture", "mystical_agriculture"),
+    ORITECH("oritech", "oritech");
 
     private final String modId;
     private final String itemPath;

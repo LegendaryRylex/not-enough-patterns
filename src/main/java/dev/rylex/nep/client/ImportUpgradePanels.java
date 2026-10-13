@@ -1,34 +1,31 @@
 package dev.rylex.nep.client;
 
+import appeng.client.gui.WidgetContainer;
 import appeng.client.gui.style.WidgetStyle;
 import appeng.core.localization.GuiText;
 import dev.rylex.nep.NepItems;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.Slot;
 
 public final class ImportUpgradePanels {
 
     public static final String WIDGET_ID = "nepImportUpgrades";
     public static final String STOCK_WIDGET_ID = "upgrades";
-    public static final int PANEL_SPACING = 32;
 
     private ImportUpgradePanels() {}
 
-    public static WidgetStyle stackedStyle(WidgetStyle stock, int offset) {
-        if (offset == 0) {
-            return stock;
+    public static void add(List<Slot> slots, Map<String, WidgetStyle> widgetStyles, WidgetContainer widgets) {
+        var stock = widgetStyles.get(STOCK_WIDGET_ID);
+        if (slots.isEmpty() || stock == null) {
+            return;
         }
 
-        var moved = new WidgetStyle();
-        moved.setLeft(stock.getLeft());
-        moved.setRight(stock.getRight());
-        moved.setTop((stock.getTop() == null ? 0 : stock.getTop()) + stock.getHeight() + offset);
-        moved.setWidth(stock.getWidth());
-        moved.setHeight(stock.getHeight());
-        moved.setHideEdge(stock.isHideEdge());
-        return moved;
+        widgetStyles.put(WIDGET_ID, stock);
+        widgets.add(WIDGET_ID, new StackedUpgradesPanel(slots, ImportUpgradePanels::compatibleUpgrades, widgets));
     }
 
     public static List<Component> compatibleUpgrades() {

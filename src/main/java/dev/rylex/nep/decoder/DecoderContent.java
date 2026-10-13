@@ -3,6 +3,7 @@ package dev.rylex.nep.decoder;
 import appeng.api.AECapabilities;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepConfigGates;
 import dev.rylex.nep.NepCreativeTabs;
 import java.util.Comparator;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -53,6 +54,7 @@ public final class DecoderContent {
         MENUS.register(modBus);
         modBus.addListener(DecoderContent::registerCapabilities);
         modBus.addListener(DecoderContent::onBuildCreativeTab);
+        NepConfigGates.register(PATTERN_DECODER_ITEM, NepConfig::requireDecoder);
     }
 
     public static DeferredItem<EncodingModuleItem> registerModule(DeferredRegister.Items items, DecoderModule module) {

@@ -58,7 +58,11 @@ class ModuleStatusTest {
             "imbuement_chamber",
             "arcane_lectern",
             "ritual_conductor",
-            "arcane_enchanting_matrix");
+            "arcane_enchanting_matrix",
+            "oritech",
+            "particle_collision",
+            "particle_collision_matrix",
+            "particle_collision_controller");
 
     @Test
     void everyModuleHasAStatusRecipe() {

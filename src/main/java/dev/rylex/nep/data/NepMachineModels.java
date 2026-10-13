@@ -117,6 +117,20 @@ final class NepMachineModels {
         return boxes;
     }
 
+    static List<Box> collisionRing() {
+        List<Box> boxes = new ArrayList<>();
+        boxes.add(box(0, 0, 0, 16, 3, 16, "plate"));
+        boxes.addAll(capRing(3, 4, 1.5F, "frame"));
+        boxes.add(box(1.5F, 3, 1.5F, 14.5F, 3.5F, 14.5F, "dark"));
+        boxes.addAll(sides(List.of(box(7, 3.5F, 13.5F, 9, 9, 14.5F, "plate"))));
+        boxes.addAll(sides(List.of(box(1, 9, 13, 13, 11, 15, "ring"))));
+        boxes.add(box(CORE_LOW, 4, CORE_LOW, CORE_LOW + CORE_SIZE, 4 + CORE_SIZE, CORE_LOW + CORE_SIZE, "glow"));
+        List<Box> particle = List.of(box(3.5F, 11, 13.5F, 4.5F, 12, 14.5F, "glow"));
+        boxes.addAll(particle);
+        boxes.addAll(turn(turn(particle)));
+        return boxes;
+    }
+
     static List<Box> brassCasing() {
         List<Box> boxes = new ArrayList<>();
         boxes.add(box(0, 0, 0, 16, 2, 16, "casing"));

@@ -13,6 +13,7 @@ import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.MechanicalCraftingPattern;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.pattern.NepPattern;
+import dev.rylex.nep.pattern.ParticleCollisionPattern;
 import dev.rylex.nep.pattern.RuneworkingPattern;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.pattern.SpiritFocusingPattern;
@@ -37,6 +38,7 @@ public final class ExtendedAeCompat {
             InfusionPattern.class,
             MechanicalCraftingPattern.class,
             MiniaturizationPattern.class,
+            ParticleCollisionPattern.class,
             RuneworkingPattern.class,
             SequencedAssemblyPattern.class,
             SpiritFocusingPattern.class,

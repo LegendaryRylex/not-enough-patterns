@@ -1,6 +1,5 @@
 package dev.rylex.nep;
 
-import appeng.api.upgrades.Upgrades;
 import appeng.core.definitions.AEBlocks;
 import dev.rylex.nep.client.NepClient;
 import dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsCompat;
@@ -12,12 +11,17 @@ import dev.rylex.nep.compat.draconic.DraconicCompat;
 import dev.rylex.nep.compat.extendedae.ExtendedAeCompat;
 import dev.rylex.nep.compat.malum.MalumCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat;
+import dev.rylex.nep.compat.oritech.OritechCompat;
 import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.guide.NepRecipes;
 import dev.rylex.nep.hub.NepContent;
 import dev.rylex.nep.net.NepNetwork;
+import dev.rylex.nep.provider.ImportCardUpgrades;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -83,6 +87,10 @@ public final class Nep {
             ArsCompat.init(modBus, dist);
             LOGGER.info("Ars Nouveau integration enabled");
         }
+        if (ModList.get().isLoaded("oritech")) {
+            OritechCompat.init(modBus, dist);
+            LOGGER.info("Oritech integration enabled");
+        }
         if (ModList.get().isLoaded("extendedae")) {
             ExtendedAeCompat.init(modBus, dist);
             LOGGER.info("ExtendedAE integration enabled");
@@ -95,27 +103,30 @@ public final class Nep {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            Upgrades.add(NepItems.IMPORT_CARD, AEBlocks.PATTERN_PROVIDER.block(), 1);
-            registerProviderUpgrade("advanced_ae", "adv_pattern_provider", "small_adv_pattern_provider");
-            registerProviderUpgrade("extendedae", "ex_pattern_provider");
-            registerProviderUpgrade("expandedae", "exp_pattern_provider");
-            registerProviderUpgrade("megacells", "mega_pattern_provider");
-            registerProviderUpgrade("appliedcreate", "andesite_pattern_provider", "brass_pattern_provider");
-            registerProviderUpgrade(
+            var providers = new ArrayList<Item>();
+            providers.add(AEBlocks.PATTERN_PROVIDER.asItem());
+            addProviders(providers, "advanced_ae", "adv_pattern_provider", "small_adv_pattern_provider");
+            addProviders(providers, "extendedae", "ex_pattern_provider");
+            addProviders(providers, "expandedae", "exp_pattern_provider");
+            addProviders(providers, "megacells", "mega_pattern_provider");
+            addProviders(providers, "appliedcreate", "andesite_pattern_provider", "brass_pattern_provider");
+            addProviders(
+                    providers,
                     "ae2_draconic_fusion_autocrafter",
                     "me_draconic_pattern_provider",
                     "me_draconic_pattern_provider_panel");
+            ImportCardUpgrades.register(providers);
         });
     }
 
-    private static void registerProviderUpgrade(String modId, String... itemPaths) {
+    private static void addProviders(List<Item> providers, String modId, String... itemPaths) {
         if (!ModList.get().isLoaded(modId)) {
             return;
         }
         for (var path : itemPaths) {
             BuiltInRegistries.ITEM
                     .getOptional(ResourceLocation.fromNamespaceAndPath(modId, path))
-                    .ifPresent(item -> Upgrades.add(NepItems.IMPORT_CARD, item, 1));
+                    .ifPresent(providers::add);
         }
     }
 }

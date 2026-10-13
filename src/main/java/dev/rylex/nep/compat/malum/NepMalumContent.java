@@ -5,6 +5,7 @@ import com.sammy.malum.common.item.spirit.SpiritShardItem;
 import com.sammy.malum.core.systems.registry.SpiritHolder;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepConfigGates;
 import dev.rylex.nep.NepCreativeTabs;
 import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.decoder.DecoderModule;
@@ -102,6 +103,10 @@ final class NepMalumContent {
         BLOCK_ENTITIES.register(modBus);
         MENUS.register(modBus);
         modBus.addListener(NepMalumContent::onBuildCreativeTab);
+        NepConfigGates.register(MATRIX_ITEM, NepConfig::malumFocusedSpiritMatrix);
+        NepConfigGates.register(MATRIX_IMPETUS, NepConfig::malumFocusedSpiritMatrix);
+        NepConfigGates.register(FRACTURED_MATRIX_IMPETUS, NepConfig::malumFocusedSpiritMatrix);
+        NepConfigGates.register(MATRIX_CATALYZER, NepConfig::malumFocusedSpiritMatrix);
     }
 
     private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {

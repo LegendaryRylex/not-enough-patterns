@@ -2,6 +2,8 @@ package dev.rylex.nep.hub;
 
 import appeng.api.AECapabilities;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepConfigGates;
 import dev.rylex.nep.NepCreativeTabs;
 import java.util.List;
 import net.minecraft.core.component.DataComponentType;
@@ -68,6 +70,8 @@ public final class NepContent {
         MENUS.register(modBus);
         modBus.addListener(NepContent::registerCapabilities);
         modBus.addListener(NepContent::onBuildCreativeTab);
+        NepConfigGates.register(MACHINE_HUB_ITEM, NepConfig::machineHubEnabled);
+        NepConfigGates.register(HUB_LINKER, NepConfig::machineHubEnabled);
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {

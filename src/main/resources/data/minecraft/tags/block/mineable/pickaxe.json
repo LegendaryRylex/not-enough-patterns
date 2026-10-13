@@ -52,6 +52,14 @@
     {
       "id": "nep:ritual_conductor",
       "required": false
+    },
+    {
+      "id": "nep:particle_collision_controller",
+      "required": false
+    },
+    {
+      "id": "nep:particle_collision_matrix",
+      "required": false
     }
   ]
 }

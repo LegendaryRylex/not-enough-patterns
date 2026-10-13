@@ -1,0 +1,37 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "nep:sequenced_assembly_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:fusion_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:miniaturization_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:atomic_empowering_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:infused_awakening_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:focused_spirit_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:arcane_enchanting_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:particle_collision_matrix",
+      "required": false
+    }
+  ]
+}

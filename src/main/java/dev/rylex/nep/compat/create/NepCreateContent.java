@@ -1,6 +1,8 @@
 package dev.rylex.nep.compat.create;
 
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepConfigGates;
 import dev.rylex.nep.NepCreativeTabs;
 import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.decoder.DecoderModule;
@@ -127,6 +129,9 @@ final class NepCreateContent {
         MENUS.register(modBus);
         ATTACHMENTS.register(modBus);
         modBus.addListener(NepCreateContent::onBuildCreativeTab);
+        NepConfigGates.register(CONTROLLER_ITEM, NepConfig::createSequencedAssembly);
+        NepConfigGates.register(LINKER, NepConfig::createSequencedAssembly);
+        NepConfigGates.register(MATRIX_ITEM, NepConfig::createSequencedAssemblyMatrix);
     }
 
     private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {

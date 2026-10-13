@@ -10,6 +10,7 @@ public enum MatrixCoreProfile {
     FUSION("fusion", 0xE95508, 0xFFCEA8),
     INFUSED_AWAKENING("infused_awakening", 0xA80000, 0xF18C8C),
     MINIATURIZATION("miniaturization", 0x08BAE9, 0xA8E4FF),
+    PARTICLE_COLLISION("particle_collision", 0x1FB48F, 0xB3FFE9),
     SEQUENCED_ASSEMBLER("sequenced_assembler", 0xC07A31, 0xF6E7B1);
 
     private static final String FOLDER = "textures/block/matrix/core/";

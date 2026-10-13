@@ -1,0 +1,17 @@
+{
+  "type": "oritech:particle_collision",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "oritech"
+    }
+  ],
+  "ingredients": [
+    { "item": "minecraft:clay_ball" },
+    { "item": "minecraft:flint" }
+  ],
+  "results": [
+    { "id": "minecraft:emerald", "count": 1 }
+  ],
+  "time": 2
+}

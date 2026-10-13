@@ -38,6 +38,7 @@ public class NepBlockStates extends BlockStateProvider {
             new Matrix("atomic_empowering_matrix", "empowering", false),
             new Matrix("infused_awakening_matrix", "infused_awakening", false),
             new Matrix("miniaturization_matrix", "miniaturization", false),
+            new Matrix("particle_collision_matrix", "particle_collision", false),
             new Matrix("focused_spirit_matrix", "focused_spirit", false),
             new Matrix("arcane_enchanting_matrix", "arcane_enchanting", false));
 
@@ -51,6 +52,7 @@ public class NepBlockStates extends BlockStateProvider {
     private static final String PATTERN_DECODER = "pattern_decoder";
     private static final String MINIATURIZATION_CONTROLLER = "miniaturization_controller";
     private static final String ASSEMBLY_CONTROLLER = "sequenced_assembly_controller";
+    private static final String COLLISION_CONTROLLER = "particle_collision_controller";
     private static final String WORKING = "working";
     private static final String ASSEMBLY_WORKING = "on";
     private static final String HALTED = "halted";
@@ -75,6 +77,7 @@ public class NepBlockStates extends BlockStateProvider {
         machineHub();
         patternDecoder();
         miniaturizationController();
+        collisionController();
         assemblyController();
         arcaneLectern();
         ritualConductor();
@@ -228,6 +231,30 @@ public class NepBlockStates extends BlockStateProvider {
                         .toList(),
                 Set.of("glow", FIELD));
         return part;
+    }
+
+    private void collisionController() {
+        Block block = block(COLLISION_CONTROLLER);
+        for (String status : MINIATURIZATION_STATES) {
+            BlockModelBuilder model = models().getBuilder(COLLISION_CONTROLLER + "_" + status)
+                    .parent(models().getExistingFile(mcLoc("block/block")))
+                    .renderType(SOLID)
+                    .texture("particle", machine("oritech/plate"))
+                    .texture("plate", machine("oritech/plate"))
+                    .texture("frame", machine("oritech/frame"))
+                    .texture("dark", machine("oritech/dark"))
+                    .texture("ring", machine("oritech/ring"))
+                    .texture("glow", machine("oritech/glow_" + status));
+            NepMachineModels.emit(model, NepMachineModels.collisionRing(), Set.of("glow"));
+        }
+        getVariantBuilder(block)
+                .forAllStatesExcept(
+                        state -> ConfiguredModel.builder()
+                                .modelFile(models().getExistingFile(
+                                                Nep.id("block/" + COLLISION_CONTROLLER + "_" + statusOf(state))))
+                                .build(),
+                        besidesStatus(block));
+        itemModels().withExistingParent(COLLISION_CONTROLLER, Nep.id("block/" + COLLISION_CONTROLLER + "_running"));
     }
 
     private void assemblyController() {

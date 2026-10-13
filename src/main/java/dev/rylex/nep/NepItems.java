@@ -13,6 +13,7 @@ import dev.rylex.nep.pattern.ImbuementPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.MechanicalCraftingPattern;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
+import dev.rylex.nep.pattern.ParticleCollisionPattern;
 import dev.rylex.nep.pattern.RuneworkingPattern;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.pattern.SpiritFocusingPattern;
@@ -88,6 +89,11 @@ public final class NepItems {
 
     public static final DeferredItem<Item> ENCHANTING_PATTERN = ITEMS.register(
             "enchanting_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(EnchantingPattern::new)
+                    .build());
+
+    public static final DeferredItem<Item> PARTICLE_COLLISION_PATTERN =
+            ITEMS.register("particle_collision_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(
+                            ParticleCollisionPattern::new)
                     .build());
 
     public static final DeferredItem<Item> IMPORT_CARD =

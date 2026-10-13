@@ -1,6 +1,8 @@
 package dev.rylex.nep.compat.draconic;
 
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.NepConfigGates;
 import dev.rylex.nep.NepCreativeTabs;
 import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.decoder.DecoderModule;
@@ -70,6 +72,7 @@ final class NepDraconicContent {
         MENUS.register(modBus);
         ATTACHMENTS.register(modBus);
         modBus.addListener(NepDraconicContent::onBuildCreativeTab);
+        NepConfigGates.register(MATRIX_ITEM, NepConfig::draconicFusionMatrix);
     }
 
     private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {

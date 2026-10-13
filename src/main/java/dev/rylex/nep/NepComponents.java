@@ -90,6 +90,11 @@ public final class NepComponents {
                     "encoded_enchanting_pattern", builder -> builder.persistent(EncodedRecipePattern.CODEC)
                             .networkSynchronized(EncodedRecipePattern.STREAM_CODEC));
 
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<EncodedRecipePattern>>
+            ENCODED_PARTICLE_COLLISION_PATTERN = COMPONENTS.registerComponentType(
+                    "encoded_particle_collision_pattern", builder -> builder.persistent(EncodedRecipePattern.CODEC)
+                            .networkSynchronized(EncodedRecipePattern.STREAM_CODEC));
+
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ResourceLocation>> SOURCE_RECIPE =
             COMPONENTS.registerComponentType("source_recipe", builder -> builder.persistent(ResourceLocation.CODEC)
                     .networkSynchronized(ResourceLocation.STREAM_CODEC));

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "oritech"
+    }
+  ],
+  "category": "misc",
+  "pattern": [
+    "RSR",
+    "EAE",
+    "PCP"
+  ],
+  "key": {
+    "R": { "item": "oritech:accelerator_ring" },
+    "S": { "item": "oritech:accelerator_sensor" },
+    "E": { "item": "ae2:engineering_processor" },
+    "A": { "item": "ae2:pattern_provider" },
+    "P": { "item": "oritech:machine_plating_block" },
+    "C": { "item": "oritech:accelerator_controller" }
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:particle_collision_controller"
+  }
+}
