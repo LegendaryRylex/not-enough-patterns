@@ -6,6 +6,9 @@ import dev.rylex.nep.compat.extendedae.ExtendedAePatternViewGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.AwakeningAltarCraftingMachineGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.InfusedAwakeningMatrixGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.InfusionAltarCraftingMachineGameTest;
+import dev.rylex.nep.compat.oritech.ParticleCollisionControllerGameTest;
+import dev.rylex.nep.compat.oritech.ParticleCollisionMatrixGameTest;
+import dev.rylex.nep.compat.oritech.ParticleCollisionPatternGameTest;
 import dev.rylex.nep.compat.thunderbolt.ThunderboltChannelGameTest;
 import dev.rylex.nep.decoder.PatternDecoderGameTest;
 import dev.rylex.nep.hub.ChannelModeGameTest;
@@ -73,6 +76,11 @@ public final class NepGameTests {
         AwakeningAltarCraftingMachineGameTest.register(new Batch(event, "nep_awakening_altar", LARGE));
         InfusionAltarCraftingMachineGameTest.register(new Batch(event, "nep_infusion_altar", LARGE));
         ExtendedAePatternViewGameTest.register(new Batch(event, "nep_extendedae", SMALL));
+        ParticleCollisionPatternGameTest.register(new Batch(event, "nep_oritech_particle_collision", SMALL));
+        ParticleCollisionMatrixGameTest.register(
+                new Batch(event, "nep_particle_collision_matrix", SMALL),
+                new Batch(event, "nep_particle_collision_matrix_unpowered", SMALL));
+        ParticleCollisionControllerGameTest.register(new Batch(event, "nep_oritech_collision_controller", LARGE));
     }
 
     static Consumer<GameTestHelper> body(Identifier name) {

@@ -24,7 +24,13 @@ class ItemModelsTest {
     private static final Path MODELS = Paths.get("src", "main", "resources", "assets", "nep", "models");
 
     private static final List<String> COMPAT_GATED = List.of(
-            "infused_awakening_matrix", "apothic_enchanting_encoding_module", "mystical_agriculture_encoding_module");
+            "infused_awakening_matrix",
+            "apothic_enchanting_encoding_module",
+            "mystical_agriculture_encoding_module",
+            "oritech_encoding_module",
+            "particle_collision_matrix",
+            "particle_collision_controller",
+            "accelerator_linker");
 
     private static List<String> expectedItems() {
         List<String> paths = new ArrayList<>(COMPAT_GATED);

@@ -163,7 +163,7 @@
       },
       "from": [
         15,
-        3,
+        8.5,
         6
       ],
       "to": [
@@ -194,8 +194,40 @@
         }
       },
       "from": [
-        0.5,
+        15,
         3,
+        6
+      ],
+      "to": [
+        15.5,
+        7.5,
+        13
+      ]
+    },
+    {
+      "faces": {
+        "down": {
+          "texture": "#module2"
+        },
+        "east": {
+          "texture": "#module2"
+        },
+        "north": {
+          "texture": "#module2"
+        },
+        "south": {
+          "texture": "#module2"
+        },
+        "up": {
+          "texture": "#module2"
+        },
+        "west": {
+          "texture": "#module2"
+        }
+      },
+      "from": [
+        0.5,
+        8.5,
         6
       ],
       "to": [
@@ -984,6 +1016,7 @@
     "frame": "nep:block/machine/nep/frame",
     "module0": "nep:block/machine/nep/module/apothic_enchanting_encoding_module",
     "module1": "nep:block/machine/nep/module/mystical_agriculture_encoding_module",
+    "module2": "nep:block/machine/nep/module/oritech_encoding_module",
     "particle": "nep:block/machine/nep/plate",
     "plate": "nep:block/machine/nep/plate",
     "rim": "nep:block/machine/nep/rim"

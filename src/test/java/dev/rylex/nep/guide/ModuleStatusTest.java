@@ -31,7 +31,11 @@ class ModuleStatusTest {
             "awakening_altar",
             "infused_awakening_matrix",
             "apothic_enchanting",
-            "enchantment_infusion");
+            "enchantment_infusion",
+            "oritech",
+            "particle_collision",
+            "particle_collision_matrix",
+            "particle_collision_controller");
 
     @Test
     void everyModuleHasAStatusRecipe() {

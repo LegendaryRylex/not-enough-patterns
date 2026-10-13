@@ -1,0 +1,19 @@
+{
+  "type": "oritech:particle_collision",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "oritech"
+    }
+  ],
+  "itemInputs": [
+    "nep:particle_collision_controller",
+    "nep:matrix_circuitry"
+  ],
+  "itemResults": [
+    {
+      "id": "nep:particle_collision_matrix"
+    }
+  ],
+  "time": 2500
+}

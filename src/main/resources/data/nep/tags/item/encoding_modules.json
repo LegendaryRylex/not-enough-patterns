@@ -1,0 +1,17 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "nep:apothic_enchanting_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:mystical_agriculture_encoding_module",
+      "required": false
+    },
+    {
+      "id": "nep:oritech_encoding_module",
+      "required": false
+    }
+  ]
+}

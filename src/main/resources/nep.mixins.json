@@ -15,7 +15,8 @@
     "PatternProviderLogicHostMixin",
     "PatternProviderLogicMixin",
     "PatternProviderMenuMixin",
-    "UpgradeCardItemMixin"
+    "UpgradeCardItemMixin",
+    "UpgradesMixin"
   ],
   "client": [
     "AbstractContainerScreenAccessor",
@@ -23,7 +24,8 @@
     "EncodingHelperMixin",
     "GuideBuilderMixin",
     "PatternProviderScreenMixin",
-    "ScreenStyleAccessor"
+    "ScreenStyleAccessor",
+    "WidgetContainerAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "nep:infused_awakening_matrix",
+      "required": false
+    },
+    {
+      "id": "nep:particle_collision_matrix",
+      "required": false
+    }
+  ]
+}

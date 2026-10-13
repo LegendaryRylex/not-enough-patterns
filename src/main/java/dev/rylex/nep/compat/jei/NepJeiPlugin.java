@@ -6,6 +6,7 @@ import dev.rylex.nep.client.MachineHubScreen;
 import dev.rylex.nep.compat.ae2wtlib.Ae2WtLibJeiCompat;
 import dev.rylex.nep.compat.apothic.ApothicJeiCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalJeiCompat;
+import dev.rylex.nep.compat.oritech.OritechJeiCompat;
 import dev.rylex.nep.util.Recipes;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +73,9 @@ public final class NepJeiPlugin implements IModPlugin {
         if (ModList.get().isLoaded("mysticalagriculture")) {
             MysticalJeiCompat.addManualTransfers(registration, helper);
         }
+        if (ModList.get().isLoaded("oritech")) {
+            OritechJeiCompat.addManualTransfers(registration, helper);
+        }
     }
 
     @Override
@@ -81,7 +85,12 @@ public final class NepJeiPlugin implements IModPlugin {
 
     @Override
     public void onRuntimeAvailable(IJeiRuntime runtime) {
-        DecoderJeiVisibility.apply(runtime);
+        ConfigJeiVisibility.attach(runtime);
+    }
+
+    @Override
+    public void onRuntimeUnavailable() {
+        ConfigJeiVisibility.detach();
     }
 
     @Override
@@ -98,6 +107,9 @@ public final class NepJeiPlugin implements IModPlugin {
         }
         if (ModList.get().isLoaded("mysticalagriculture")) {
             sources.add(MysticalJeiCompat.source());
+        }
+        if (ModList.get().isLoaded("oritech")) {
+            sources.add(OritechJeiCompat.source());
         }
         return List.copyOf(sources);
     }

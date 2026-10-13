@@ -5,6 +5,7 @@ import appeng.api.upgrades.Upgrades;
 import dev.rylex.nep.pattern.AwakeningPattern;
 import dev.rylex.nep.pattern.EnchantingPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
+import dev.rylex.nep.pattern.ParticleCollisionPattern;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -24,6 +25,11 @@ public final class NepItems {
 
     public static final DeferredItem<Item> ENCHANTING_PATTERN = ITEMS.registerItem(
             "enchanting_pattern", props -> PatternDetailsHelper.encodedPatternItemBuilder(EnchantingPattern::new)
+                    .build(props));
+
+    public static final DeferredItem<Item> PARTICLE_COLLISION_PATTERN =
+            ITEMS.registerItem("particle_collision_pattern", props -> PatternDetailsHelper.encodedPatternItemBuilder(
+                            ParticleCollisionPattern::new)
                     .build(props));
 
     public static final DeferredItem<Item> IMPORT_CARD =

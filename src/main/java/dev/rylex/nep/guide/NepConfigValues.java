@@ -36,6 +36,9 @@ public final class NepConfigValues {
         values.put("infusionMillibucketsPerExperience", NepConfig::apothicInfusionMillibucketsPerExperience);
         values.put("infusedAwakeningMatrixChannels", NepConfig::mysticalInfusedAwakeningMatrixChannels);
         values.put("infusedAwakeningMatrixTankCapacity", NepConfig::mysticalInfusedAwakeningMatrixTankCapacity);
+        values.put("particleCollisionMatrixChannels", NepConfig::oritechMatrixChannels);
+        values.put("particleCollisionControllerChannels", NepConfig::oritechControllerChannels);
+        values.put("particleCollisionControllerLinkRange", NepConfig::oritechControllerLinkRange);
         return Collections.unmodifiableMap(values);
     }
 }

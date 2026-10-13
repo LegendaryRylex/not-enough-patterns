@@ -23,6 +23,10 @@ class CompatIsolationTest {
             new ForeignRule(
                     Paths.get("dev", "rylex", "nep", "compat", "mysticalagriculture"),
                     List.of("com.blakebr0.mysticalagriculture", "com.blakebr0.cucumber")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "oritech"), List.of("rearth.oritech")),
+            new ForeignRule(
+                    Paths.get("dev", "rylex", "nep", "compat", "oritech", "oritechthings"),
+                    List.of("com.lumengrid.oritechthings")),
             new ForeignRule(
                     Paths.get("dev", "rylex", "nep", "compat", "advancedae"), List.of("net.pedroksl.advanced_ae")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "thunderbolt"), List.of("com.moakiee.ae2lt")),
@@ -32,6 +36,7 @@ class CompatIsolationTest {
     private static final List<String> COMPAT_ENTRY_POINTS = List.of(
             "dev.rylex.nep.compat.apothic.ApothicCompat",
             "dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat",
+            "dev.rylex.nep.compat.oritech.OritechCompat",
             "dev.rylex.nep.compat.extendedae.ExtendedAeCompat");
 
     @Test

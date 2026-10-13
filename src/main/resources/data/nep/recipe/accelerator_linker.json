@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "oritech"
+    }
+  ],
+  "category": "misc",
+  "pattern": [
+    "  P",
+    " E ",
+    "S  "
+  ],
+  "key": {
+    "P": "oritech:processing_unit",
+    "E": "oritech:electrum_ingot",
+    "S": "#c:rods/wooden"
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:accelerator_linker"
+  }
+}

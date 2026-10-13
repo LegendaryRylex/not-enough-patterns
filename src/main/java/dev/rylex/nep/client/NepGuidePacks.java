@@ -23,6 +23,7 @@ public final class NepGuidePacks {
         }
         hidePagesWithout(event, "mysticalagriculture", "no_mysticalagriculture");
         hidePagesWithout(event, "apothic_enchanting", "no_apothic_enchanting");
+        hidePagesWithout(event, "oritech", "no_oritech");
     }
 
     private static void hidePagesWithout(AddPackFindersEvent event, String modId, String pack) {

@@ -4,7 +4,8 @@ import net.neoforged.fml.ModList;
 
 public enum DecoderModule {
     APOTHIC_ENCHANTING("apothic_enchanting", "apothic_enchanting"),
-    MYSTICAL_AGRICULTURE("mysticalagriculture", "mystical_agriculture");
+    MYSTICAL_AGRICULTURE("mysticalagriculture", "mystical_agriculture"),
+    ORITECH("oritech", "oritech");
 
     private final String modId;
     private final String itemPath;

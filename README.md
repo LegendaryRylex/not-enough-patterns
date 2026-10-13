@@ -14,6 +14,7 @@ Pattern providers only cope with machines shaped like a furnace: items in, items
 | Create               |   ✅   |   ❌   | Mechanical Crafting, Deploying, Filling, Sequenced Assembly |
 | Draconic Evolution   |   ✅   |   ❌   | Fusion Crafting                                             |
 | Mystical Agriculture |   ✅   |   ✅   | Infusion, Awakening                                         |
+| Oritech              |   ✅   |   ✅   | Particle Collision                                          |
 
 Look a recipe up in JEI, hit the **+** button at a Pattern Encoding Terminal, and the right pattern comes back with the ingredients already worked out.
 
@@ -60,5 +61,4 @@ NEP is built with pack devs in mind: `nep-server.toml` is fully modular. Every i
 | Malum                  |Spirit Altar                                    |
 | Mekanism               |Metallurgic Infuser                             |
 | Occultism              |Rituals                                         |
-| Oritech                |Particle Accelerator, Fluid Centrifuge, Cyber Station |
 | Pneumaticcraft         |Pressure Chamber, Heat Crafting                 |

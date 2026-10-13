@@ -56,6 +56,9 @@ var skippableRuntimeMods = [
         appflux: [[group: 'curse.maven', module: 'applied-flux-965012']],
         wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
         tb     : [[group: 'curse.maven', module: 'ae2-lightning-tech-1527395']],
+        oritech: [[group: 'curse.maven', module: 'oritech-1030830'],
+                  [group: 'curse.maven', module: 'athena-841890'],
+                  [group: 'curse.maven', module: 'oritech-things-1166849']],
 ]
 
 var impliedSkips = [wtlib: ['aae', 'eae', 'appflux'], eae: ['appflux']]
@@ -187,6 +190,12 @@ dependencies {
     localRuntime "curse.maven:glodium-957920:${glodium_file}"
     localRuntime "curse.maven:applied-flux-965012:${appliedflux_file}"
 
+    compileOnly "curse.maven:oritech-1030830:${oritech_file}"
+    localRuntime "curse.maven:oritech-1030830:${oritech_file}"
+    compileOnly "curse.maven:oritech-things-1166849:${oritechthings_file}"
+    localRuntime "curse.maven:oritech-things-1166849:${oritechthings_file}"
+    localRuntime "curse.maven:athena-841890:${athena_file}"
+
     compileOnly "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
     compileOnly "curse.maven:cucumber-272335:${cucumber_file}"
     localRuntime "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
@@ -240,6 +249,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             advanced_ae_version_range: advanced_ae_version_range,
             extendedae_version_range: extendedae_version_range,
             mysticalagriculture_version_range: mysticalagriculture_version_range,
+            oritech_version_range  : oritech_version_range,
+            oritechthings_version_range: oritechthings_version_range,
             apothic_enchanting_version_range: apothic_enchanting_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,

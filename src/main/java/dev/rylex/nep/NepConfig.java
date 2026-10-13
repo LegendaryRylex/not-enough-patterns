@@ -5,6 +5,7 @@ import dev.rylex.nep.hub.HubRules;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class NepConfig {
@@ -47,6 +48,26 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_ME_DRAIN;
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_IDLE_ME_DRAIN;
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_CHANNELS;
+
+    private static final ModConfigSpec.BooleanValue ORITECH_OVERRIDE;
+    private static final ModConfigSpec.BooleanValue ORITECH_PARTICLE_COLLISION;
+    private static final ModConfigSpec.BooleanValue ORITECH_MATRIX;
+    private static final ModConfigSpec.BooleanValue ORITECH_MATRIX_AUTO_REQUEST;
+    private static final ModConfigSpec.IntValue ORITECH_MATRIX_ENERGY_COST;
+    private static final ModConfigSpec.IntValue ORITECH_MATRIX_CHARGE_RATE;
+    private static final ModConfigSpec.IntValue ORITECH_MATRIX_CAPACITY;
+    private static final ModConfigSpec.IntValue ORITECH_MATRIX_CRAFT_TICKS;
+    private static final ModConfigSpec.BooleanValue ORITECH_MATRIX_ME_CHARGE;
+    private static final ModConfigSpec.IntValue ORITECH_MATRIX_ME_DRAIN;
+    private static final ModConfigSpec.IntValue ORITECH_MATRIX_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue ORITECH_MATRIX_CHANNELS;
+    private static final ModConfigSpec.BooleanValue ORITECH_CONTROLLER;
+    private static final ModConfigSpec.BooleanValue ORITECH_CONTROLLER_AUTO_REQUEST;
+    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_LINK_RANGE;
+    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_COLLISION_TIMEOUT;
+    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_ME_DRAIN;
+    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_CHANNELS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -149,6 +170,110 @@ public final class NepConfig {
                 .defineInRange("meNetworkChannels", 15, 0, 128);
         builder.pop();
 
+        builder.pop();
+
+        builder.comment("Oritech integration.")
+                .translation("nep.configuration.modules.oritech")
+                .push("oritech");
+        ORITECH_OVERRIDE = builder.comment(
+                        "Master override for Oritech integration.",
+                        "When disabled, every Oritech module below is disabled regardless of its own toggle.")
+                .translation("nep.configuration.modules.oritech.override")
+                .define("allow_oritech_module", true);
+        ORITECH_PARTICLE_COLLISION = builder.comment(
+                        "Particle Collision Module: Encodes Particle Accelerator collision recipes as patterns, with the two colliding items as ingredients.",
+                        "The patterns push their ingredients into adjacent inventories like a plain processing pattern.")
+                .translation("nep.configuration.modules.oritech.particleCollision")
+                .define("particleCollision", true);
+
+        builder.comment("Particle Collision Matrix:")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix")
+                .push("particleCollisionMatrix");
+        ORITECH_MATRIX = builder.comment(
+                        "The Particle Collision Matrix runs whole particle collision recipes inside a single block, with no accelerator ring.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.enabled")
+                .define("enabled", true);
+        ORITECH_MATRIX_AUTO_REQUEST = builder.comment(
+                        "Treats the Matrix as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a craft it owes is left without materials.",
+                        "When disabled, a Matrix left short of materials stalls until you manually restock it.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.autoRequest")
+                .define("autoRequest", true);
+        ORITECH_MATRIX_ENERGY_COST = builder.comment(
+                        "Energy a Matrix craft costs, as a percentage of what Oritech's motors would spend speeding one particle up to the recipe's collision speed.",
+                        "100 charges exactly what the real accelerator would; the cost grows with the square of the recipe's speed.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.energyCost")
+                .defineInRange("energyCostPercent", 100, 0, 10_000);
+        ORITECH_MATRIX_CHARGE_RATE = builder.comment("Maximum energy the Matrix accepts per tick, in FE.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.chargeRate")
+                .defineInRange("chargeRate", 1_000_000, 1, Integer.MAX_VALUE);
+        ORITECH_MATRIX_CAPACITY = builder.comment(
+                        "Size of the Matrix's internal energy buffer, in FE.",
+                        "A craft costing more than this still finishes, paying up to the buffer's worth each tick until it is covered.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.capacity")
+                .defineInRange("energyCapacity", 10_000_000, 1_000, Integer.MAX_VALUE);
+        ORITECH_MATRIX_CRAFT_TICKS = builder.comment(
+                        "Fewest ticks a Matrix craft takes. 20 ticks is one second.",
+                        "A craft lasts longer whenever its energy cannot be paid as fast as this allows.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.craftTicks")
+                .defineInRange("craftTicks", 10, 1, 24_000);
+        ORITECH_MATRIX_ME_CHARGE = builder.comment(
+                        "Lets the Matrix charge a craft from its ME network's own power whenever its FE buffer runs short.",
+                        "The network's last tenth of stored power is left alone, so a craft drawing its charge cannot brown the network out.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.meNetworkCharge")
+                .define("meNetworkCharge", true);
+        ORITECH_MATRIX_ME_DRAIN = builder.comment(
+                        "Energy the Matrix draws from its ME network while crafting, in AE per tick. Progress stops whenever the network cannot supply this much power.",
+                        "This is separate from the FE it crafts with, and pays for the ME network side of the machine.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.meNetworkDrain")
+                .defineInRange("meNetworkDrain", 500, 0, 1_000_000);
+        ORITECH_MATRIX_IDLE_ME_DRAIN = builder.comment(
+                        "Energy the Matrix draws from its ME network while idle, in AE per tick. This standing cost is read once when the Matrix joins a network, so changing it needs a world reload.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.idleMeNetworkDrain")
+                .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        ORITECH_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.oritech.particleCollisionMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
+        builder.pop();
+
+        builder.comment("Particle Collision Controller:")
+                .translation("nep.configuration.modules.oritech.particleCollisionController")
+                .push("particleCollisionController");
+        ORITECH_CONTROLLER = builder.comment(
+                        "The Particle Collision Controller runs particle collision patterns on a real Particle Accelerator: it launches one particle, waits until it is fast enough, then releases the second into its path.",
+                        "It links to two Particle Accelerators on the same ring with the Accelerator Linker, and only takes patterns whose speed it has seen a particle reach in that ring.")
+                .translation("nep.configuration.modules.oritech.particleCollisionController.enabled")
+                .define("enabled", true);
+        ORITECH_CONTROLLER_AUTO_REQUEST = builder.comment(
+                        "Treats the Controller as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a collision it owes is left without materials.",
+                        "When disabled, a Controller left short of materials stalls until you restock it by hand.")
+                .translation("nep.configuration.modules.oritech.particleCollisionController.autoRequest")
+                .define("autoRequest", true);
+        ORITECH_CONTROLLER_LINK_RANGE = builder.comment(
+                        "Maximum distance, in blocks, that a linked Particle Accelerator may sit from the Particle Collision Controller.")
+                .translation("nep.configuration.modules.oritech.particleCollisionController.linkRange")
+                .defineInRange("linkRange", 64, 1, 256);
+        ORITECH_CONTROLLER_COLLISION_TIMEOUT = builder.comment(
+                        "Ticks the Controller waits for two launched particles to meet before it recalls both and gives the items back.",
+                        "Raise it for a large ring where the fast particle needs a long lap to catch the slow one.")
+                .translation("nep.configuration.modules.oritech.particleCollisionController.collisionTimeout")
+                .defineInRange("collisionTimeout", 1_200, 20, 72_000);
+        ORITECH_CONTROLLER_ME_DRAIN = builder.comment(
+                        "Energy the Controller draws from its ME network while a particle is in flight, in AE per tick. A Controller that loses network power still finishes the collision in flight, but starts no new one.",
+                        "The accelerator's motors still take their own RF, so this is only the Controller's share.")
+                .translation("nep.configuration.modules.oritech.particleCollisionController.meNetworkDrain")
+                .defineInRange("meNetworkDrain", 100, 0, 1_000_000);
+        ORITECH_CONTROLLER_IDLE_ME_DRAIN = builder.comment(
+                        "Energy the Controller draws from its ME network while idle, in AE per tick. This standing cost is read once when the Controller joins a network, so changing it needs a world reload.")
+                .translation("nep.configuration.modules.oritech.particleCollisionController.idleMeNetworkDrain")
+                .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        ORITECH_CONTROLLER_CHANNELS = builder.comment(
+                        "Channels the Controller takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Controller joins a network, so changing it needs a world reload. Set to 0 for a Controller that takes up no channels at all.")
+                .translation("nep.configuration.modules.oritech.particleCollisionController.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 7, 0, 128);
+        builder.pop();
         builder.pop();
 
         builder.pop();
@@ -282,6 +407,12 @@ public final class NepConfig {
         builder.pop();
 
         SPEC = builder.build();
+    }
+
+    public static void onConfigLoaded(ModConfigEvent event) {
+        if (event.getConfig().getSpec() == SPEC) {
+            NepConfigGates.changed();
+        }
     }
 
     public static boolean loaded() {
@@ -419,5 +550,83 @@ public final class NepConfig {
 
     public static int mysticalInfusedAwakeningMatrixChannels() {
         return SPEC.isLoaded() ? MYSTICAL_MATRIX_CHANNELS.get() : 15;
+    }
+
+    public static boolean oritechOverride() {
+        return SPEC.isLoaded() && ORITECH_OVERRIDE.get();
+    }
+
+    public static boolean oritechParticleCollision() {
+        return oritechOverride() && ORITECH_PARTICLE_COLLISION.get();
+    }
+
+    public static boolean oritechParticleCollisionMatrix() {
+        return oritechOverride() && ORITECH_MATRIX.get();
+    }
+
+    public static boolean oritechMatrixAutoRequest() {
+        return oritechParticleCollisionMatrix() && ORITECH_MATRIX_AUTO_REQUEST.get();
+    }
+
+    public static long oritechMatrixEnergyCostPercent() {
+        return SPEC.isLoaded() ? ORITECH_MATRIX_ENERGY_COST.get() : 100;
+    }
+
+    public static int oritechMatrixChargeRate() {
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CHARGE_RATE.get() : 1_000_000;
+    }
+
+    public static int oritechMatrixCapacity() {
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CAPACITY.get() : 10_000_000;
+    }
+
+    public static int oritechMatrixCraftTicks() {
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CRAFT_TICKS.get() : 10;
+    }
+
+    public static boolean oritechMatrixMeCharge() {
+        return !SPEC.isLoaded() || ORITECH_MATRIX_ME_CHARGE.get();
+    }
+
+    public static int oritechMatrixMeDrain() {
+        return SPEC.isLoaded() ? ORITECH_MATRIX_ME_DRAIN.get() : 500;
+    }
+
+    public static int oritechMatrixIdleMeDrain() {
+        int idle = SPEC.isLoaded() ? ORITECH_MATRIX_IDLE_ME_DRAIN.get() : 10;
+        return Math.min(idle, oritechMatrixMeDrain());
+    }
+
+    public static int oritechMatrixChannels() {
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CHANNELS.get() : 15;
+    }
+
+    public static boolean oritechParticleCollisionController() {
+        return oritechOverride() && ORITECH_CONTROLLER.get();
+    }
+
+    public static boolean oritechControllerAutoRequest() {
+        return oritechParticleCollisionController() && ORITECH_CONTROLLER_AUTO_REQUEST.get();
+    }
+
+    public static int oritechControllerLinkRange() {
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_LINK_RANGE.get() : 64;
+    }
+
+    public static int oritechControllerCollisionTimeout() {
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_COLLISION_TIMEOUT.get() : 1_200;
+    }
+
+    public static int oritechControllerMeDrain() {
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_ME_DRAIN.get() : 100;
+    }
+
+    public static int oritechControllerIdleMeDrain() {
+        int idle = SPEC.isLoaded() ? ORITECH_CONTROLLER_IDLE_ME_DRAIN.get() : 10;
+        return Math.min(idle, oritechControllerMeDrain());
+    }
+
+    public static int oritechControllerChannels() {
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_CHANNELS.get() : 7;
     }
 }

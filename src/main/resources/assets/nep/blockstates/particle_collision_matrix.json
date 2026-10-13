@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "nep:block/particle_collision_matrix"
+    }
+  }
+}

@@ -70,6 +70,20 @@ ordering="AFTER"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
+modId="oritech"
+type="optional"
+versionRange="${oritech_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="oritechthings"
+type="optional"
+versionRange="${oritechthings_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
 modId="gmrecipes"
 type="required"
 versionRange="${gmrecipes_version_range}"

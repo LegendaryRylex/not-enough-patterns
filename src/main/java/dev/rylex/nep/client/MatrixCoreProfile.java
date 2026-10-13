@@ -4,7 +4,8 @@ import dev.rylex.nep.Nep;
 import net.minecraft.resources.Identifier;
 
 public enum MatrixCoreProfile {
-    INFUSED_AWAKENING("infused_awakening", 0xA80000, 0xF18C8C);
+    INFUSED_AWAKENING("infused_awakening", 0xA80000, 0xF18C8C),
+    PARTICLE_COLLISION("particle_collision", 0x1FB48F, 0xB3FFE9);
 
     private static final String FOLDER = "textures/block/matrix/core/";
     private static final Identifier PLASMA = Nep.id(FOLDER + "plasma.png");

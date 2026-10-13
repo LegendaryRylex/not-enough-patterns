@@ -2,6 +2,7 @@ package dev.rylex.nep.machine;
 
 import appeng.api.config.Actionable;
 import appeng.api.config.PowerMultiplier;
+import appeng.api.config.PowerUnit;
 import appeng.api.networking.GridFlags;
 import appeng.api.networking.GridHelper;
 import appeng.api.networking.IGrid;
@@ -12,6 +13,7 @@ import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.crafting.ICraftingLink;
 import appeng.api.networking.crafting.ICraftingRequester;
 import appeng.api.networking.crafting.ICraftingService;
+import appeng.api.networking.energy.IEnergyService;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
@@ -33,6 +35,8 @@ import org.jetbrains.annotations.Nullable;
 public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequester, ChannelDemand {
 
     public static final int TRACKER_SIZE = 18;
+
+    private static final double NETWORK_ENERGY_RESERVE = 0.1;
 
     private static final double POWER_EPSILON = 0.01;
 
@@ -172,6 +176,25 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
         if (restockLog.shouldLog(level.getGameTime(), subject, message)) {
             Nep.LOGGER.info(message);
         }
+    }
+
+    public long chargeBuffer(MatrixEnergyBuffer buffer, long wanted) {
+        long room = buffer.receive(wanted, true);
+        if (room <= 0) {
+            return 0;
+        }
+        IGrid grid = mainNode.getGrid();
+        if (grid == null) {
+            return 0;
+        }
+        IEnergyService energy = grid.getEnergyService();
+        double spare = energy.getStoredPower() - energy.getMaxStoredPower() * NETWORK_ENERGY_RESERVE;
+        double wantedAe = Math.min(spare, PowerUnit.FE.convertTo(PowerUnit.AE, room));
+        if (wantedAe <= POWER_EPSILON) {
+            return 0;
+        }
+        double drawn = energy.extractAEPower(wantedAe, Actionable.MODULATE, PowerMultiplier.ONE);
+        return buffer.receive((long) PowerUnit.AE.convertTo(PowerUnit.FE, drawn), false);
     }
 
     public void cancelRequests() {
