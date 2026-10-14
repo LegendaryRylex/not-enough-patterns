@@ -1,4 +1,4 @@
-package dev.rylex.nep.compat.mysticalagriculture;
+package dev.rylex.nep.compat.occultism;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.implementations.blockentities.ICraftingMachine;
@@ -9,20 +9,19 @@ import java.util.List;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 
-public class InfusedAwakeningMatrixCraftingMachine implements ICraftingMachine {
+public class BoundSpiritMatrixCraftingMachine implements ICraftingMachine {
 
-    private final InfusedAwakeningMatrixBlockEntity matrix;
+    private final BoundSpiritMatrixBlockEntity matrix;
 
-    public InfusedAwakeningMatrixCraftingMachine(InfusedAwakeningMatrixBlockEntity matrix) {
+    public BoundSpiritMatrixCraftingMachine(BoundSpiritMatrixBlockEntity matrix) {
         this.matrix = matrix;
     }
 
     @Override
     public PatternContainerGroup getCraftingMachineInfo() {
+        ItemStack icon = new ItemStack(NepOccultismContent.MATRIX_ITEM.get());
         return new PatternContainerGroup(
-                AEItemKey.of(new ItemStack(NepMysticalContent.MATRIX_ITEM.get())),
-                NepMysticalContent.MATRIX.get().getName(),
-                List.of());
+                AEItemKey.of(icon), NepOccultismContent.MATRIX.get().getName(), List.of());
     }
 
     @Override

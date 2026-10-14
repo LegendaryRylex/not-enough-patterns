@@ -8,6 +8,7 @@ import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
 import appeng.helpers.patternprovider.PatternProviderTarget;
 import dev.rylex.nep.ConfigOverrides;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.NepGameTests;
 import java.util.ArrayList;
@@ -34,27 +35,23 @@ import net.neoforged.neoforge.transfer.item.ItemResource;
 
 public final class MachineHubGameTest {
 
-    private static final BlockPos HUB = new BlockPos(2, 1, 2);
-    private static final BlockPos FIRST = new BlockPos(2, 1, 3);
-    private static final BlockPos SECOND = new BlockPos(3, 1, 2);
-    private static final BlockPos WIDE_HUB = new BlockPos(1, 1, 4);
-    private static final BlockPos ME_CONTROLLER = new BlockPos(2, 2, 2);
-    private static final BlockPos ENERGY = ME_CONTROLLER.above();
-
-    private static final String CHANNELS_FIELD = "MACHINE_HUB_CHANNELS";
-    private static final String CHANNELS_PER_LINK_FIELD = "MACHINE_HUB_CHANNELS_PER_LINK";
+    static final BlockPos HUB = new BlockPos(2, 1, 2);
+    static final BlockPos FIRST = new BlockPos(2, 1, 3);
+    static final BlockPos SECOND = new BlockPos(3, 1, 2);
+    static final BlockPos WIDE_HUB = new BlockPos(1, 1, 4);
+    static final BlockPos ME_CONTROLLER = new BlockPos(2, 2, 2);
+    static final BlockPos ENERGY = ME_CONTROLLER.above();
 
     private static final int AD_HOC_CEILING = 8;
     private static final int NETWORK_TICKS = 200;
 
     private MachineHubGameTest() {}
 
-    private static void powerUp(GameTestHelper helper) {
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+    static void powerUp(GameTestHelper helper) {
+        GameTestFixtures.powerUp(helper, ME_CONTROLLER, ENERGY);
     }
 
-    private static void whenOnline(GameTestHelper helper, MachineHubBlockEntity hub, Runnable body) {
+    static void whenOnline(GameTestHelper helper, MachineHubBlockEntity hub, Runnable body) {
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(
                         hub.routing(),
@@ -63,13 +60,9 @@ public final class MachineHubGameTest {
                 .thenSucceed();
     }
 
-    public static void register(
-            NepGameTests.Batch batch,
-            NepGameTests.Batch wide,
-            NepGameTests.Batch channels,
-            NepGameTests.Batch adHoc,
-            NepGameTests.Batch rules) {
-        batch.add("a_provider_sees_the_hub_as_something_it_can_push_into", MachineHubGameTest::aProviderSeesTheHub)
+    public static void register(NepGameTests.Batch batch, NepGameTests.Batch channels, NepGameTests.Batch adHoc) {
+        batch.add("a_link_takes_the_role_it_is_set_to", MachineHubGameTest::aLinkTakesTheRoleItIsSetTo)
+                .add("a_provider_sees_the_hub_as_something_it_can_push_into", MachineHubGameTest::aProviderSeesTheHub)
                 .add(
                         "ingredients_pushed_at_the_hub_land_in_the_linked_inventory",
                         NETWORK_TICKS,
@@ -95,7 +88,6 @@ public final class MachineHubGameTest {
                         NETWORK_TICKS,
                         MachineHubGameTest::aHubOnAControllerNetworkBillsItForEveryLink)
                 .add("a_wrench_picks_the_hub_up_with_its_links", MachineHubGameTest::aWrenchPicksTheHubUpWithItsLinks)
-                .add("a_scan_leaves_player_storage_alone", MachineHubGameTest::aScanLeavesPlayerStorageAlone)
                 .add(
                         "a_hub_with_no_network_says_so_even_when_it_only_feeds_a_machine",
                         MachineHubGameTest::aHubWithNoNetworkSaysSoEvenWhenItOnlyFeedsAMachine)
@@ -107,28 +99,7 @@ public final class MachineHubGameTest {
                         "a_hub_refuses_to_link_itself_or_another_hub",
                         MachineHubGameTest::aHubRefusesToLinkItselfOrAnotherHub)
                 .add("a_link_is_kept_across_a_save_and_load", MachineHubGameTest::aLinkIsKeptAcrossASaveAndLoad)
-                .add(
-                        "a_scan_proposes_the_inventories_touching_it",
-                        MachineHubGameTest::aScanProposesTheInventoriesTouchingIt)
-                .add(
-                        "a_scan_crosses_plain_casing_to_reach_a_hatch_behind_it",
-                        MachineHubGameTest::aScanCrossesPlainCasing)
-                .add(
-                        "a_scan_will_not_cross_vanilla_building_blocks",
-                        MachineHubGameTest::aScanWillNotCrossVanillaBuildingBlocks)
-                .add(
-                        "a_scan_will_not_bridge_through_a_vanilla_block_entity_that_holds_nothing",
-                        MachineHubGameTest::aScanWillNotBridgeThroughAnEmptyVanillaBlockEntity)
-                .add(
-                        "a_scan_will_not_walk_off_through_the_ground_it_is_standing_on",
-                        MachineHubGameTest::aScanWillNotWalkOffThroughTheGround)
-                .add("a_scan_turns_back_at_the_provider_feeding_it", MachineHubGameTest::aScanTurnsBackAtTheProvider)
                 .add("a_network_block_cannot_be_linked_by_hand", MachineHubGameTest::aNetworkBlockCannotBeLinkedByHand);
-
-        wide.add("a_scan_crosses_a_casing_wall_up_to_the_configured_depth", MachineHubGameTest::aScanCrossesACasingWall)
-                .add(
-                        "a_scan_stops_at_a_casing_wall_thicker_than_the_configured_depth",
-                        MachineHubGameTest::aScanStopsAtATooThickCasingWall);
 
         channels.add(
                 "a_hub_demanding_more_channels_than_a_device_may_carry_stays_offline",
@@ -143,27 +114,20 @@ public final class MachineHubGameTest {
                         "a_linked_hub_takes_an_ad_hoc_network_past_its_ceiling_and_goes_dark",
                         NETWORK_TICKS,
                         MachineHubGameTest::aLinkedHubTakesAnAdHocNetworkPastItsCeilingAndGoesDark);
-
-        rules.add(
-                        "a_whitelisted_block_carries_the_scan_like_the_hub_face_would",
-                        MachineHubGameTest::aWhitelistedBlockCarriesTheScanLikeTheHubFaceWould)
-                .add(
-                        "a_link_blacklisted_block_is_refused_even_from_a_plan",
-                        MachineHubGameTest::aLinkBlacklistedBlockIsRefusedEvenFromAPlan);
     }
 
-    private static MachineHubBlockEntity hub(GameTestHelper helper) {
+    static MachineHubBlockEntity hub(GameTestHelper helper) {
         return hub(helper, HUB);
     }
 
-    private static MachineHubBlockEntity hub(GameTestHelper helper, BlockPos pos) {
+    static MachineHubBlockEntity hub(GameTestHelper helper, BlockPos pos) {
         helper.setBlock(pos, NepContent.MACHINE_HUB.get());
         MachineHubBlockEntity hub = MachineHubBlockEntity.at(helper.getLevel(), helper.absolutePos(pos));
         helper.assertTrue(hub != null, "the Machine Hub placed no block entity");
         return hub;
     }
 
-    private static BlockPos casingWall(GameTestHelper helper, BlockPos from, int thickness) {
+    static BlockPos casingWall(GameTestHelper helper, BlockPos from, int thickness) {
         BlockPos at = from;
         for (int step = 0; step < thickness; step++) {
             at = at.east();
@@ -174,14 +138,14 @@ public final class MachineHubGameTest {
         return hatch;
     }
 
-    private static void hatch(GameTestHelper helper, BlockPos pos) {
+    static void hatch(GameTestHelper helper, BlockPos pos) {
         helper.setBlock(pos, AEBlocks.SKY_STONE_TANK.block());
         helper.assertTrue(
                 helper.getLevel().getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(pos), null) != null,
                 "the test hatch at " + pos + " exposed no fluid handler");
     }
 
-    private static ResourceHandler<ItemResource> chest(GameTestHelper helper, BlockPos pos) {
+    static ResourceHandler<ItemResource> chest(GameTestHelper helper, BlockPos pos) {
         helper.setBlock(pos, Blocks.CHEST);
         ResourceHandler<ItemResource> handler =
                 helper.getLevel().getCapability(Capabilities.Item.BLOCK, helper.absolutePos(pos), null);
@@ -189,10 +153,14 @@ public final class MachineHubGameTest {
         return handler;
     }
 
-    private static void link(GameTestHelper helper, MachineHubBlockEntity hub, BlockPos pos, HubRole role) {
+    static void link(GameTestHelper helper, MachineHubBlockEntity hub, BlockPos pos, HubRole role) {
         List<HubLink> plan = new ArrayList<>(hub.links());
         plan.add(new HubLink(helper.absolutePos(pos), role));
         hub.applyPlan(plan);
+    }
+
+    static boolean proposes(GameTestHelper helper, List<HubLink> proposed, BlockPos pos) {
+        return proposed.stream().anyMatch(link -> link.pos().equals(helper.absolutePos(pos)));
     }
 
     private static PatternProviderTarget targetOf(GameTestHelper helper) {
@@ -222,6 +190,21 @@ public final class MachineHubGameTest {
 
     private static void fill(ResourceHandler<ItemResource> handler, ItemStack stack) {
         ResourceHandlerUtil.insertStacking(handler, ItemResource.of(stack), stack.getCount(), null);
+    }
+
+    public static void aLinkTakesTheRoleItIsSetTo(GameTestHelper helper) {
+        MachineHubBlockEntity hub = hub(helper);
+        chest(helper, FIRST);
+        link(helper, hub, FIRST, HubRole.INPUT);
+
+        hub.setRole(0, HubRole.INPUT.previous());
+        helper.assertValueEqual(hub.links().get(0).role(), HubRole.BOTH, "the role after stepping back from Input");
+        hub.setRole(0, HubRole.BOTH.next());
+        helper.assertValueEqual(hub.links().get(0).role(), HubRole.INPUT, "the role after stepping on from Both");
+        hub.setRole(5, HubRole.OUTPUT);
+        helper.assertValueEqual(
+                hub.links().size(), 1, "the link count after setting the role of a link that is not there");
+        helper.succeed();
     }
 
     public static void aProviderSeesTheHub(GameTestHelper helper) {
@@ -322,7 +305,7 @@ public final class MachineHubGameTest {
     public static void aHubOnAControllerNetworkBillsItForEveryLink(GameTestHelper helper) {
         MachineHubBlockEntity hub = hub(helper);
         powerUp(helper);
-        ResourceHandler<ItemResource> first = chest(helper, FIRST);
+        chest(helper, FIRST);
         chest(helper, SECOND);
         link(helper, hub, FIRST, HubRole.INPUT);
         link(helper, hub, SECOND, HubRole.INPUT);
@@ -339,16 +322,18 @@ public final class MachineHubGameTest {
                     node.getGrid().getPathingService().getUsedChannels(),
                     expected,
                     "channels the controller network reports in use");
-            helper.assertTrue(first != null, "the linked inventory vanished");
         });
     }
 
     public static void aHubDemandingMoreChannelsThanADeviceMayCarryStaysOffline(GameTestHelper helper) {
-        ConfigOverrides.Restore restore = ConfigOverrides.override(CHANNELS_PER_LINK_FIELD, 32);
-        MachineHubBlockEntity hub = hub(helper);
-        powerUp(helper);
-        chest(helper, FIRST);
-        link(helper, hub, FIRST, HubRole.INPUT);
+        ConfigOverrides.Restore restore = ConfigOverrides.override(HubConfigFields.CHANNELS_PER_LINK, 32);
+        MachineHubBlockEntity hub = HubConfigFields.guarded(restore, () -> {
+            MachineHubBlockEntity placed = hub(helper);
+            powerUp(helper);
+            chest(helper, FIRST);
+            link(helper, placed, FIRST, HubRole.INPUT);
+            return placed;
+        });
 
         helper.startSequence()
                 .thenIdle(60)
@@ -363,9 +348,12 @@ public final class MachineHubGameTest {
     }
 
     public static void anUnlinkedHubClaimsItsWholeDemandFromAnAdHocNetwork(GameTestHelper helper) {
-        ConfigOverrides.Restore restore = ConfigOverrides.override(CHANNELS_FIELD, AD_HOC_CEILING);
-        MachineHubBlockEntity hub = hub(helper);
-        helper.setBlock(HUB.above(), AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+        ConfigOverrides.Restore restore = ConfigOverrides.override(HubConfigFields.CHANNELS, AD_HOC_CEILING);
+        MachineHubBlockEntity hub = HubConfigFields.guarded(restore, () -> {
+            MachineHubBlockEntity placed = hub(helper);
+            helper.setBlock(HUB.above(), AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+            return placed;
+        });
 
         int expected = NepConfig.machineHubChannels();
 
@@ -388,11 +376,14 @@ public final class MachineHubGameTest {
     }
 
     public static void aLinkedHubTakesAnAdHocNetworkPastItsCeilingAndGoesDark(GameTestHelper helper) {
-        ConfigOverrides.Restore restore = ConfigOverrides.override(CHANNELS_FIELD, AD_HOC_CEILING);
-        MachineHubBlockEntity hub = hub(helper);
-        helper.setBlock(HUB.above(), AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-        chest(helper, FIRST);
-        link(helper, hub, FIRST, HubRole.INPUT);
+        ConfigOverrides.Restore restore = ConfigOverrides.override(HubConfigFields.CHANNELS, AD_HOC_CEILING);
+        MachineHubBlockEntity hub = HubConfigFields.guarded(restore, () -> {
+            MachineHubBlockEntity placed = hub(helper);
+            helper.setBlock(HUB.above(), AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+            chest(helper, FIRST);
+            link(helper, placed, FIRST, HubRole.INPUT);
+            return placed;
+        });
 
         helper.startSequence()
                 .thenIdle(60)
@@ -482,124 +473,6 @@ public final class MachineHubGameTest {
         helper.succeed();
     }
 
-    public static void aScanProposesTheInventoriesTouchingIt(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper);
-        hatch(helper, FIRST);
-        hatch(helper, SECOND);
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.stream().anyMatch(link -> link.pos().equals(helper.absolutePos(FIRST)))
-                        && proposed.stream().anyMatch(link -> link.pos().equals(helper.absolutePos(SECOND))),
-                "the scan missed an inventory touching the hub: " + proposed);
-        helper.assertTrue(
-                proposed.stream().noneMatch(link -> link.pos().equals(helper.absolutePos(HUB))),
-                "the scan proposed the hub itself");
-        helper.succeed();
-    }
-
-    public static void aScanCrossesPlainCasing(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper);
-        BlockPos casing = HUB.south();
-        BlockPos hatch = casing.south();
-        helper.setBlock(casing, AEBlocks.QUARTZ_BLOCK.block());
-        helper.setBlock(hatch, AEBlocks.SKY_STONE_TANK.block());
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.stream().anyMatch(link -> link.pos().equals(helper.absolutePos(hatch))),
-                "the scan stopped at a plain casing block instead of crossing it to the hatch behind: " + proposed);
-        helper.succeed();
-    }
-
-    public static void aScanWillNotCrossVanillaBuildingBlocks(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper);
-        helper.setBlock(HUB.south(), Blocks.IRON_BLOCK);
-        helper.setBlock(HUB.south().south(), AEBlocks.SKY_STONE_TANK.block());
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.isEmpty(),
-                "a vanilla block is indistinguishable from terrain, so crossing one would let the scan wander off the"
-                        + " machine: " + proposed);
-        helper.succeed();
-    }
-
-    public static void aScanCrossesACasingWall(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper, WIDE_HUB);
-        BlockPos hatch = casingWall(helper, WIDE_HUB, NepConfig.machineHubCasingDepth());
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.stream().anyMatch(link -> link.pos().equals(helper.absolutePos(hatch))),
-                "a wall no thicker than the configured casing depth stopped the scan reaching the hatch behind it: "
-                        + proposed);
-        helper.succeed();
-    }
-
-    public static void aScanStopsAtATooThickCasingWall(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper, WIDE_HUB);
-        BlockPos hatch = casingWall(helper, WIDE_HUB, NepConfig.machineHubCasingDepth() + 1);
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.stream().noneMatch(link -> link.pos().equals(helper.absolutePos(hatch))),
-                "the scan ran through more plain blocks than the casing depth allows, which is how it would wander"
-                        + " off a machine and into whatever a mod's decorative blocks lead to: " + proposed);
-        helper.succeed();
-    }
-
-    public static void aScanWillNotBridgeThroughAnEmptyVanillaBlockEntity(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper);
-        helper.setBlock(HUB.south(), Blocks.SCULK_SENSOR);
-        helper.setBlock(HUB.south().south(), AEBlocks.SKY_STONE_TANK.block());
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.isEmpty(),
-                "a vanilla block entity with no inventory is decoration, not a machine part, so it must not carry the"
-                        + " scan onward: " + proposed);
-        helper.succeed();
-    }
-
-    public static void aScanWillNotWalkOffThroughTheGround(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper);
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
-            }
-        }
-        helper.setBlock(new BlockPos(0, 0, 0), AEBlocks.SKY_STONE_TANK.block());
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.isEmpty(),
-                "the scan spread through a stone floor and picked up a chest sitting on the far side of it: "
-                        + proposed);
-        helper.succeed();
-    }
-
-    public static void aScanTurnsBackAtTheProvider(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper);
-        helper.setBlock(FIRST, AEBlocks.PATTERN_PROVIDER.block());
-        helper.setBlock(FIRST.north(), AEBlocks.SKY_STONE_TANK.block());
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.isEmpty(),
-                "the scan walked into an ME network block; a hub linked back through its own provider would loop: "
-                        + proposed);
-        helper.succeed();
-    }
-
     public static void aNetworkBlockCannotBeLinkedByHand(GameTestHelper helper) {
         MachineHubBlockEntity hub = hub(helper);
         helper.setBlock(FIRST, AEBlocks.PATTERN_PROVIDER.block());
@@ -648,57 +521,5 @@ public final class MachineHubGameTest {
         }
         helper.fail("wrenching the Hub put no Machine Hub in the player's inventory");
         return ItemStack.EMPTY;
-    }
-
-    public static void aScanLeavesPlayerStorageAlone(GameTestHelper helper) {
-        MachineHubBlockEntity hub = hub(helper);
-        chest(helper, FIRST);
-        helper.setBlock(SECOND, Blocks.BARREL);
-
-        List<HubLink> proposed = hub.scan();
-
-        helper.assertTrue(
-                proposed.isEmpty(),
-                "chests and barrels ship in nep:machine_hub/blocked, so a scan proposing them would drag a player's"
-                        + " storage into the machine: " + proposed);
-        helper.succeed();
-    }
-
-    public static void aWhitelistedBlockCarriesTheScanLikeTheHubFaceWould(GameTestHelper helper) {
-        ConfigOverrides.Restore restore =
-                ConfigOverrides.override("MACHINE_HUB_SCAN_WHITELIST", List.of("minecraft:iron_block"));
-        try {
-            MachineHubBlockEntity hub = hub(helper);
-            helper.setBlock(HUB.south(), Blocks.IRON_BLOCK);
-            BlockPos behind = HUB.south().south();
-            hatch(helper, behind);
-
-            List<HubLink> proposed = hub.scan();
-
-            helper.assertTrue(
-                    proposed.stream().anyMatch(link -> link.pos().equals(helper.absolutePos(behind))),
-                    "a whitelisted vanilla casing block did not carry the scan to the hatch behind it: " + proposed);
-        } finally {
-            restore.undo();
-        }
-        helper.succeed();
-    }
-
-    public static void aLinkBlacklistedBlockIsRefusedEvenFromAPlan(GameTestHelper helper) {
-        ConfigOverrides.Restore restore =
-                ConfigOverrides.override("MACHINE_HUB_LINK_BLACKLIST", List.of("minecraft:chest"));
-        try {
-            MachineHubBlockEntity hub = hub(helper);
-            chest(helper, FIRST);
-
-            hub.applyPlan(List.of(new HubLink(helper.absolutePos(FIRST), HubRole.INPUT)));
-
-            helper.assertTrue(
-                    hub.links().isEmpty(),
-                    "a link-blacklisted block was linked anyway, so the Hub Linker path around the scan is not gated");
-        } finally {
-            restore.undo();
-        }
-        helper.succeed();
     }
 }

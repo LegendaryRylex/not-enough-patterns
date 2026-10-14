@@ -6,7 +6,6 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
 import com.mojang.serialization.Codec;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -43,16 +42,11 @@ public final class PushingCpus {
         if (grid == null || outputs.isEmpty()) {
             return 0;
         }
-        List<CraftingCPUCluster> clusters = new ArrayList<>();
-        Set<BlockPos> present = new HashSet<>();
-        for (ICraftingCPU cpu : grid.getCraftingService().getCpus()) {
-            if (cpu instanceof CraftingCPUCluster cluster) {
-                clusters.add(cluster);
-                present.add(cluster.getBoundsMin());
-            }
-        }
         int cancelled = 0;
-        for (CraftingCPUCluster cluster : clusters) {
+        for (ICraftingCPU cpu : grid.getCraftingService().getCpus()) {
+            if (!(cpu instanceof CraftingCPUCluster cluster)) {
+                continue;
+            }
             if (!partial && !positions.contains(cluster.getBoundsMin())) {
                 continue;
             }

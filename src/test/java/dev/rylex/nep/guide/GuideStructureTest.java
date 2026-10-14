@@ -7,11 +7,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.rylex.nep.MinecraftBootstrap;
+import dev.rylex.nep.ProjectFiles;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(MinecraftBootstrap.class)
 class GuideStructureTest {
 
-    private static final Path RESOURCES = locate("src/main/resources", "nep/src/main/resources");
+    private static final Path RESOURCES = ProjectFiles.resources();
     private static final Path PAGES = RESOURCES.resolve("assets/nep/ae2guide/nep");
     private static final Path FILTERS = RESOURCES.resolve("guide_filters");
     private static final Path SOURCE = RESOURCES.resolveSibling("java");
@@ -72,7 +72,7 @@ class GuideStructureTest {
         List<String> violations = new ArrayList<>();
         for (Path page : listMarkdown(PAGES, true)) {
             String name = PAGES.relativize(page).toString().replace('\\', '/');
-            Matcher matcher = PARENT.matcher(read(page));
+            Matcher matcher = PARENT.matcher(ProjectFiles.read(page));
             if (!matcher.find()) {
                 if (!INDEX.equals(name)) {
                     violations.add(name + " has no navigation parent, so it never appears in the sidebar");
@@ -99,7 +99,7 @@ class GuideStructureTest {
         List<String> violations = new ArrayList<>();
         for (Path page : listMarkdown(PAGES, true)) {
             String name = PAGES.relativize(page).toString().replace('\\', '/');
-            Matcher matcher = LINK.matcher(read(page));
+            Matcher matcher = LINK.matcher(ProjectFiles.read(page));
             while (matcher.find()) {
                 String target = matcher.group(1);
                 if (target.startsWith("http://") || target.startsWith("https://") || target.startsWith("#")) {
@@ -161,8 +161,9 @@ class GuideStructureTest {
             if (!Files.isRegularFile(meta)) {
                 continue;
             }
-            JsonObject pack =
-                    JsonParser.parseString(read(meta)).getAsJsonObject().getAsJsonObject("pack");
+            JsonObject pack = JsonParser.parseString(ProjectFiles.read(meta))
+                    .getAsJsonObject()
+                    .getAsJsonObject("pack");
             for (String field : List.of("min_format", "max_format")) {
                 JsonElement declared = pack.get(field);
                 if (declared == null || declared.getAsInt() != current) {
@@ -189,7 +190,7 @@ class GuideStructureTest {
 
         for (Path screen : screens) {
             String name = screen.getFileName().toString();
-            String source = read(screen);
+            String source = ProjectFiles.read(screen);
             if (source.contains("abstract class")) {
                 continue;
             }
@@ -217,17 +218,11 @@ class GuideStructureTest {
     }
 
     private static List<Path> javaFiles(String suffix) {
-        try (Stream<Path> files = Files.walk(SOURCE)) {
-            return files.filter(path -> path.getFileName().toString().endsWith(suffix))
-                    .sorted()
-                    .toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return ProjectFiles.walk(SOURCE, suffix);
     }
 
     private static List<Pattern> blockedPaths(Path meta) {
-        JsonObject root = JsonParser.parseString(read(meta)).getAsJsonObject();
+        JsonObject root = JsonParser.parseString(ProjectFiles.read(meta)).getAsJsonObject();
         List<Pattern> patterns = new ArrayList<>();
         for (JsonElement entry : root.getAsJsonObject("filter").getAsJsonArray("block")) {
             JsonObject block = entry.getAsJsonObject();
@@ -252,38 +247,6 @@ class GuideStructureTest {
     }
 
     private static List<Path> listMarkdown(Path dir, boolean recursive) {
-        try (Stream<Path> files = recursive ? Files.walk(dir) : Files.list(dir)) {
-            return files.filter(path -> path.toString().endsWith(".md"))
-                    .sorted()
-                    .toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static String read(Path file) {
-        try {
-            return Files.readString(file);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static Path locate(String... candidates) {
-        String projectDir = System.getProperty("nep.projectDir");
-        for (String candidate : candidates) {
-            if (projectDir != null) {
-                Path anchored = Paths.get(projectDir).resolve(candidate);
-                if (Files.isDirectory(anchored)) {
-                    return anchored.toAbsolutePath().normalize();
-                }
-            }
-            Path path = Paths.get(candidate);
-            if (Files.isDirectory(path)) {
-                return path.toAbsolutePath().normalize();
-            }
-        }
-        throw new IllegalStateException(
-                "Could not locate src/main/resources from " + Paths.get("").toAbsolutePath());
+        return recursive ? ProjectFiles.walk(dir, ".md") : ProjectFiles.list(dir, ".md");
     }
 }

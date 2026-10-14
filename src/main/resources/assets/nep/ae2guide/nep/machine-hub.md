@@ -51,7 +51,7 @@ The Hub is that single place. It takes the whole pattern and hands each ingredie
 
 1. Place the Hub <Color id="yellow">touching the machine</Color>, and put a Pattern Provider against the Hub.
 2. Open the Hub and press <Color id="green">Scan</Color>. It walks outward through the machine, links everything it finds that holds items or fluids, and guesses whether each one takes ingredients or gives results.
-3. Check the guesses. Every row has a <Color id="yellow">→</Color> or <Color id="yellow">←</Color> you can click to cycle its role, a <Color id="yellow">⚙</Color> that opens that link's settings, and an <Color id="red">✗</Color> that un-links it. Twelve rows show at a time; scroll the wheel or drag the bar for the rest.
+3. Check the guesses. Every row has a <Color id="yellow">→</Color> or <Color id="yellow">←</Color> you can click to cycle its role (shift-click to cycle back), a <Color id="yellow">⚙</Color> that opens that link's settings, and an <Color id="red">✗</Color> that un-links it. Twelve rows show at a time; scroll the wheel or drag the bar for the rest.
 
 Scanning again keeps whatever you configured for a machine it finds a second time, so correcting a guess is never undone by a later scan.
 

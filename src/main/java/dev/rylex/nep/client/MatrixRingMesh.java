@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 public final class MatrixRingMesh {
 
     public static final float TUBE = 0.25F;
-    public static final float[] RADII = {4.30F, 5.10F, 5.90F};
+    private static final float[] RADII = {4.30F, 5.10F, 5.90F};
 
     private static final int SIDES = 16;
     private static final int STRIDE = 8;
@@ -14,7 +14,6 @@ public final class MatrixRingMesh {
     private static final int RAMP_COLUMNS = 16;
     private static final int LIT_COLUMN = 0;
 
-    /** The first of the cage skin's grain columns. */
     private static final int GRAIN_COLUMN = 8;
 
     private static final float[] AXIS_PLUS = {0.0F, 0.0F, 1.0F};
@@ -33,7 +32,7 @@ public final class MatrixRingMesh {
      * Builds a ring lying in the xy plane and pivoting about y, then applies {@code turns} cyclic axis
      * permutations, so turn one pivots about z and turn two about x.
      */
-    public static MatrixRingMesh of(float radius, float tube, int turns) {
+    private static MatrixRingMesh of(float radius, float tube, int turns) {
         float[] data = new float[SIDES * 4 * 4 * STRIDE];
         int grain = GRAIN_COLUMN + turns;
         int cursor = 0;

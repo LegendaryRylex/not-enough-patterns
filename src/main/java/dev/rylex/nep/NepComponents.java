@@ -14,25 +14,26 @@ public final class NepComponents {
     public static final DeferredRegister.DataComponents COMPONENTS =
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, Nep.MOD_ID);
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<EncodedRecipePattern>>
-            ENCODED_INFUSION_PATTERN = COMPONENTS.registerComponentType(
-                    "encoded_infusion_pattern", builder -> builder.persistent(EncodedRecipePattern.CODEC)
-                            .networkSynchronized(EncodedRecipePattern.STREAM_CODEC));
+    private static DeferredHolder<DataComponentType<?>, DataComponentType<EncodedRecipePattern>> recipePattern(
+            String name) {
+        return COMPONENTS.registerComponentType(name, builder -> builder.persistent(EncodedRecipePattern.CODEC)
+                .networkSynchronized(EncodedRecipePattern.STREAM_CODEC));
+    }
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<EncodedRecipePattern>>
-            ENCODED_AWAKENING_PATTERN = COMPONENTS.registerComponentType(
-                    "encoded_awakening_pattern", builder -> builder.persistent(EncodedRecipePattern.CODEC)
-                            .networkSynchronized(EncodedRecipePattern.STREAM_CODEC));
+            ENCODED_INFUSION_PATTERN = recipePattern("encoded_infusion_pattern");
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<EncodedRecipePattern>>
-            ENCODED_ENCHANTING_PATTERN = COMPONENTS.registerComponentType(
-                    "encoded_enchanting_pattern", builder -> builder.persistent(EncodedRecipePattern.CODEC)
-                            .networkSynchronized(EncodedRecipePattern.STREAM_CODEC));
+            ENCODED_AWAKENING_PATTERN = recipePattern("encoded_awakening_pattern");
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<EncodedRecipePattern>>
-            ENCODED_PARTICLE_COLLISION_PATTERN = COMPONENTS.registerComponentType(
-                    "encoded_particle_collision_pattern", builder -> builder.persistent(EncodedRecipePattern.CODEC)
-                            .networkSynchronized(EncodedRecipePattern.STREAM_CODEC));
+            ENCODED_ENCHANTING_PATTERN = recipePattern("encoded_enchanting_pattern");
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<EncodedRecipePattern>>
+            ENCODED_PARTICLE_COLLISION_PATTERN = recipePattern("encoded_particle_collision_pattern");
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<EncodedRecipePattern>>
+            ENCODED_RITUAL_PATTERN = recipePattern("encoded_ritual_pattern");
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Identifier>> SOURCE_RECIPE =
             COMPONENTS.registerComponentType("source_recipe", builder -> builder.persistent(Identifier.CODEC)

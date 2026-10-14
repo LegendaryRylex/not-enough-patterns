@@ -4,6 +4,7 @@ import dev.rylex.nep.Nep;
 import net.minecraft.resources.Identifier;
 
 public enum MatrixCoreProfile {
+    BOUND_SPIRIT("bound_spirit", 0x62B31A, 0xE1FFB3),
     INFUSED_AWAKENING("infused_awakening", 0xA80000, 0xF18C8C),
     PARTICLE_COLLISION("particle_collision", 0x1FB48F, 0xB3FFE9);
 

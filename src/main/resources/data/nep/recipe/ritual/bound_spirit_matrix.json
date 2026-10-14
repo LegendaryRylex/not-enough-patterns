@@ -1,0 +1,31 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "type": "occultism:ritual",
+  "activation_item": "occultism:book_of_binding_bound_afrit",
+  "duration": 240,
+  "ingredients": [
+    "ae2:molecular_assembler",
+    "nep:matrix_circuitry",
+    "nep:matrix_circuitry",
+    "nep:matrix_circuitry",
+    "nep:matrix_circuitry",
+    "occultism:dimensional_matrix",
+    "occultism:spirit_attuned_crystal",
+    "occultism:spirit_attuned_crystal"
+  ],
+  "pentacle_id": "occultism:craft_afrit",
+  "result": {
+    "count": 1,
+    "id": "nep:bound_spirit_matrix"
+  },
+  "ritual_dummy": {
+    "count": 1,
+    "id": "nep:bound_spirit_matrix"
+  },
+  "ritual_type": "occultism:craft"
+}

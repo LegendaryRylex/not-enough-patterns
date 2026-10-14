@@ -6,10 +6,12 @@ import dev.rylex.nep.client.MachineHubScreen;
 import dev.rylex.nep.compat.ae2wtlib.Ae2WtLibJeiCompat;
 import dev.rylex.nep.compat.apothic.ApothicJeiCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalJeiCompat;
+import dev.rylex.nep.compat.occultism.OccultismJeiCompat;
 import dev.rylex.nep.compat.oritech.OritechJeiCompat;
 import dev.rylex.nep.util.Recipes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
@@ -23,6 +25,7 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.fml.ModList;
+import org.jetbrains.annotations.Nullable;
 
 @JeiPlugin
 public final class NepJeiPlugin implements IModPlugin {
@@ -70,11 +73,10 @@ public final class NepJeiPlugin implements IModPlugin {
         if (ModList.get().isLoaded("ae2wtlib")) {
             Ae2WtLibJeiCompat.bindPatternMenus(binder);
         }
-        if (ModList.get().isLoaded("mysticalagriculture")) {
-            MysticalJeiCompat.addManualTransfers(registration, helper);
-        }
-        if (ModList.get().isLoaded("oritech")) {
-            OritechJeiCompat.addManualTransfers(registration, helper);
+        for (Integration integration : INTEGRATIONS) {
+            if (integration.manualTransfers() != null && ModList.get().isLoaded(integration.modId())) {
+                integration.manualTransfers().add(registration, helper);
+            }
         }
     }
 
@@ -102,15 +104,27 @@ public final class NepJeiPlugin implements IModPlugin {
 
     private static List<JeiTransferSource> sources() {
         List<JeiTransferSource> sources = new ArrayList<>();
-        if (ModList.get().isLoaded("apothic_enchanting")) {
-            sources.add(ApothicJeiCompat.source());
-        }
-        if (ModList.get().isLoaded("mysticalagriculture")) {
-            sources.add(MysticalJeiCompat.source());
-        }
-        if (ModList.get().isLoaded("oritech")) {
-            sources.add(OritechJeiCompat.source());
+        for (Integration integration : INTEGRATIONS) {
+            if (ModList.get().isLoaded(integration.modId())) {
+                sources.add(integration.source().get());
+            }
         }
         return List.copyOf(sources);
     }
+
+    @FunctionalInterface
+    private interface ManualTransfers {
+        void add(IRecipeTransferRegistration registration, IRecipeTransferHandlerHelper helper);
+    }
+
+    private record Integration(
+            String modId,
+            Supplier<JeiTransferSource> source,
+            @Nullable ManualTransfers manualTransfers) {}
+
+    private static final List<Integration> INTEGRATIONS = List.of(
+            new Integration("apothic_enchanting", ApothicJeiCompat::source, null),
+            new Integration("mysticalagriculture", MysticalJeiCompat::source, MysticalJeiCompat::addManualTransfers),
+            new Integration("oritech", OritechJeiCompat::source, OritechJeiCompat::addManualTransfers),
+            new Integration("occultism", OccultismJeiCompat::source, OccultismJeiCompat::addManualTransfers));
 }

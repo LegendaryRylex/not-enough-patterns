@@ -15,12 +15,17 @@ public final class RetainedInputs {
     public static final int HIGHLIGHT = 0xFFFFD24A;
 
     public static void describe(PatternDetailsTooltip tooltip, List<GenericStack> retained) {
+        describe(tooltip, retained, "nep.pattern.returned", "nep.pattern.returned.and");
+    }
+
+    private static void describe(
+            PatternDetailsTooltip tooltip, List<GenericStack> stacks, String firstKey, String andKey) {
         boolean first = true;
-        for (GenericStack kept : retained) {
+        for (GenericStack stack : stacks) {
             tooltip.addProperty(Component.empty()
-                    .append(Component.translatable(first ? "nep.pattern.returned" : "nep.pattern.returned.and"))
+                    .append(Component.translatable(first ? firstKey : andKey))
                     .append(": ")
-                    .append(entry(kept).withStyle(ChatFormatting.YELLOW)));
+                    .append(entry(stack).withStyle(ChatFormatting.YELLOW)));
             first = false;
         }
     }

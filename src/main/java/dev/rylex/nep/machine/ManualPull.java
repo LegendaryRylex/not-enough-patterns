@@ -89,18 +89,14 @@ public final class ManualPull {
     }
 
     private static int[] slotOrder(int slots, ManualRequirement requirement, int preferredSlot) {
-        if (!requirement.carriesData() || preferredSlot < 0 || preferredSlot >= slots) {
-            int[] order = new int[slots];
-            for (int slot = 0; slot < slots; slot++) {
-                order[slot] = slot;
-            }
-            return order;
-        }
         int[] order = new int[slots];
-        order[0] = preferredSlot;
-        int next = 1;
+        boolean preferred = requirement.carriesData() && preferredSlot >= 0 && preferredSlot < slots;
+        int next = 0;
+        if (preferred) {
+            order[next++] = preferredSlot;
+        }
         for (int slot = 0; slot < slots; slot++) {
-            if (slot != preferredSlot) {
+            if (!preferred || slot != preferredSlot) {
                 order[next++] = slot;
             }
         }

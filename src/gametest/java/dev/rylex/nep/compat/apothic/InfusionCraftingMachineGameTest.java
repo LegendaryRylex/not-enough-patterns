@@ -1,5 +1,7 @@
 package dev.rylex.nep.compat.apothic;
 
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.AECapabilities;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
@@ -8,7 +10,7 @@ import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.NepGameTests;
 import dev.rylex.nep.NepItems;
 import dev.rylex.nep.pattern.EnchantingPattern;
@@ -99,10 +101,8 @@ public final class InfusionCraftingMachineGameTest {
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(TABLE), null);
-        helper.assertTrue(machine != null, "the Enchanting Table of the Raven exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(
+                helper, TABLE, "the Enchanting Table of the Raven exposed no crafting machine capability");
     }
 
     private static List<ItemStack> accepted(InfusionRecipe recipe, Level level) {
@@ -161,14 +161,11 @@ public final class InfusionCraftingMachineGameTest {
         return details;
     }
 
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
+    private static ItemStack bareProcessingPattern(GameTestHelper helper, RecipeHolder<InfusionRecipe> holder) {
+        return PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new GenericStack(
+                        AEItemKey.of(accepted(holder.value(), helper.getLevel()).get(0)), 1)),
+                List.of(GenericStack.fromItemStack(holder.value().getOutput().create())));
     }
 
     private static int countReturned(GameTestHelper helper, ItemStack wanted) {
@@ -305,10 +302,7 @@ public final class InfusionCraftingMachineGameTest {
         ICraftingMachine machine = machine(helper);
 
         RecipeHolder<InfusionRecipe> holder = simpleRecipe(helper);
-        ItemStack encoded = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(new GenericStack(
-                        AEItemKey.of(accepted(holder.value(), helper.getLevel()).get(0)), 1)),
-                List.of(GenericStack.fromItemStack(holder.value().getOutput().create())));
+        ItemStack encoded = bareProcessingPattern(helper, holder);
         IPatternDetails details = decode(helper, encoded);
 
         helper.assertTrue(
@@ -383,10 +377,7 @@ public final class InfusionCraftingMachineGameTest {
         ICraftingMachine machine = machine(helper);
 
         RecipeHolder<InfusionRecipe> holder = simpleRecipe(helper);
-        ItemStack bare = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(new GenericStack(
-                        AEItemKey.of(accepted(holder.value(), helper.getLevel()).get(0)), 1)),
-                List.of(GenericStack.fromItemStack(holder.value().getOutput().create())));
+        ItemStack bare = bareProcessingPattern(helper, holder);
         ItemStack converted = PatternConverters.convertQuietly(
                 PatternOrigin.ofRecipe(holder.id().identifier()), bare, helper.getLevel());
         helper.assertTrue(converted != null, "the infusion recipe encoded no pattern");

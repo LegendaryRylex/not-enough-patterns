@@ -42,4 +42,4 @@ These Matrices are a late-game "one-block solution" to that mods crafting method
 
 Below is a list of all current Matrices available in the mod:
 
-* <ItemImage id="nep:infused_awakening_matrix" scale="0.5"/> [Infused Awakening Matrix](/nep/mysticalagriculture/infused-awakening-matrix.md) (Mystical Agriculture)
+<CategoryIndex category="Matrices"/>

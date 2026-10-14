@@ -39,6 +39,12 @@ public final class NepConfigValues {
         values.put("particleCollisionMatrixChannels", NepConfig::oritechMatrixChannels);
         values.put("particleCollisionControllerChannels", NepConfig::oritechControllerChannels);
         values.put("particleCollisionControllerLinkRange", NepConfig::oritechControllerLinkRange);
+        values.put("boundSpiritMatrixChannels", NepConfig::occultismMatrixChannels);
+        values.put("boundSpiritMatrixSpiritFireTicks", NepConfig::occultismMatrixSpiritFireTicks);
+        values.put("spiritProviderQueueLimit", NepConfig::occultismSpiritProviderQueue);
+        values.put("ritualControllerChannels", NepConfig::occultismRitualControllerChannels);
+        values.put("ritualControllerBowlRange", NepConfig::occultismRitualControllerBowlRange);
+        values.put("ritualControllerTierSpeed", NepConfig::occultismRitualControllerTierSpeed);
         return Collections.unmodifiableMap(values);
     }
 }

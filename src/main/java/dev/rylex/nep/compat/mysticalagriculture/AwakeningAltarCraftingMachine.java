@@ -25,6 +25,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class AwakeningAltarCraftingMachine implements ICraftingMachine {
 
@@ -111,9 +112,10 @@ public class AwakeningAltarCraftingMachine implements ICraftingMachine {
         List<AwakeningPedestalTileEntity> pedestals = new ArrayList<>();
         List<EssenceVesselTileEntity> vessels = new ArrayList<>();
         for (BlockPos pos : altar.getPedestalPositions()) {
-            if (level.getBlockEntity(pos) instanceof AwakeningPedestalTileEntity pedestal) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof AwakeningPedestalTileEntity pedestal) {
                 pedestals.add(pedestal);
-            } else if (level.getBlockEntity(pos) instanceof EssenceVesselTileEntity vessel) {
+            } else if (be instanceof EssenceVesselTileEntity vessel) {
                 vessels.add(vessel);
             }
         }
@@ -151,10 +153,9 @@ public class AwakeningAltarCraftingMachine implements ICraftingMachine {
                     InfusionAltarCraftingMachine.toStack(plan.pedestals().get(slot)));
         }
         for (int slot = 0; slot < plan.essences().size(); slot++) {
+            MysticalRecipeResolver.ItemAmount essence = plan.essences().get(slot);
             MysticalInventories.set(
-                    vessels.get(slot).getInventory(),
-                    0,
-                    InfusionAltarCraftingMachine.toStack(plan.essences().get(slot)));
+                    vessels.get(slot).getInventory(), 0, essence.key().toStack((int) essence.amount()));
         }
         altar.activate();
         altar.setChanged();

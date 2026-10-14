@@ -6,12 +6,14 @@ import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.client.EnergyGauge;
 import dev.rylex.nep.client.MatrixScreen;
 import dev.rylex.nep.client.ReadoutButton;
+import dev.rylex.nep.client.ScreenFormat;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -19,6 +21,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisionMatrixMenu> {
 
+    private static final String OUTPUT_FULL_HINT = "gui.nep.particle_collision_matrix.stall.output_full.hint";
     private static final Identifier TEXTURE = Nep.id("textures/gui/particle_collision_matrix.png");
 
     private static final int TITLE_ON_PANEL = 0xFF1C3A2E;
@@ -29,7 +32,33 @@ public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisio
     private static final int CRAFT_FILL = 0x3FE0B8;
 
     private static final int GAUGE_X = 152;
-    private static final int GAUGE_Y = 73;
+    private static final int GAUGE_Y = 99;
+
+    private static final int STRIP_LEFT = 29;
+    private static final int STRIP_RIGHT = 166;
+    private static final int STRIP_TOP = 63;
+    private static final int STRIP_HEIGHT = 20;
+    private static final int STRIP_TEXT_Y = 69;
+    private static final int ICON_X = 32;
+    private static final int ICON_Y = 65;
+    private static final int ICON_SIZE = 16;
+    private static final int ICON_PITCH = 18;
+    private static final int ICON_HOVER = 0x40FFFFFF;
+
+    private int layoutRevision = -1;
+
+    @Nullable
+    private ParticleCollisionMatrixBlockEntity layoutMatrix;
+
+    private List<AddonEntry> layoutEntries = List.of();
+    private List<ItemStack> layoutIcons = List.of();
+    private int layoutShown;
+    private int layoutOverflow;
+
+    @Nullable
+    private Component layoutTotals;
+
+    private int layoutTotalsX;
 
     @Nullable
     private ReadoutButton clearPending;
@@ -41,6 +70,11 @@ public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisio
     @Override
     protected Identifier texture() {
         return TEXTURE;
+    }
+
+    @Override
+    protected int sheetHeight() {
+        return 282;
     }
 
     @Override
@@ -106,6 +140,8 @@ public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisio
 
         graphics.text(font, statusLine(matrix), READOUT_X, LINE_ONE_Y, statusColour(matrix), false);
 
+        drawAddonStrip(graphics, matrix, mouseX, mouseY);
+
         ItemStack making = matrix.activeResult();
         Component craftingLabel = Component.translatable("gui.nep.particle_collision_matrix.crafting");
         graphics.text(font, craftingLabel, READOUT_X, LINE_TWO_Y, READOUT_DIM, false);
@@ -127,12 +163,12 @@ public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisio
         Component energyLine = making.isEmpty()
                 ? Component.translatable(
                         "gui.nep.particle_collision_matrix.buffer_line",
-                        format(matrix.storedEnergy()),
-                        format(matrix.energyCapacity()))
+                        ScreenFormat.format(matrix.storedEnergy()),
+                        ScreenFormat.format(matrix.energyCapacity()))
                 : Component.translatable(
                         "gui.nep.particle_collision_matrix.charge_line",
-                        format(matrix.craftPaid()),
-                        format(matrix.craftCost()));
+                        ScreenFormat.format(matrix.craftPaid()),
+                        ScreenFormat.format(matrix.craftCost()));
         graphics.text(font, energyLine, READOUT_X, LINE_THREE_Y, READOUT_DIM, false);
         drawTrailing(
                 graphics,
@@ -150,66 +186,90 @@ public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisio
 
     private static Component faultLine(
             ParticleCollisionMatrixBlockEntity.Stall stall, ParticleCollisionMatrixBlockEntity.Refusal refusal) {
-        String key =
-                switch (stall) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.particle_collision_matrix.stall.ingredients";
-                    case OUTPUT_FULL -> "gui.nep.particle_collision_matrix.output_blocked";
-                    case NO_RECIPE -> "gui.nep.particle_collision_matrix.stall.no_recipe";
-                };
+        String key = stallKey(stall);
         if (key != null) {
             return Component.translatable(key);
         }
-        String refused =
-                switch (refusal) {
-                    case NONE -> null;
-                    case NOT_A_COLLISION_PATTERN -> "gui.nep.particle_collision_matrix.refused.wrong_pattern";
-                    case NO_ITEM_OUTPUT -> "gui.nep.particle_collision_matrix.refused.no_item_output";
-                    case UNKNOWN_RECIPE -> "gui.nep.particle_collision_matrix.refused.unknown_recipe";
-                    case MIXED_RECIPES -> "gui.nep.particle_collision_matrix.refused.mixed_recipes";
-                    case ITEMS_ONLY -> "gui.nep.particle_collision_matrix.refused.items_only";
-                    case TOO_MANY_INPUTS -> "gui.nep.particle_collision_matrix.refused.too_many_inputs";
-                    case BUFFER_FULL -> "gui.nep.particle_collision_matrix.refused.buffer_full";
-                };
+        String refused = refusalKey(refusal);
         return refused == null
                 ? Component.translatable("gui.nep.particle_collision_matrix.idle")
                 : Component.translatable(refused);
     }
 
+    @Nullable
+    private static String stallKey(ParticleCollisionMatrixBlockEntity.Stall stall) {
+        return switch (stall) {
+            case NONE -> null;
+            case INGREDIENTS -> "gui.nep.particle_collision_matrix.stall.ingredients";
+            case OUTPUT_FULL -> "gui.nep.particle_collision_matrix.output_blocked";
+            case NO_RECIPE -> "gui.nep.particle_collision_matrix.stall.no_recipe";
+        };
+    }
+
+    @Nullable
+    private static String stallHintKey(ParticleCollisionMatrixBlockEntity.Stall stall) {
+        if (stall == ParticleCollisionMatrixBlockEntity.Stall.OUTPUT_FULL) {
+            return OUTPUT_FULL_HINT;
+        }
+        String key = stallKey(stall);
+        return key == null ? null : key + ".hint";
+    }
+
+    @Nullable
+    private static String refusalKey(ParticleCollisionMatrixBlockEntity.Refusal refusal) {
+        return switch (refusal) {
+            case NONE -> null;
+            case NOT_A_COLLISION_PATTERN -> "gui.nep.particle_collision_matrix.refused.wrong_pattern";
+            case NO_ITEM_OUTPUT -> "gui.nep.particle_collision_matrix.refused.no_item_output";
+            case UNKNOWN_RECIPE -> "gui.nep.particle_collision_matrix.refused.unknown_recipe";
+            case MIXED_RECIPES -> "gui.nep.particle_collision_matrix.refused.mixed_recipes";
+            case ITEMS_ONLY -> "gui.nep.particle_collision_matrix.refused.items_only";
+            case TOO_MANY_INPUTS -> "gui.nep.particle_collision_matrix.refused.too_many_inputs";
+            case BUFFER_FULL -> "gui.nep.particle_collision_matrix.refused.buffer_full";
+        };
+    }
+
+    private record Fault(boolean active, String line, String hint) {}
+
+    private static List<Fault> powerFaults(ParticleCollisionMatrixBlockEntity matrix) {
+        return List.of(
+                new Fault(
+                        matrix.hasChannelFault(),
+                        "gui.nep.particle_collision_matrix.no_network_channels",
+                        "gui.nep.particle_collision_matrix.no_network_channels.hint"),
+                new Fault(
+                        matrix.hasPowerFault(),
+                        "gui.nep.particle_collision_matrix.no_network_power",
+                        "gui.nep.particle_collision_matrix.stall.no_me_power.hint"),
+                new Fault(
+                        matrix.hasEnergyFault(),
+                        "gui.nep.particle_collision_matrix.no_energy",
+                        "gui.nep.particle_collision_matrix.stall.no_energy.hint"));
+    }
+
     private static List<Component> statusHint(ParticleCollisionMatrixBlockEntity matrix) {
-        if (matrix.hasPowerFault()) {
-            return List.of(Component.translatable("gui.nep.particle_collision_matrix.stall.no_me_power.hint")
-                    .withStyle(ChatFormatting.GRAY));
+        for (Fault fault : powerFaults(matrix)) {
+            if (fault.active()) {
+                return fault.hint() == null
+                        ? List.of()
+                        : List.of(Component.translatable(fault.hint()).withStyle(ChatFormatting.GRAY));
+            }
         }
-        if (matrix.hasEnergyFault()) {
-            return List.of(Component.translatable("gui.nep.particle_collision_matrix.stall.no_energy.hint")
-                    .withStyle(ChatFormatting.GRAY));
-        }
-        String key =
-                switch (matrix.stall()) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.particle_collision_matrix.stall.ingredients.hint";
-                    case OUTPUT_FULL -> "gui.nep.particle_collision_matrix.stall.output_full.hint";
-                    case NO_RECIPE -> "gui.nep.particle_collision_matrix.stall.no_recipe.hint";
-                };
+        String key = stallHintKey(matrix.stall());
         if (key == null && matrix.refusal() != ParticleCollisionMatrixBlockEntity.Refusal.NONE) {
             key = "gui.nep.particle_collision_matrix.refused.hint";
         }
         if (key == null && matrix.isOutputBlocked()) {
-            key = "gui.nep.particle_collision_matrix.stall.output_full.hint";
+            key = OUTPUT_FULL_HINT;
         }
         return key == null ? List.of() : List.of(Component.translatable(key).withStyle(ChatFormatting.GRAY));
     }
 
     private static Component statusLine(ParticleCollisionMatrixBlockEntity matrix) {
-        if (matrix.hasChannelFault()) {
-            return Component.translatable("gui.nep.particle_collision_matrix.no_network_channels");
-        }
-        if (matrix.hasPowerFault()) {
-            return Component.translatable("gui.nep.particle_collision_matrix.no_network_power");
-        }
-        if (matrix.hasEnergyFault()) {
-            return Component.translatable("gui.nep.particle_collision_matrix.no_energy");
+        for (Fault fault : powerFaults(matrix)) {
+            if (fault.active()) {
+                return Component.translatable(fault.line());
+            }
         }
         if (matrix.stall() != ParticleCollisionMatrixBlockEntity.Stall.NONE
                 || matrix.refusal() != ParticleCollisionMatrixBlockEntity.Refusal.NONE) {
@@ -231,8 +291,7 @@ public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisio
         return matrix.stall() != ParticleCollisionMatrixBlockEntity.Stall.NONE
                 || matrix.refusal() != ParticleCollisionMatrixBlockEntity.Refusal.NONE
                 || matrix.isOutputBlocked()
-                || matrix.hasPowerFault()
-                || matrix.hasEnergyFault()
+                || powerFaults(matrix).stream().anyMatch(Fault::active)
                 || !matrix.missingInputs().isEmpty();
     }
 
@@ -243,17 +302,192 @@ public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisio
         return matrix.activeResult().isEmpty() ? READOUT_DIM : READOUT_TEXT;
     }
 
-    private static String format(long value) {
-        if (value >= 1_000_000_000L) {
-            return String.format("%.1fG", value / 1_000_000_000.0);
+    private void refreshLayout(ParticleCollisionMatrixBlockEntity matrix) {
+        if (matrix == layoutMatrix && matrix.addonRevision() == layoutRevision) {
+            return;
         }
-        if (value >= 1_000_000L) {
-            return String.format("%.1fM", value / 1_000_000.0);
+        layoutMatrix = matrix;
+        layoutRevision = matrix.addonRevision();
+        layoutEntries = List.copyOf(matrix.addonEntries());
+        layoutIcons = layoutEntries.stream().map(AddonEntry::stack).toList();
+
+        Component totals = addonBadge(matrix);
+        int totalsX = totals == null ? READOUT_RIGHT : READOUT_RIGHT - font.width(totals);
+        int needed = layoutEntries.size() * ICON_PITCH - (ICON_PITCH - ICON_SIZE);
+        boolean totalsFit = totals != null && ICON_X + needed + 6 <= totalsX;
+        layoutTotals = totalsFit ? totals : null;
+        layoutTotalsX = totalsX;
+
+        int capacity =
+                totalsFit ? layoutEntries.size() : (READOUT_RIGHT - ICON_X + (ICON_PITCH - ICON_SIZE)) / ICON_PITCH;
+        if (layoutEntries.size() <= capacity) {
+            layoutShown = layoutEntries.size();
+            layoutOverflow = 0;
+        } else {
+            layoutShown = Math.max(0, capacity - 1);
+            layoutOverflow = layoutEntries.size() - layoutShown;
         }
-        if (value >= 1_000L) {
-            return String.format("%.1fK", value / 1_000.0);
+    }
+
+    private int hoveredIcon(int mouseX, int mouseY) {
+        int cells = layoutShown + (layoutOverflow > 0 ? 1 : 0);
+        for (int i = 0; i < cells; i++) {
+            if (within(mouseX, mouseY, ICON_X + i * ICON_PITCH, ICON_Y, ICON_SIZE, ICON_SIZE)) {
+                return i;
+            }
         }
-        return Long.toString(value);
+        return -1;
+    }
+
+    private void drawAddonStrip(
+            GuiGraphicsExtractor graphics, ParticleCollisionMatrixBlockEntity matrix, int mouseX, int mouseY) {
+        refreshLayout(matrix);
+        if (layoutEntries.isEmpty()) {
+            graphics.text(
+                    font,
+                    Component.translatable("gui.nep.particle_collision_matrix.addons.none"),
+                    ICON_X,
+                    STRIP_TEXT_Y,
+                    READOUT_DIM,
+                    false);
+            return;
+        }
+        int hovered = hoveredIcon(mouseX, mouseY);
+        for (int i = 0; i < layoutShown; i++) {
+            int x = ICON_X + i * ICON_PITCH;
+            if (i == hovered) {
+                graphics.fill(x, ICON_Y, x + ICON_SIZE, ICON_Y + ICON_SIZE, ICON_HOVER);
+            }
+            graphics.item(layoutIcons.get(i), x, ICON_Y);
+        }
+        if (layoutOverflow > 0) {
+            Component more = Component.translatable("gui.nep.particle_collision_matrix.addons.more", layoutOverflow);
+            int x = ICON_X + layoutShown * ICON_PITCH;
+            graphics.text(font, more, x + (ICON_SIZE - font.width(more)) / 2, STRIP_TEXT_Y, READOUT_TEXT, false);
+        }
+        if (layoutTotals != null) {
+            graphics.text(font, layoutTotals, layoutTotalsX, STRIP_TEXT_Y, READOUT_TEXT, false);
+        }
+    }
+
+    private static List<Component> contribution(AddonEntry entry) {
+        List<Component> lines = new ArrayList<>();
+        if (entry.speed() != 1.0F) {
+            lines.add(Component.translatable(
+                    "gui.nep.particle_collision_matrix.addon.speed", String.format("%.2f", 1.0F / entry.speed())));
+        }
+        if (entry.efficiency() != 1.0F) {
+            lines.add(Component.translatable(
+                    "gui.nep.particle_collision_matrix.addons.efficiency", Math.round(entry.efficiency() * 100.0F)));
+        }
+        if (entry.chambers() > 0) {
+            lines.add(Component.translatable("gui.nep.particle_collision_matrix.addon.chambers", entry.chambers()));
+        }
+        if (entry.capacity() > 0) {
+            lines.add(Component.translatable(
+                    "gui.nep.particle_collision_matrix.addons.capacity", ScreenFormat.format(entry.capacity())));
+        }
+        if (entry.insert() > 0) {
+            lines.add(Component.translatable(
+                    "gui.nep.particle_collision_matrix.addon.insert", ScreenFormat.format(entry.insert())));
+        }
+        if (lines.isEmpty()) {
+            lines.add(Component.translatable("gui.nep.particle_collision_matrix.addon.passive"));
+        }
+        lines.replaceAll(line -> ((MutableComponent) line).withStyle(ChatFormatting.GRAY));
+        return lines;
+    }
+
+    private static List<Component> entryTooltip(AddonEntry entry) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(entry.name());
+        lines.addAll(contribution(entry));
+        return lines;
+    }
+
+    private List<Component> overflowTooltip() {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.translatable("gui.nep.particle_collision_matrix.addons.more_title", layoutOverflow));
+        for (AddonEntry entry : layoutEntries.subList(layoutShown, layoutEntries.size())) {
+            lines.add(entry.name());
+            lines.addAll(contribution(entry));
+        }
+        return lines;
+    }
+
+    private static Component extenderLine(ParticleCollisionMatrixBlockEntity matrix) {
+        return matrix.layeredExtenders()
+                ? Component.translatable(
+                                "gui.nep.particle_collision_matrix.addons.extender_layers", matrix.extenderLimit() + 1)
+                        .withStyle(ChatFormatting.GRAY)
+                : Component.translatable("gui.nep.particle_collision_matrix.addons.extenders", matrix.extenderLimit())
+                        .withStyle(ChatFormatting.GRAY);
+    }
+
+    @Nullable
+    private static Component addonBadge(ParticleCollisionMatrixBlockEntity matrix) {
+        if (matrix.addonCount() == 0) {
+            return null;
+        }
+        List<Component> parts = new ArrayList<>();
+        if (matrix.speedMultiplier() != 1.0F) {
+            parts.add(Component.translatable("gui.nep.particle_collision_matrix.addon_speed", speedFactor(matrix)));
+        }
+        if (matrix.efficiencyMultiplier() != 1.0F) {
+            parts.add(Component.translatable(
+                    "gui.nep.particle_collision_matrix.addon_efficiency", efficiencyPercent(matrix)));
+        }
+        if (matrix.extraChambers() > 0) {
+            parts.add(
+                    Component.translatable("gui.nep.particle_collision_matrix.addon_chambers", matrix.extraChambers()));
+        }
+        if (parts.isEmpty()) {
+            return Component.translatable("gui.nep.particle_collision_matrix.addon_count", matrix.addonCount());
+        }
+        MutableComponent badge = Component.empty();
+        for (int i = 0; i < parts.size(); i++) {
+            if (i > 0) {
+                badge.append(" ");
+            }
+            badge.append(parts.get(i));
+        }
+        return badge;
+    }
+
+    private static String speedFactor(ParticleCollisionMatrixBlockEntity matrix) {
+        return String.format("%.2f", 1.0F / matrix.speedMultiplier());
+    }
+
+    private static String efficiencyPercent(ParticleCollisionMatrixBlockEntity matrix) {
+        return Long.toString(Math.round(matrix.efficiencyMultiplier() * 100.0F));
+    }
+
+    private static List<Component> addonTooltip(ParticleCollisionMatrixBlockEntity matrix) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.translatable("gui.nep.particle_collision_matrix.addons", matrix.addonCount()));
+        lines.add(extenderLine(matrix));
+        if (matrix.speedMultiplier() != 1.0F) {
+            lines.add(Component.translatable(
+                            "gui.nep.particle_collision_matrix.addons.speed", speedFactor(matrix), matrix.craftTicks())
+                    .withStyle(ChatFormatting.GRAY));
+        }
+        if (matrix.efficiencyMultiplier() != 1.0F) {
+            lines.add(Component.translatable(
+                            "gui.nep.particle_collision_matrix.addons.efficiency", efficiencyPercent(matrix))
+                    .withStyle(ChatFormatting.GRAY));
+        }
+        if (matrix.extraChambers() > 0) {
+            lines.add(Component.translatable(
+                            "gui.nep.particle_collision_matrix.addons.chambers", matrix.extraChambers() + 1)
+                    .withStyle(ChatFormatting.GRAY));
+        }
+        if (matrix.addonCapacityBonus() > 0) {
+            lines.add(Component.translatable(
+                            "gui.nep.particle_collision_matrix.addons.capacity",
+                            ScreenFormat.format(matrix.addonCapacityBonus()))
+                    .withStyle(ChatFormatting.GRAY));
+        }
+        return lines;
     }
 
     @Override
@@ -269,14 +503,42 @@ public class ParticleCollisionMatrixScreen extends MatrixScreen<ParticleCollisio
                             Component.translatable("gui.nep.particle_collision_matrix.energy"),
                             Component.translatable(
                                             "gui.nep.particle_collision_matrix.charge",
-                                            format(matrix.storedEnergy()),
-                                            format(matrix.energyCapacity()))
+                                            ScreenFormat.format(matrix.storedEnergy()),
+                                            ScreenFormat.format(matrix.energyCapacity()))
                                     .withStyle(ChatFormatting.GRAY)),
                     mouseX,
                     mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, 32)) {
+        if (within(
+                        mouseX,
+                        mouseY,
+                        ParticleCollisionMatrixMenu.CORE_X,
+                        ParticleCollisionMatrixMenu.CORE_Y,
+                        ICON_SIZE,
+                        ICON_SIZE)
+                && matrix.coreSlot().stack().isEmpty()
+                && menu.getCarried().isEmpty()) {
+            graphics.setComponentTooltipForNextFrame(
+                    font,
+                    List.of(
+                            Component.translatable("gui.nep.particle_collision_matrix.core"),
+                            Component.translatable("gui.nep.particle_collision_matrix.core.hint")
+                                    .withStyle(ChatFormatting.GRAY)),
+                    mouseX,
+                    mouseY);
+            return;
+        }
+        if (within(mouseX, mouseY, STRIP_LEFT, STRIP_TOP, STRIP_RIGHT - STRIP_LEFT, STRIP_HEIGHT)) {
+            refreshLayout(matrix);
+            int hovered = hoveredIcon(mouseX, mouseY);
+            List<Component> lines = hovered < 0
+                    ? addonTooltip(matrix)
+                    : hovered < layoutShown ? entryTooltip(layoutEntries.get(hovered)) : overflowTooltip();
+            graphics.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
+            return;
+        }
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, READOUT_HEIGHT)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

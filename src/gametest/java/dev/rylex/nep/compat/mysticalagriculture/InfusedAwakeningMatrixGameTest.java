@@ -1,25 +1,26 @@
 package dev.rylex.nep.compat.mysticalagriculture;
 
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.mysticalagriculture.MysticalFixtures.awakeningPattern;
+import static dev.rylex.nep.compat.mysticalagriculture.MysticalFixtures.infusionPattern;
+import static dev.rylex.nep.compat.mysticalagriculture.MysticalFixtures.simplestAwakening;
+import static dev.rylex.nep.compat.mysticalagriculture.MysticalFixtures.simplestInfusion;
+
 import appeng.api.AECapabilities;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
-import appeng.core.definitions.AEBlocks;
 import com.blakebr0.mysticalagriculture.api.crafting.IAwakeningRecipe;
 import com.blakebr0.mysticalagriculture.api.crafting.IInfusionRecipe;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.NepGameTests;
 import dev.rylex.nep.machine.ManualCraftFixtures;
 import dev.rylex.nep.machine.ManualCraftOutcome;
 import dev.rylex.nep.machine.ManualCraftResult;
 import dev.rylex.nep.machine.ManualRequirement;
-import dev.rylex.nep.pattern.AwakeningPattern;
-import dev.rylex.nep.pattern.InfusionPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.util.Recipes;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,88 +85,11 @@ public final class InfusedAwakeningMatrixGameTest {
     }
 
     private static void powerUp(GameTestHelper helper) {
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-    }
-
-    private static RecipeHolder<IInfusionRecipe> simplestInfusion(GameTestHelper helper) {
-        RecipeHolder<IInfusionRecipe> best = null;
-        for (RecipeHolder<IInfusionRecipe> holder : MysticalRecipeResolver.infusionCandidates(helper.getLevel())) {
-            if (!holder.id().identifier().getNamespace().equals("mysticalagriculture")) {
-                continue;
-            }
-            if (MysticalRecipeIngredients.infusion(holder.value(), helper.getLevel()) == null) {
-                continue;
-            }
-            if (best == null || holder.id().identifier().compareTo(best.id().identifier()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no infusion recipe was loaded");
-        return best;
-    }
-
-    private static RecipeHolder<IAwakeningRecipe> simplestAwakening(GameTestHelper helper) {
-        RecipeHolder<IAwakeningRecipe> best = null;
-        for (RecipeHolder<IAwakeningRecipe> holder : MysticalRecipeResolver.awakeningCandidates(helper.getLevel())) {
-            if (MysticalRecipeIngredients.awakening(holder.value(), helper.getLevel()) == null) {
-                continue;
-            }
-            if (best == null || holder.id().identifier().compareTo(best.id().identifier()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no awakening recipe was loaded");
-        return best;
-    }
-
-    private static IPatternDetails pattern(
-            GameTestHelper helper, EncodedIngredients expected, Identifier recipe, boolean awakening) {
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        GenericStack result = expected.outputs().get(0);
-
-        ItemStack encoded = awakening
-                ? AwakeningPattern.encode(recipe, inputs, result)
-                : InfusionPattern.encode(recipe, inputs, result);
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the pattern did not decode");
-        return details;
-    }
-
-    private static IPatternDetails infusionPattern(GameTestHelper helper, RecipeHolder<IInfusionRecipe> holder) {
-        EncodedIngredients expected = MysticalRecipeIngredients.infusion(holder.value(), helper.getLevel());
-        helper.assertTrue(expected != null, "the recipe produced no ingredient list");
-        return pattern(helper, expected, holder.id().identifier(), false);
-    }
-
-    private static IPatternDetails awakeningPattern(GameTestHelper helper, RecipeHolder<IAwakeningRecipe> holder) {
-        EncodedIngredients expected = MysticalRecipeIngredients.awakening(holder.value(), helper.getLevel());
-        helper.assertTrue(expected != null, "the recipe produced no ingredient list");
-        return pattern(helper, expected, holder.id().identifier(), true);
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
+        GameTestFixtures.powerUp(helper, ME_CONTROLLER, ENERGY_CELL);
     }
 
     private static boolean outputHolds(InfusedAwakeningMatrixBlockEntity matrix, ItemStack expected, int count) {
-        int found = 0;
-        for (int slot = 0; slot < matrix.getOutputBuffer().size(); slot++) {
-            ItemStack stack = matrix.getOutputBuffer().stackAt(slot);
-            if (ItemStack.isSameItem(stack, expected)) {
-                found += stack.getCount();
-            }
-        }
-        return found >= count;
+        return GameTestFixtures.holds(matrix.getOutputBuffer(), expected, count);
     }
 
     private static long tankTotal(InfusedAwakeningMatrixBlockEntity matrix) {

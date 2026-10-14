@@ -49,6 +49,26 @@ public final class NepConfig {
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_IDLE_ME_DRAIN;
     private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_CHANNELS;
 
+    private static final ModConfigSpec.BooleanValue OCCULTISM_OVERRIDE;
+    private static final ModConfigSpec.BooleanValue OCCULTISM_SPIRIT_PROVIDER;
+    private static final ModConfigSpec.IntValue OCCULTISM_SPIRIT_PROVIDER_RANGE;
+    private static final ModConfigSpec.IntValue OCCULTISM_SPIRIT_PROVIDER_QUEUE;
+    private static final ModConfigSpec.BooleanValue OCCULTISM_MATRIX;
+    private static final ModConfigSpec.BooleanValue OCCULTISM_MATRIX_AUTO_REQUEST;
+    private static final ModConfigSpec.IntValue OCCULTISM_MATRIX_SPIRIT_FIRE_TICKS;
+    private static final ModConfigSpec.IntValue OCCULTISM_MATRIX_CRAFT_TIME;
+    private static final ModConfigSpec.IntValue OCCULTISM_MATRIX_ME_DRAIN;
+    private static final ModConfigSpec.IntValue OCCULTISM_MATRIX_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue OCCULTISM_MATRIX_CHANNELS;
+    private static final ModConfigSpec.BooleanValue RITUAL_CONTROLLER;
+    private static final ModConfigSpec.BooleanValue RITUAL_CONTROLLER_AUTO_REQUEST;
+    private static final ModConfigSpec.IntValue RITUAL_CONTROLLER_BOWL_RANGE;
+    private static final ModConfigSpec.IntValue RITUAL_CONTROLLER_TIER_SPEED;
+    private static final ModConfigSpec.BooleanValue RITUAL_CONTROLLER_REPAIR;
+    private static final ModConfigSpec.BooleanValue RITUAL_CONTROLLER_STAND_INS;
+    private static final ModConfigSpec.IntValue RITUAL_CONTROLLER_ME_DRAIN;
+    private static final ModConfigSpec.IntValue RITUAL_CONTROLLER_IDLE_ME_DRAIN;
+    private static final ModConfigSpec.IntValue RITUAL_CONTROLLER_CHANNELS;
     private static final ModConfigSpec.BooleanValue ORITECH_OVERRIDE;
     private static final ModConfigSpec.BooleanValue ORITECH_PARTICLE_COLLISION;
     private static final ModConfigSpec.BooleanValue ORITECH_MATRIX;
@@ -168,6 +188,122 @@ public final class NepConfig {
                         "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
                 .translation("nep.configuration.modules.mysticalagriculture.infusedAwakeningMatrix.meNetworkChannels")
                 .defineInRange("meNetworkChannels", 15, 0, 128);
+        builder.pop();
+
+        builder.pop();
+
+        builder.comment("Occultism integration.")
+                .translation("nep.configuration.modules.occultism")
+                .push("occultism");
+        OCCULTISM_OVERRIDE = builder.comment(
+                        "Master override for Occultism integration.",
+                        "When disabled, every Occultism module below is disabled regardless of its own toggle.")
+                .translation("nep.configuration.modules.occultism.override")
+                .define("allow_occultism_module", true);
+
+        builder.comment("Bound Spirit Matrix:")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix")
+                .push("boundSpiritMatrix");
+        OCCULTISM_MATRIX = builder.comment(
+                        "The Bound Spirit Matrix runs spirit fire, crushing and crystallizing recipes inside a single block.",
+                        "Spirit fire always works; crushing and crystallizing need a Spirit-Infused Book of that job, whose spirit tier sets the recipes it can run, its speed and its output.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.enabled")
+                .define("enabled", true);
+        OCCULTISM_MATRIX_AUTO_REQUEST = builder.comment(
+                        "Treats the Matrix as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a craft it owes is left without materials.",
+                        "When disabled, a Matrix left short of materials stalls until you manually restock it.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.autoRequest")
+                .define("autoRequest", true);
+        OCCULTISM_MATRIX_SPIRIT_FIRE_TICKS = builder.comment(
+                        "Ticks the Matrix spends on a spirit fire craft. 20 ticks is one second.",
+                        "Real spirit fire converts an item the moment it lands in the flames, so it has no per-item duration.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.spiritFireCraftTicks")
+                .defineInRange("spiritFireCraftTicks", 20, 1, 24_000);
+        OCCULTISM_MATRIX_CRAFT_TIME = builder.comment(
+                        "Time a crushing or crystallizing craft takes, as a percentage of what the bound spirit would take in the world.",
+                        "That base time is the recipe's own duration scaled by Occultism's per-tier time multiplier, so a stronger spirit is faster here too.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.craftTime")
+                .defineInRange("craftTimePercent", 100, 1, 10_000);
+        OCCULTISM_MATRIX_ME_DRAIN = builder.comment(
+                        "Energy the Matrix draws from its ME network while crafting, in AE per tick. Progress stops whenever the network cannot supply this much power.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.meNetworkDrain")
+                .defineInRange("meNetworkDrain", 500, 0, 1_000_000);
+        OCCULTISM_MATRIX_IDLE_ME_DRAIN = builder.comment(
+                        "Energy the Matrix draws from its ME network while idle, in AE per tick. This standing cost is read once when the Matrix joins a network, so changing it needs a world reload.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.idleMeNetworkDrain")
+                .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        OCCULTISM_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
+        builder.pop();
+
+        builder.comment("Spirit Provider:")
+                .translation("nep.configuration.modules.occultism.spiritProvider")
+                .push("spiritProvider");
+        OCCULTISM_SPIRIT_PROVIDER = builder.comment(
+                        "The Spirit Provider takes crushing, crystallizing, smelting and trading crafts from a pattern provider against it and lays the inputs out for a working spirit to collect.",
+                        "Only a spirit whose work area covers the Provider is served, and its finished products go back through the pattern provider instead of onto the ground.")
+                .translation("nep.configuration.modules.occultism.spiritProvider.enabled")
+                .define("enabled", true);
+        OCCULTISM_SPIRIT_PROVIDER_RANGE = builder.comment(
+                        "How far, in blocks along each axis, the Provider looks for working spirits.",
+                        "A spirit further away than this is never served, even when its work area covers the Provider.")
+                .translation("nep.configuration.modules.occultism.spiritProvider.searchRange")
+                .defineInRange("searchRange", 16, 1, 64);
+        OCCULTISM_SPIRIT_PROVIDER_QUEUE = builder.comment(
+                        "Most crafts the Provider holds at once, counting those still waiting for a spirit.",
+                        "A pattern provider is turned away while the Provider is full, and tries again later.")
+                .translation("nep.configuration.modules.occultism.spiritProvider.queueLimit")
+                .defineInRange("queueLimit", 8, 1, 256);
+        builder.pop();
+
+        builder.comment("Ritual Controller:")
+                .translation("nep.configuration.modules.occultism.ritualController")
+                .push("ritualController");
+        RITUAL_CONTROLLER = builder.comment(
+                        "The Ritual Controller runs Occultism crafting rituals from ritual patterns on a real pentacle: it lays the ingredients into the sacrificial bowls, starts the ritual at the golden bowl and collects the result.",
+                        "It needs a Spirit-Infused Book, whose spirit tier sets the highest pentacle it may run and how fast its rituals go.")
+                .translation("nep.configuration.modules.occultism.ritualController.enabled")
+                .define("enabled", true);
+        RITUAL_CONTROLLER_AUTO_REQUEST = builder.comment(
+                        "Treats the Controller as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a ritual it owes is left without materials.",
+                        "When disabled, a Controller left short of materials stalls until you restock it by hand.")
+                .translation("nep.configuration.modules.occultism.ritualController.autoRequest")
+                .define("autoRequest", true);
+        RITUAL_CONTROLLER_BOWL_RANGE = builder.comment(
+                        "How far, in blocks along each axis, the Controller looks for the golden sacrificial bowl it drives.",
+                        "The nearest golden bowl in range is the one it uses.")
+                .translation("nep.configuration.modules.occultism.ritualController.bowlRange")
+                .defineInRange("bowlRange", 4, 1, 16);
+        RITUAL_CONTROLLER_TIER_SPEED = builder.comment(
+                        "Extra ritual speed for each spirit tier above foliot, as a percentage of the ritual's normal pace.",
+                        "At 50, a djinni book runs rituals 1.5 times as fast, an afrit book twice as fast and a marid book 2.5 times as fast.")
+                .translation("nep.configuration.modules.occultism.ritualController.tierSpeed")
+                .defineInRange("tierSpeedPercent", 50, 0, 1000);
+        RITUAL_CONTROLLER_REPAIR = builder.comment(
+                        "Lets the Controller repair damaged items stored on its ME network with Occultism's repair rituals while it has no pattern work, once repairing is switched on in its screen.")
+                .translation("nep.configuration.modules.occultism.ritualController.repair")
+                .define("repair", true);
+        RITUAL_CONTROLLER_STAND_INS = builder.comment(
+                        "Lets the Controller satisfy a ritual's sacrifice with a stand-in item instead of a slain mob, such as a spawn egg or a soul gem holding the right creature.",
+                        "Which items stand in for which mobs is set by nep:sacrifice_stand_in recipes.")
+                .translation("nep.configuration.modules.occultism.ritualController.sacrificeStandIns")
+                .define("sacrificeStandIns", true);
+        RITUAL_CONTROLLER_ME_DRAIN = builder.comment(
+                        "Energy the Controller draws from its ME network while a ritual runs, in AE per tick. A Controller that loses network power lets the ritual in progress finish, but starts no new one.")
+                .translation("nep.configuration.modules.occultism.ritualController.meNetworkDrain")
+                .defineInRange("meNetworkDrain", 100, 0, 1_000_000);
+        RITUAL_CONTROLLER_IDLE_ME_DRAIN = builder.comment(
+                        "Energy the Controller draws from its ME network while idle, in AE per tick. This standing cost is read once when the Controller joins a network, so changing it needs a world reload.")
+                .translation("nep.configuration.modules.occultism.ritualController.idleMeNetworkDrain")
+                .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        RITUAL_CONTROLLER_CHANNELS = builder.comment(
+                        "Channels the Controller takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Controller joins a network, so changing it needs a world reload. Set to 0 for a Controller that takes up no channels at all.")
+                .translation("nep.configuration.modules.occultism.ritualController.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 7, 0, 128);
         builder.pop();
 
         builder.pop();
@@ -409,10 +545,35 @@ public final class NepConfig {
         SPEC = builder.build();
     }
 
-    public static void onConfigLoaded(ModConfigEvent event) {
-        if (event.getConfig().getSpec() == SPEC) {
-            NepConfigGates.changed();
+    private static int clampedIdle(ModConfigSpec.IntValue idle, int active) {
+        return Math.min(SPEC.isLoaded() ? idle.get() : idle.getDefault(), active);
+    }
+
+    private static void warnIdleAboveActive(
+            String machine, ModConfigSpec.IntValue idle, ModConfigSpec.IntValue active) {
+        int idleDrain = idle.get();
+        int activeDrain = active.get();
+        if (idleDrain > activeDrain) {
+            Nep.LOGGER.warn(
+                    "{} idleMeNetworkDrain ({} AE/t) is above meNetworkDrain ({} AE/t); the idle"
+                            + " drain is clamped to {} AE/t, so working costs no more than sitting idle.",
+                    machine,
+                    idleDrain,
+                    activeDrain,
+                    activeDrain);
         }
+    }
+
+    public static void onConfigLoaded(ModConfigEvent event) {
+        if (event.getConfig().getSpec() != SPEC) {
+            return;
+        }
+        NepConfigGates.changed();
+        warnIdleAboveActive("Infused Awakening Matrix", MYSTICAL_MATRIX_IDLE_ME_DRAIN, MYSTICAL_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Occultism Matrix", OCCULTISM_MATRIX_IDLE_ME_DRAIN, OCCULTISM_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Ritual Controller", RITUAL_CONTROLLER_IDLE_ME_DRAIN, RITUAL_CONTROLLER_ME_DRAIN);
+        warnIdleAboveActive("Oritech Matrix", ORITECH_MATRIX_IDLE_ME_DRAIN, ORITECH_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Oritech Controller", ORITECH_CONTROLLER_IDLE_ME_DRAIN, ORITECH_CONTROLLER_ME_DRAIN);
     }
 
     public static boolean loaded() {
@@ -420,7 +581,7 @@ public final class NepConfig {
     }
 
     public static int importCardGrace() {
-        return SPEC.isLoaded() ? IMPORT_CARD_GRACE.get() : 200;
+        return SPEC.isLoaded() ? IMPORT_CARD_GRACE.get() : IMPORT_CARD_GRACE.getDefault();
     }
 
     public static boolean debugLogging() {
@@ -432,7 +593,7 @@ public final class NepConfig {
     }
 
     public static boolean processingPatternConversion() {
-        return SPEC.isLoaded() && PROCESSING_PATTERN_CONVERSION.get();
+        return SPEC.isLoaded() ? PROCESSING_PATTERN_CONVERSION.get() : PROCESSING_PATTERN_CONVERSION.getDefault();
     }
 
     public static boolean requireDecoder() {
@@ -444,11 +605,11 @@ public final class NepConfig {
     }
 
     public static int patternDecoderChannels() {
-        return SPEC.isLoaded() ? PATTERN_DECODER_CHANNELS.get() : 1;
+        return SPEC.isLoaded() ? PATTERN_DECODER_CHANNELS.get() : PATTERN_DECODER_CHANNELS.getDefault();
     }
 
     public static int patternDecoderIdleMeDrain() {
-        return SPEC.isLoaded() ? PATTERN_DECODER_IDLE_ME_DRAIN.get() : 5;
+        return SPEC.isLoaded() ? PATTERN_DECODER_IDLE_ME_DRAIN.get() : PATTERN_DECODER_IDLE_ME_DRAIN.getDefault();
     }
 
     public static boolean machineHubEnabled() {
@@ -456,39 +617,45 @@ public final class NepConfig {
     }
 
     public static int machineHubLinkRange() {
-        return SPEC.isLoaded() ? MACHINE_HUB_LINK_RANGE.get() : 16;
+        return SPEC.isLoaded() ? MACHINE_HUB_LINK_RANGE.get() : MACHINE_HUB_LINK_RANGE.getDefault();
     }
 
     public static int machineHubMaximumLinks() {
-        return SPEC.isLoaded() ? MACHINE_HUB_MAXIMUM_LINKS.get() : 24;
+        return SPEC.isLoaded() ? MACHINE_HUB_MAXIMUM_LINKS.get() : MACHINE_HUB_MAXIMUM_LINKS.getDefault();
     }
 
     public static int machineHubScanBudget() {
-        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : 128;
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : MACHINE_HUB_SCAN_BUDGET.getDefault();
     }
 
     public static int machineHubCasingDepth() {
-        return SPEC.isLoaded() ? MACHINE_HUB_CASING_DEPTH.get() : 3;
+        return SPEC.isLoaded() ? MACHINE_HUB_CASING_DEPTH.get() : MACHINE_HUB_CASING_DEPTH.getDefault();
     }
 
     public static List<? extends String> machineHubScanWhitelist() {
-        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_WHITELIST.get() : List.of();
+        return SPEC.isLoaded()
+                ? MACHINE_HUB_SCAN_WHITELIST.get()
+                : List.copyOf(MACHINE_HUB_SCAN_WHITELIST.getDefault());
     }
 
     public static List<? extends String> machineHubScanBlacklist() {
-        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BLACKLIST.get() : List.of();
+        return SPEC.isLoaded()
+                ? MACHINE_HUB_SCAN_BLACKLIST.get()
+                : List.copyOf(MACHINE_HUB_SCAN_BLACKLIST.getDefault());
     }
 
     public static List<? extends String> machineHubLinkBlacklist() {
-        return SPEC.isLoaded() ? MACHINE_HUB_LINK_BLACKLIST.get() : List.of();
+        return SPEC.isLoaded()
+                ? MACHINE_HUB_LINK_BLACKLIST.get()
+                : List.copyOf(MACHINE_HUB_LINK_BLACKLIST.getDefault());
     }
 
     public static int machineHubChannels() {
-        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS.get() : 11;
+        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS.get() : MACHINE_HUB_CHANNELS.getDefault();
     }
 
     public static int machineHubChannelsPerLink() {
-        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS_PER_LINK.get() : 1;
+        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS_PER_LINK.get() : MACHINE_HUB_CHANNELS_PER_LINK.getDefault();
     }
 
     public static boolean apothicOverride() {
@@ -500,7 +667,9 @@ public final class NepConfig {
     }
 
     public static int apothicInfusionExperiencePerBottle() {
-        return SPEC.isLoaded() ? APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE.get() : 70;
+        return SPEC.isLoaded()
+                ? APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE.get()
+                : APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE.getDefault();
     }
 
     public static boolean apothicInfusionPreferExperienceFluid() {
@@ -508,7 +677,9 @@ public final class NepConfig {
     }
 
     public static int apothicInfusionMillibucketsPerExperience() {
-        return SPEC.isLoaded() ? APOTHIC_INFUSION_MILLIBUCKETS_PER_EXPERIENCE.get() : 20;
+        return SPEC.isLoaded()
+                ? APOTHIC_INFUSION_MILLIBUCKETS_PER_EXPERIENCE.get()
+                : APOTHIC_INFUSION_MILLIBUCKETS_PER_EXPERIENCE.getDefault();
     }
 
     public static boolean mysticalOverride() {
@@ -532,24 +703,105 @@ public final class NepConfig {
     }
 
     public static int mysticalInfusedAwakeningMatrixCraftTicks() {
-        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CRAFT_TICKS.get() : 20;
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CRAFT_TICKS.get() : MYSTICAL_MATRIX_CRAFT_TICKS.getDefault();
     }
 
     public static long mysticalInfusedAwakeningMatrixTankCapacity() {
-        return SPEC.isLoaded() ? MYSTICAL_MATRIX_TANK_CAPACITY.get() : 40L;
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_TANK_CAPACITY.get() : MYSTICAL_MATRIX_TANK_CAPACITY.getDefault();
     }
 
     public static int mysticalInfusedAwakeningMatrixMeDrain() {
-        return SPEC.isLoaded() ? MYSTICAL_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_ME_DRAIN.get() : MYSTICAL_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int mysticalInfusedAwakeningMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? MYSTICAL_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, mysticalInfusedAwakeningMatrixMeDrain());
+        return clampedIdle(MYSTICAL_MATRIX_IDLE_ME_DRAIN, mysticalInfusedAwakeningMatrixMeDrain());
     }
 
     public static int mysticalInfusedAwakeningMatrixChannels() {
-        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CHANNELS.get() : MYSTICAL_MATRIX_CHANNELS.getDefault();
+    }
+
+    public static boolean occultismOverride() {
+        return SPEC.isLoaded() && OCCULTISM_OVERRIDE.get();
+    }
+
+    public static boolean occultismMatrix() {
+        return occultismOverride() && OCCULTISM_MATRIX.get();
+    }
+
+    public static boolean occultismMatrixAutoRequest() {
+        return occultismMatrix() && OCCULTISM_MATRIX_AUTO_REQUEST.get();
+    }
+
+    public static int occultismMatrixSpiritFireTicks() {
+        return SPEC.isLoaded()
+                ? OCCULTISM_MATRIX_SPIRIT_FIRE_TICKS.get()
+                : OCCULTISM_MATRIX_SPIRIT_FIRE_TICKS.getDefault();
+    }
+
+    public static int occultismMatrixCraftTimePercent() {
+        return SPEC.isLoaded() ? OCCULTISM_MATRIX_CRAFT_TIME.get() : OCCULTISM_MATRIX_CRAFT_TIME.getDefault();
+    }
+
+    public static int occultismMatrixMeDrain() {
+        return SPEC.isLoaded() ? OCCULTISM_MATRIX_ME_DRAIN.get() : OCCULTISM_MATRIX_ME_DRAIN.getDefault();
+    }
+
+    public static int occultismMatrixIdleMeDrain() {
+        return clampedIdle(OCCULTISM_MATRIX_IDLE_ME_DRAIN, occultismMatrixMeDrain());
+    }
+
+    public static int occultismMatrixChannels() {
+        return SPEC.isLoaded() ? OCCULTISM_MATRIX_CHANNELS.get() : OCCULTISM_MATRIX_CHANNELS.getDefault();
+    }
+
+    public static boolean occultismSpiritProvider() {
+        return occultismOverride() && OCCULTISM_SPIRIT_PROVIDER.get();
+    }
+
+    public static int occultismSpiritProviderRange() {
+        return SPEC.isLoaded() ? OCCULTISM_SPIRIT_PROVIDER_RANGE.get() : OCCULTISM_SPIRIT_PROVIDER_RANGE.getDefault();
+    }
+
+    public static int occultismSpiritProviderQueue() {
+        return SPEC.isLoaded() ? OCCULTISM_SPIRIT_PROVIDER_QUEUE.get() : OCCULTISM_SPIRIT_PROVIDER_QUEUE.getDefault();
+    }
+
+    public static boolean occultismRitualController() {
+        return occultismOverride() && RITUAL_CONTROLLER.get();
+    }
+
+    public static boolean occultismRitualControllerAutoRequest() {
+        return occultismRitualController() && RITUAL_CONTROLLER_AUTO_REQUEST.get();
+    }
+
+    public static int occultismRitualControllerBowlRange() {
+        return SPEC.isLoaded() ? RITUAL_CONTROLLER_BOWL_RANGE.get() : RITUAL_CONTROLLER_BOWL_RANGE.getDefault();
+    }
+
+    public static int occultismRitualControllerTierSpeed() {
+        return SPEC.isLoaded() ? RITUAL_CONTROLLER_TIER_SPEED.get() : RITUAL_CONTROLLER_TIER_SPEED.getDefault();
+    }
+
+    public static boolean occultismRitualControllerRepair() {
+        return occultismRitualController() && RITUAL_CONTROLLER_REPAIR.get();
+    }
+
+    public static boolean occultismSacrificeStandIns() {
+        return occultismRitualController() && RITUAL_CONTROLLER_STAND_INS.get();
+    }
+
+    public static int occultismRitualControllerMeDrain() {
+        return SPEC.isLoaded() ? RITUAL_CONTROLLER_ME_DRAIN.get() : RITUAL_CONTROLLER_ME_DRAIN.getDefault();
+    }
+
+    public static int occultismRitualControllerIdleMeDrain() {
+        return clampedIdle(RITUAL_CONTROLLER_IDLE_ME_DRAIN, occultismRitualControllerMeDrain());
+    }
+
+    public static int occultismRitualControllerChannels() {
+        return SPEC.isLoaded() ? RITUAL_CONTROLLER_CHANNELS.get() : RITUAL_CONTROLLER_CHANNELS.getDefault();
     }
 
     public static boolean oritechOverride() {
@@ -569,19 +821,19 @@ public final class NepConfig {
     }
 
     public static long oritechMatrixEnergyCostPercent() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_ENERGY_COST.get() : 100;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_ENERGY_COST.get() : ORITECH_MATRIX_ENERGY_COST.getDefault();
     }
 
     public static int oritechMatrixChargeRate() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_CHARGE_RATE.get() : 1_000_000;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CHARGE_RATE.get() : ORITECH_MATRIX_CHARGE_RATE.getDefault();
     }
 
     public static int oritechMatrixCapacity() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_CAPACITY.get() : 10_000_000;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CAPACITY.get() : ORITECH_MATRIX_CAPACITY.getDefault();
     }
 
     public static int oritechMatrixCraftTicks() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_CRAFT_TICKS.get() : 10;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CRAFT_TICKS.get() : ORITECH_MATRIX_CRAFT_TICKS.getDefault();
     }
 
     public static boolean oritechMatrixMeCharge() {
@@ -589,16 +841,15 @@ public final class NepConfig {
     }
 
     public static int oritechMatrixMeDrain() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_ME_DRAIN.get() : ORITECH_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int oritechMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? ORITECH_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, oritechMatrixMeDrain());
+        return clampedIdle(ORITECH_MATRIX_IDLE_ME_DRAIN, oritechMatrixMeDrain());
     }
 
     public static int oritechMatrixChannels() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CHANNELS.get() : ORITECH_MATRIX_CHANNELS.getDefault();
     }
 
     public static boolean oritechParticleCollisionController() {
@@ -610,23 +861,24 @@ public final class NepConfig {
     }
 
     public static int oritechControllerLinkRange() {
-        return SPEC.isLoaded() ? ORITECH_CONTROLLER_LINK_RANGE.get() : 64;
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_LINK_RANGE.get() : ORITECH_CONTROLLER_LINK_RANGE.getDefault();
     }
 
     public static int oritechControllerCollisionTimeout() {
-        return SPEC.isLoaded() ? ORITECH_CONTROLLER_COLLISION_TIMEOUT.get() : 1_200;
+        return SPEC.isLoaded()
+                ? ORITECH_CONTROLLER_COLLISION_TIMEOUT.get()
+                : ORITECH_CONTROLLER_COLLISION_TIMEOUT.getDefault();
     }
 
     public static int oritechControllerMeDrain() {
-        return SPEC.isLoaded() ? ORITECH_CONTROLLER_ME_DRAIN.get() : 100;
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_ME_DRAIN.get() : ORITECH_CONTROLLER_ME_DRAIN.getDefault();
     }
 
     public static int oritechControllerIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? ORITECH_CONTROLLER_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, oritechControllerMeDrain());
+        return clampedIdle(ORITECH_CONTROLLER_IDLE_ME_DRAIN, oritechControllerMeDrain());
     }
 
     public static int oritechControllerChannels() {
-        return SPEC.isLoaded() ? ORITECH_CONTROLLER_CHANNELS.get() : 7;
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_CHANNELS.get() : ORITECH_CONTROLLER_CHANNELS.getDefault();
     }
 }

@@ -46,7 +46,7 @@ public class PatternDecoderBlockEntity extends BlockEntity implements MenuProvid
         return modules;
     }
 
-    int modules() {
+    int heldMask() {
         return held;
     }
 

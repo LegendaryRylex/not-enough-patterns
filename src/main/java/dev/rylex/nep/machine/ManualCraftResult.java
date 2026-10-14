@@ -12,5 +12,6 @@ public enum ManualCraftResult {
     FIELD_TOO_LARGE,
     NO_FIELD,
     NO_LINE,
-    NO_IMPETUS
+    NO_IMPETUS,
+    NO_SPIRIT
 }

@@ -20,6 +20,9 @@ config="${mod_id}.advancedae.mixins.json"
 [[mixins]]
 config="${mod_id}.thunderbolt.mixins.json"
 
+[[mixins]]
+config="${mod_id}.occultism.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId="ae2"
 type="required"
@@ -70,6 +73,13 @@ ordering="AFTER"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
+modId="occultism"
+type="optional"
+versionRange="${occultism_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
 modId="oritech"
 type="optional"
 versionRange="${oritech_version_range}"
@@ -85,7 +95,7 @@ side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="gmrecipes"
-type="required"
+type="optional"
 versionRange="${gmrecipes_version_range}"
 ordering="NONE"
 side="CLIENT"

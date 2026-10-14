@@ -1,6 +1,7 @@
 package dev.rylex.nep.provider;
 
 import appeng.api.stacks.AEKey;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -23,11 +24,11 @@ public final class OwedDispatch {
     }
 
     public Map<AEKey, Long> parked() {
-        return parked;
+        return Collections.unmodifiableMap(parked);
     }
 
     public Map<AEKey, Long> owed() {
-        return owed;
+        return Collections.unmodifiableMap(owed);
     }
 
     public long owedAmount(AEKey key) {

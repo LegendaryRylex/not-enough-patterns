@@ -15,6 +15,8 @@ public final class NepIcons {
     public static final Component SCAN = icon("\uE005");
     public static final Component DOWN = icon("\uE006");
     public static final Component HELP = icon("\uE007");
+    public static final Component UP = icon("\uE008");
+    public static final Component UP_BLOCKED = icon("\uE009");
 
     private NepIcons() {}
 

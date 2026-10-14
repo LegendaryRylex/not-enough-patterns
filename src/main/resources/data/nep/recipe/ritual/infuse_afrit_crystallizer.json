@@ -1,0 +1,41 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "type": "occultism:ritual",
+  "activation_item": "occultism:book_of_binding_bound_afrit",
+  "duration": 180,
+  "ingredients": [
+    "occultism:gray_paste",
+    "#c:storage_blocks/lapis",
+    "minecraft:amethyst_block",
+    "minecraft:quartz_block",
+    "minecraft:dripstone_block",
+    "occultism:book_of_binding_empty"
+  ],
+  "pentacle_id": "occultism:craft_afrit",
+  "result": {
+    "count": 1,
+    "id": "nep:spirit_infused_book",
+    "components": {
+      "nep:bound_spirit": {
+        "tier": "afrit",
+        "work": "crystallizer"
+      }
+    }
+  },
+  "ritual_dummy": {
+    "count": 1,
+    "id": "nep:spirit_infused_book",
+    "components": {
+      "nep:bound_spirit": {
+        "tier": "afrit",
+        "work": "crystallizer"
+      }
+    }
+  },
+  "ritual_type": "occultism:craft"
+}

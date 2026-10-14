@@ -215,6 +215,10 @@ public class ParticleCollisionControllerScreen extends MatrixScreen<ParticleColl
     }
 
     private static List<Component> statusHint(ParticleCollisionControllerBlockEntity controller) {
+        if (controller.hasChannelFault()) {
+            return List.of(
+                    Component.translatable(KEY + "no_network_channels.hint").withStyle(ChatFormatting.GRAY));
+        }
         if (controller.hasPowerFault()) {
             return List.of(Component.translatable(KEY + "no_network_power.hint").withStyle(ChatFormatting.GRAY));
         }
@@ -231,6 +235,7 @@ public class ParticleCollisionControllerScreen extends MatrixScreen<ParticleColl
         if (faultKey(controller) != null
                 || controller.isOutputBlocked()
                 || controller.hasPowerFault()
+                || controller.hasChannelFault()
                 || !controller.missingInputs().isEmpty()) {
             return READOUT_WARN;
         }
@@ -240,7 +245,7 @@ public class ParticleCollisionControllerScreen extends MatrixScreen<ParticleColl
     @Override
     protected void extractReadoutTooltips(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         ParticleCollisionControllerBlockEntity controller = menu.controller();
-        if (controller == null || !within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, 32)) {
+        if (controller == null || !within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, READOUT_HEIGHT)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

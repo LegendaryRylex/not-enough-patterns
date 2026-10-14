@@ -134,6 +134,14 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity
         return !owed.isEmpty();
     }
 
+    public long pendingJobs() {
+        long total = 0;
+        for (long count : owed.values()) {
+            total += count;
+        }
+        return total;
+    }
+
     public boolean hasPowerFault() {
         return powerFault;
     }

@@ -200,7 +200,7 @@ public class PatternDecoderScreen extends MatrixScreen<PatternDecoderMenu> {
         if (hoveredSlot == null || hoveredSlot.index >= PatternDecoderBlockEntity.SLOTS) {
             return null;
         }
-        return DecoderModule.values()[hoveredSlot.index];
+        return DecoderModule.bySlot(hoveredSlot.index);
     }
 
     @Override

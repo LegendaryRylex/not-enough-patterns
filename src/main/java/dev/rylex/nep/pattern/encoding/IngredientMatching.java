@@ -5,6 +5,8 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +47,7 @@ public final class IngredientMatching {
         for (int i = 0; i < order.length; i++) {
             order[i] = i;
         }
-        java.util.Arrays.sort(order, java.util.Comparator.comparingInt(i -> matchingOptions(remaining, slots.get(i))));
+        Arrays.sort(order, Comparator.comparingInt(i -> matchingOptions(remaining, slots.get(i))));
 
         GenericStack[] chosen = new GenericStack[slots.size()];
         return search(remaining, slots, order, 0, chosen, new int[] {ASSIGN_BUDGET}) ? chosen : null;
@@ -128,7 +130,11 @@ public final class IngredientMatching {
     public static Map<AEItemKey, Long> flattenItemInputs(IPatternDetails pattern) {
         Map<AEItemKey, Long> available = new LinkedHashMap<>();
         for (IPatternDetails.IInput input : pattern.getInputs()) {
-            GenericStack primary = input.getPossibleInputs()[0];
+            GenericStack[] possible = input.getPossibleInputs();
+            if (possible.length == 0) {
+                continue;
+            }
+            GenericStack primary = possible[0];
             if (!(primary.what() instanceof AEItemKey itemKey)) {
                 return null;
             }

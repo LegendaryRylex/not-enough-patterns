@@ -1,14 +1,21 @@
 package dev.rylex.nep.compat.apothic;
 
+import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.NepConfig;
 import dev.shadowsoffire.apothic_enchanting.table.infusion.InfusionRecipe;
 import dev.shadowsoffire.placebo.util.EnchantmentUtils;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.Items;
 
 final class InfusionCosts {
     private InfusionCosts() {}
 
     static final int LAPIS = 3;
+
+    static GenericStack lapis() {
+        return new GenericStack(AEItemKey.of(Items.LAPIS_LAZULI), LAPIS);
+    }
 
     private static final int INFUSION_SLOT = 2;
     private static final int MINIMUM_LEVEL = 3;

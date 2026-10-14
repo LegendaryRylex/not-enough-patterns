@@ -8,6 +8,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.MinecraftBootstrap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.world.item.Items;
@@ -105,7 +106,7 @@ class PatternContentsTest {
         AEItemKey iron = AEItemKey.of(Items.IRON_INGOT);
         AEItemKey gold = AEItemKey.of(Items.GOLD_INGOT);
         List<GenericStack> condensed = PatternContents.condenseSlots(
-                java.util.Arrays.asList(
+                Arrays.asList(
                         new GenericStack(iron, 1),
                         null,
                         new GenericStack(gold, 1),

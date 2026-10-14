@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "occultism:soul_gem",
+      "required": false
+    },
+    {
+      "id": "occultism:fragile_soul_gem",
+      "required": false
+    },
+    "minecraft:armadillo_spawn_egg",
+    {
+      "id": "mysticalagriculture:armadillo_essence",
+      "required": false
+    }
+  ]
+}

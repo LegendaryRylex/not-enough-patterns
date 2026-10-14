@@ -6,6 +6,7 @@ import dev.rylex.nep.pattern.EnchantingPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.NepPattern;
 import dev.rylex.nep.pattern.ParticleCollisionPattern;
+import dev.rylex.nep.pattern.RitualPattern;
 import java.util.List;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -15,7 +16,11 @@ public final class ExtendedAeCompat {
     private ExtendedAeCompat() {}
 
     private static final List<Class<? extends NepPattern>> VIEWABLE_PATTERNS = List.of(
-            AwakeningPattern.class, EnchantingPattern.class, InfusionPattern.class, ParticleCollisionPattern.class);
+            AwakeningPattern.class,
+            EnchantingPattern.class,
+            InfusionPattern.class,
+            ParticleCollisionPattern.class,
+            RitualPattern.class);
 
     public static void init(IEventBus modBus, Dist dist) {
         NepExtendedAeContent.register(modBus);

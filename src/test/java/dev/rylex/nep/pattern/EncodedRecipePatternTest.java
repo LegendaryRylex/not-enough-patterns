@@ -1,6 +1,7 @@
 package dev.rylex.nep.pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import appeng.api.stacks.AEItemKey;
@@ -33,7 +34,7 @@ class EncodedRecipePatternTest {
         EncodedRecipePattern decoded =
                 EncodedRecipePattern.CODEC.parse(NbtOps.INSTANCE, encoded).getOrThrow();
         assertEquals(pattern(), decoded);
-        assertTrue(!decoded.containsMissingContent());
+        assertFalse(decoded.containsMissingContent());
     }
 
     @Test

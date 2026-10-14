@@ -28,7 +28,13 @@ sourceSets {
 
 repositories {
     mavenCentral()
-    maven { url = 'https://maven.blamejared.com/' }
+    maven {
+        url = 'https://maven.blamejared.com/'
+        content {
+            includeGroup 'mezz.jei'
+            includeGroup 'net.mezzdev.config'
+        }
+    }
     maven {
         url = 'https://maven.shadowsoffire.dev/releases'
         content { includeGroup 'dev.shadowsoffire' }
@@ -56,6 +62,11 @@ var skippableRuntimeMods = [
         appflux: [[group: 'curse.maven', module: 'applied-flux-965012']],
         wtlib  : [[group: 'curse.maven', module: 'ae2wtlib-459929']],
         tb     : [[group: 'curse.maven', module: 'ae2-lightning-tech-1527395']],
+        occ    : [[group: 'curse.maven', module: 'occultism-361026'],
+                  [group: 'curse.maven', module: 'modonomicon-538392'],
+                  [group: 'curse.maven', module: 'smartbrainlib-661293'],
+                  [group: 'curse.maven', module: 'curios-309927'],
+                  [group: 'curse.maven', module: 'geckolib-388172']],
         oritech: [[group: 'curse.maven', module: 'oritech-1030830'],
                   [group: 'curse.maven', module: 'athena-841890'],
                   [group: 'curse.maven', module: 'oritech-things-1166849']],
@@ -81,7 +92,10 @@ if (unknownSkips) {
 }
 skippedMods = (skippedMods + skippedMods.collectMany { impliedSkips[it] ?: [] }).unique()
 if (skippedMods) {
-    skippedMods.each { key -> skippableRuntimeMods[key].each { configurations.runtimeClasspath.exclude(it) } }
+    var keptCoordinates = (skippableRuntimeMods.keySet() - skippedMods).collectMany { skippableRuntimeMods[it] }
+    skippedMods.collectMany { skippableRuntimeMods[it] }.unique()
+            .findAll { !keptCoordinates.contains(it) }
+            .each { configurations.runtimeClasspath.exclude(it) }
     logger.lifecycle("run classpath is missing: ${skippedMods.join(', ')}")
 } else if (skipModsLocal.exists() && fullClasspathRequested) {
     logger.lifecycle("skip_mods.local ignored: requested tasks run the full classpath")
@@ -170,36 +184,38 @@ configurations {
 }
 
 dependencies {
+    def optionalMod = { coord ->
+        compileOnly coord
+        localRuntime coord
+    }
+
     implementation "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     compileOnly "org.appliedenergistics:guideme:${guideme_version}"
     localRuntime "curse.maven:guideme-recipe-compat-1722328:${gmrecipes_file}"
 
-    compileOnly "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
-    localRuntime "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
+    optionalMod "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
 
-    compileOnly "curse.maven:ae2-lightning-tech-1527395:${thunderbolt_file}"
-    localRuntime "curse.maven:ae2-lightning-tech-1527395:${thunderbolt_file}"
+    optionalMod "curse.maven:ae2-lightning-tech-1527395:${thunderbolt_file}"
 
-    compileOnly "curse.maven:advancedae-1084104:${advanced_ae_file}"
-    localRuntime "curse.maven:advancedae-1084104:${advanced_ae_file}"
+    optionalMod "curse.maven:advancedae-1084104:${advanced_ae_file}"
     localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
     localRuntime "curse.maven:ae2addonlib-1366135:${ae2addonlib_file}"
 
-    compileOnly "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
-    localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
+    optionalMod "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
     localRuntime "curse.maven:glodium-957920:${glodium_file}"
     localRuntime "curse.maven:applied-flux-965012:${appliedflux_file}"
 
-    compileOnly "curse.maven:oritech-1030830:${oritech_file}"
-    localRuntime "curse.maven:oritech-1030830:${oritech_file}"
-    compileOnly "curse.maven:oritech-things-1166849:${oritechthings_file}"
-    localRuntime "curse.maven:oritech-things-1166849:${oritechthings_file}"
+    optionalMod "curse.maven:occultism-361026:${occultism_file}"
+    optionalMod "curse.maven:modonomicon-538392:${modonomicon_file}"
+    optionalMod "curse.maven:smartbrainlib-661293:${smartbrainlib_file}"
+    localRuntime "curse.maven:curios-309927:${curios_file}"
+
+    optionalMod "curse.maven:oritech-1030830:${oritech_file}"
+    optionalMod "curse.maven:oritech-things-1166849:${oritechthings_file}"
     localRuntime "curse.maven:athena-841890:${athena_file}"
 
-    compileOnly "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
-    compileOnly "curse.maven:cucumber-272335:${cucumber_file}"
-    localRuntime "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
-    localRuntime "curse.maven:cucumber-272335:${cucumber_file}"
+    optionalMod "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
+    optionalMod "curse.maven:cucumber-272335:${cucumber_file}"
 
     // transitive = false: their poms pull in Curios from a maven we do not carry
     compileOnly("dev.shadowsoffire:ApothicEnchanting:${minecraft_version}-${apothic_enchanting_version}") { transitive = false }
@@ -214,7 +230,7 @@ dependencies {
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
     runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
-    testImplementation platform('org.junit:junit-bom:5.14.4')
+    testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -236,22 +252,10 @@ spotless {
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
-    var replaceProperties = [
+    var versionRanges = project.properties.findAll { it.key.endsWith('_version_range') }
+    var replaceProperties = versionRanges + [
             minecraft_version      : minecraft_version,
-            minecraft_version_range: minecraft_version_range,
             neo_version            : neo_version,
-            neo_version_range      : neo_version_range,
-            loader_version_range   : loader_version_range,
-            ae2_version_range      : ae2_version_range,
-            gmrecipes_version_range: gmrecipes_version_range,
-            jei_version_range      : jei_version_range,
-            ae2wtlib_version_range : ae2wtlib_version_range,
-            advanced_ae_version_range: advanced_ae_version_range,
-            extendedae_version_range: extendedae_version_range,
-            mysticalagriculture_version_range: mysticalagriculture_version_range,
-            oritech_version_range  : oritech_version_range,
-            oritechthings_version_range: oritechthings_version_range,
-            apothic_enchanting_version_range: apothic_enchanting_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,

@@ -4,7 +4,7 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.pathing.ChannelMode;
 import appeng.me.service.AdHocNetworkError;
 import appeng.me.service.PathingService;
-import dev.rylex.nep.machine.ChannelDemand;
+import dev.rylex.nep.machine.WholeChannelDemand;
 import java.util.Set;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -34,7 +34,7 @@ public abstract class PathingServiceMixin {
         }
         int extra = 0;
         for (IGridNode node : nodesNeedingChannels) {
-            extra += Math.max(1, ChannelDemand.of(node)) - 1;
+            extra += WholeChannelDemand.of(node) - 1;
         }
         if (extra == 0) {
             return;

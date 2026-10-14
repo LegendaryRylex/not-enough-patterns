@@ -11,6 +11,7 @@ import appeng.core.definitions.AEParts;
 import dev.rylex.nep.ConfigOverrides;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.NepGameTests;
+import dev.rylex.nep.hub.HubConfigFields;
 import dev.rylex.nep.hub.NepContent;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -25,8 +26,6 @@ public final class ThunderboltChannelGameTest {
     private static final BlockPos SECOND_HUB = new BlockPos(3, 1, 5);
     private static final BlockPos CABLE = new BlockPos(4, 1, 5);
     private static final BlockPos CONTROLLER = new BlockPos(4, 1, 6);
-
-    private static final String CHANNELS_FIELD = "MACHINE_HUB_CHANNELS";
 
     /** More than half of what a dense cable carries, so two hubs cannot both be fed down one. */
     private static final int CROWDED_DEMAND = 20;
@@ -118,11 +117,13 @@ public final class ThunderboltChannelGameTest {
     }
 
     public static void aHubThatCannotBeFullyFedGivesItsChannelsBack(GameTestHelper helper) {
-        ConfigOverrides.Restore restore = ConfigOverrides.override(CHANNELS_FIELD, CROWDED_DEMAND);
+        ConfigOverrides.Restore restore = ConfigOverrides.override(HubConfigFields.CHANNELS, CROWDED_DEMAND);
         List<BlockPos> hubs = List.of(HUB, SECOND_HUB);
-        for (BlockPos pos : hubs) {
-            placeHub(helper, pos);
-        }
+        HubConfigFields.guardedRun(restore, () -> {
+            for (BlockPos pos : hubs) {
+                placeHub(helper, pos);
+            }
+        });
         restore.undo();
         placeCable(helper, AEParts.SMART_DENSE_CABLE.item(AEColor.TRANSPARENT));
         placeController(helper, CONTROLLER);

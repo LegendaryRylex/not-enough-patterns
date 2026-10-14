@@ -12,6 +12,7 @@ import com.blakebr0.mysticalagriculture.util.RecipeIngredientCache;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
+import dev.rylex.nep.machine.DemandTally;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.ManualCraftHost;
 import dev.rylex.nep.machine.ManualCraftOutcome;
@@ -20,17 +21,19 @@ import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.machine.ManualStaging;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.machine.MatrixStatus;
+import dev.rylex.nep.machine.StackColumns;
 import dev.rylex.nep.pattern.AwakeningPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
+import dev.rylex.nep.util.EnumNames;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -42,6 +45,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -88,7 +92,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     private static final String REFUSAL_KEY = "Refusal";
     private static final String REFUSAL_TICKS_KEY = "RefusalTicks";
 
-    private final EssenceTank[] tanks = new EssenceTank[TANKS];
+    private final TankBank tanks = new TankBank(TANKS);
 
     private final Map<AEItemKey, Template> templates = new HashMap<>();
     private final ResourceHandler<ItemResource> outputView = new OutputView();
@@ -133,13 +137,56 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         BUFFER_FULL
     }
 
+    private record Line(AEKey key, long count) {}
+
     private record Template(
             Kind kind,
-            List<AEKey> keys,
-            List<Long> counts,
-            List<AEKey> essenceKeys,
-            List<Long> essenceCounts,
-            @Nullable Identifier recipe) {}
+            List<Line> items,
+            List<Line> essences,
+            @Nullable Identifier recipe) {
+        boolean usesItem(AEKey key) {
+            return countOf(items, key) >= 0;
+        }
+
+        boolean usesEssence(AEKey key) {
+            return countOf(essences, key) >= 0;
+        }
+
+        static long countOf(List<Line> lines, AEKey key) {
+            for (Line line : lines) {
+                if (line.key().equals(key)) {
+                    return line.count();
+                }
+            }
+            return -1;
+        }
+
+        static List<Line> linesOf(StackColumns columns) {
+            List<Line> lines = new ArrayList<>(columns.keys().size());
+            for (int i = 0; i < columns.keys().size(); i++) {
+                lines.add(new Line(columns.keys().get(i), columns.counts().get(i)));
+            }
+            return List.copyOf(lines);
+        }
+
+        static StackColumns columnsOf(List<Line> lines) {
+            List<AEKey> keys = new ArrayList<>(lines.size());
+            List<Long> counts = new ArrayList<>(lines.size());
+            for (Line line : lines) {
+                keys.add(line.key());
+                counts.add(line.count());
+            }
+            return new StackColumns(List.copyOf(keys), List.copyOf(counts));
+        }
+
+        static List<Line> linesOf(Map<AEItemKey, Long> map) {
+            List<Line> lines = new ArrayList<>(map.size());
+            for (Map.Entry<AEItemKey, Long> entry : map.entrySet()) {
+                lines.add(new Line(entry.getKey(), entry.getValue()));
+            }
+            return List.copyOf(lines);
+        }
+    }
 
     public InfusedAwakeningMatrixBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(
@@ -152,9 +199,6 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
                 NepConfig.mysticalInfusedAwakeningMatrixIdleMeDrain(),
                 NepConfig.mysticalInfusedAwakeningMatrixChannels(),
                 "Infused awakening matrix");
-        for (int tank = 0; tank < TANKS; tank++) {
-            tanks[tank] = new EssenceTank();
-        }
     }
 
     public static void serverTick(
@@ -282,9 +326,9 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             if (template == null) {
                 continue;
             }
-            int index = template.keys().indexOf(key);
-            if (index >= 0) {
-                need += template.counts().get(index) * entry.getValue();
+            long count = Template.countOf(template.items(), key);
+            if (count >= 0) {
+                need += count * entry.getValue();
             }
         }
         return need;
@@ -295,7 +339,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             return true;
         }
         for (Template template : templates.values()) {
-            if (template.essenceKeys().contains(key)) {
+            if (template.usesEssence(key)) {
                 return true;
             }
         }
@@ -304,7 +348,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
 
     private boolean isBufferIngredient(AEItemKey key) {
         for (Template template : templates.values()) {
-            if (template.keys().contains(key)) {
+            if (template.usesItem(key)) {
                 return true;
             }
         }
@@ -312,67 +356,15 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     }
 
     private long insertIntoTanks(AEItemKey key, long amount, boolean simulate) {
-        if (simulate) {
-            return insertInto(snapshotTanks(), key, amount);
-        }
-        long inserted = insertInto(tanks, key, amount);
-        if (inserted > 0) {
+        long inserted = tanks.insert(key, amount, simulate);
+        if (!simulate && inserted > 0) {
             setChanged();
         }
         return inserted;
     }
 
-    private static long insertInto(EssenceTank[] target, AEItemKey key, long amount) {
-        EssenceTank home = soleTankFor(target, key);
-        return home == null ? 0 : home.insert(key, amount, false);
-    }
-
-    @Nullable
-    private static EssenceTank soleTankFor(EssenceTank[] target, AEItemKey key) {
-        for (EssenceTank tank : target) {
-            if (tank.holds(key)) {
-                return tank;
-            }
-        }
-        for (EssenceTank tank : target) {
-            if (tank.isEmpty()) {
-                return tank;
-            }
-        }
-        return null;
-    }
-
-    private EssenceTank[] snapshotTanks() {
-        EssenceTank[] copy = new EssenceTank[tanks.length];
-        for (int tank = 0; tank < tanks.length; tank++) {
-            copy[tank] = tanks[tank].copy();
-        }
-        return copy;
-    }
-
-    private long tankAmount(AEItemKey key) {
-        long total = 0;
-        for (EssenceTank tank : tanks) {
-            if (tank.holds(key)) {
-                total += tank.amount();
-            }
-        }
-        return total;
-    }
-
-    private long tankRoom(AEItemKey key) {
-        EssenceTank home = soleTankFor(tanks, key);
-        return home == null ? 0 : home.room(key);
-    }
-
     private void takeFromTanks(AEItemKey key, long amount) {
-        long remaining = amount;
-        for (EssenceTank tank : tanks) {
-            if (remaining <= 0 || !tank.holds(key)) {
-                continue;
-            }
-            remaining -= tank.extract(remaining, false);
-        }
+        tanks.take(key, amount);
         setChanged();
     }
 
@@ -478,7 +470,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     @Nullable
     private AEItemKey stockedEssence(SizedIngredient essence, Map<AEItemKey, Long> claimed) {
         for (AEItemKey key : IngredientMatching.itemOptions(essence.ingredient(), level)) {
-            if (tankAmount(key) - claimed.getOrDefault(key, 0L) >= essence.count()) {
+            if (tanks.amount(key) - claimed.getOrDefault(key, 0L) >= essence.count()) {
                 return key;
             }
         }
@@ -548,16 +540,16 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     }
 
     @Nullable
-    private List<int[]> planConsumption(List<MysticalRecipeIngredients.Demand> demands) {
+    private List<int[]> planConsumption(List<Ingredient> demands) {
         int[] slotLeft = new int[inputBuffer.size()];
         for (int slot = 0; slot < slotLeft.length; slot++) {
             slotLeft[slot] = inputBuffer.stackAt(slot).getCount();
         }
         List<int[]> takes = new ArrayList<>();
-        for (MysticalRecipeIngredients.Demand demand : demands) {
-            int need = demand.count();
+        for (Ingredient demand : demands) {
+            int need = 1;
             for (int slot = 0; slot < slotLeft.length && need > 0; slot++) {
-                if (slotLeft[slot] <= 0 || !demand.ingredient().test(inputBuffer.stackAt(slot))) {
+                if (slotLeft[slot] <= 0 || !demand.test(inputBuffer.stackAt(slot))) {
                     continue;
                 }
                 int take = Math.min(need, slotLeft[slot]);
@@ -626,7 +618,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
 
         Kind kind;
         Identifier recipe;
-        List<GenericStack> essenceStacks;
+        List<MysticalRecipeResolver.ItemAmount> essenceStacks;
         Map<AEItemKey, Long> expected;
         if (pattern instanceof InfusionPattern infusion) {
             if (!NepConfig.mysticalInfusion()) {
@@ -692,18 +684,10 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
 
         Map<AEItemKey, Long> essenceShare = new LinkedHashMap<>();
-        for (GenericStack essence : essenceStacks) {
-            essenceShare.merge((AEItemKey) essence.what(), essence.amount(), Long::sum);
+        for (MysticalRecipeResolver.ItemAmount essence : essenceStacks) {
+            essenceShare.merge(essence.key(), essence.amount(), Long::sum);
         }
-        Map<AEItemKey, Long> bufferShare = new HashMap<>(items);
-        for (Map.Entry<AEItemKey, Long> entry : essenceShare.entrySet()) {
-            long left = bufferShare.getOrDefault(entry.getKey(), 0L) - entry.getValue();
-            if (left > 0) {
-                bufferShare.put(entry.getKey(), left);
-            } else {
-                bufferShare.remove(entry.getKey());
-            }
-        }
+        Map<AEItemKey, Long> bufferShare = bufferShareOf(new HashMap<>(items), essenceShare);
         Map<AEItemKey, Long> staged = new LinkedHashMap<>(bufferShare);
         Map<AEItemKey, Long> tankShare = planTankShare(essenceShare, staged);
         if (!fitsInBuffer(staged)) {
@@ -727,11 +711,24 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         return true;
     }
 
+    private static Map<AEItemKey, Long> bufferShareOf(
+            Map<AEItemKey, Long> bufferShare, Map<AEItemKey, Long> essenceShare) {
+        for (Map.Entry<AEItemKey, Long> entry : essenceShare.entrySet()) {
+            long left = bufferShare.getOrDefault(entry.getKey(), 0L) - entry.getValue();
+            if (left > 0) {
+                bufferShare.put(entry.getKey(), left);
+            } else {
+                bufferShare.remove(entry.getKey());
+            }
+        }
+        return bufferShare;
+    }
+
     private Map<AEItemKey, Long> planTankShare(Map<AEItemKey, Long> essences, Map<AEItemKey, Long> staged) {
-        EssenceTank[] probe = snapshotTanks();
+        EssenceTank[] probe = tanks.snapshot();
         Map<AEItemKey, Long> tankShare = new LinkedHashMap<>();
         for (Map.Entry<AEItemKey, Long> entry : essences.entrySet()) {
-            long banked = insertInto(probe, entry.getKey(), entry.getValue());
+            long banked = TankBank.insertInto(probe, entry.getKey(), entry.getValue());
             if (banked > 0) {
                 tankShare.put(entry.getKey(), banked);
             }
@@ -830,10 +827,9 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             return ManualCraftOutcome.failed(staged.status());
         }
 
-        Map<AEItemKey, Long> bufferShare = new LinkedHashMap<>(staged.perCraft());
         Map<AEItemKey, Long> essenceShare = new LinkedHashMap<>();
         for (SizedIngredient essence : essences) {
-            for (Map.Entry<AEItemKey, Long> entry : bufferShare.entrySet()) {
+            for (Map.Entry<AEItemKey, Long> entry : staged.perCraft().entrySet()) {
                 if (entry.getValue() >= essence.count()
                         && essence.ingredient().test(entry.getKey().toStack(1))) {
                     essenceShare.merge(entry.getKey(), (long) essence.count(), Long::sum);
@@ -841,14 +837,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
                 }
             }
         }
-        for (Map.Entry<AEItemKey, Long> entry : essenceShare.entrySet()) {
-            long left = bufferShare.getOrDefault(entry.getKey(), 0L) - entry.getValue();
-            if (left > 0) {
-                bufferShare.put(entry.getKey(), left);
-            } else {
-                bufferShare.remove(entry.getKey());
-            }
-        }
+        Map<AEItemKey, Long> bufferShare = bufferShareOf(new LinkedHashMap<>(staged.perCraft()), essenceShare);
 
         captureTemplate(produced, kind, bufferShare, essenceShare, recipe);
         owed.merge(produced, (long) staged.batches(), Long::sum);
@@ -869,27 +858,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
 
     private void captureTemplate(
             AEItemKey output, Kind kind, Map<AEItemKey, Long> items, Map<AEItemKey, Long> essences, Identifier recipe) {
-        List<AEKey> keys = new ArrayList<>(items.size());
-        List<Long> counts = new ArrayList<>(items.size());
-        for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
-            keys.add(entry.getKey());
-            counts.add(entry.getValue());
-        }
-        List<AEKey> essenceKeys = new ArrayList<>(essences.size());
-        List<Long> essenceCounts = new ArrayList<>(essences.size());
-        for (Map.Entry<AEItemKey, Long> entry : essences.entrySet()) {
-            essenceKeys.add(entry.getKey());
-            essenceCounts.add(entry.getValue());
-        }
-        templates.put(
-                output,
-                new Template(
-                        kind,
-                        List.copyOf(keys),
-                        List.copyOf(counts),
-                        List.copyOf(essenceKeys),
-                        List.copyOf(essenceCounts),
-                        recipe));
+        templates.put(output, new Template(kind, Template.linesOf(items), Template.linesOf(essences), recipe));
     }
 
     private void autoRequest(Level level) {
@@ -897,47 +866,25 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             setMissingInputs(List.of());
             return;
         }
-        List<AEKey> keys = new ArrayList<>();
-        List<Long> targets = new ArrayList<>();
+        DemandTally tally = new DemandTally();
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
             Template template = templates.get(entry.getKey());
             if (template == null || isManualJob(entry.getKey())) {
                 continue;
             }
-            for (int i = 0; i < template.keys().size(); i++) {
-                merge(keys, targets, template.keys().get(i), template.counts().get(i) * entry.getValue());
+            for (Line line : template.items()) {
+                tally.add(line.key(), line.count() * entry.getValue());
             }
-            for (int i = 0; i < template.essenceKeys().size(); i++) {
-                long wanted = template.essenceCounts().get(i) * entry.getValue();
-                merge(keys, targets, template.essenceKeys().get(i), Math.min(wanted, EssenceTank.capacity()));
+            for (Line line : template.essences()) {
+                long wanted = line.count() * entry.getValue();
+                tally.add(line.key(), Math.min(wanted, EssenceTank.capacity()));
             }
         }
-        if (keys.isEmpty()) {
+        if (tally.isEmpty()) {
             setMissingInputs(List.of());
             return;
         }
-        List<Integer> order = new ArrayList<>();
-        for (int i = 0; i < keys.size(); i++) {
-            order.add(i);
-        }
-        order.sort(Comparator.comparing(i -> keys.get(i).toString()));
-        List<AEKey> stableKeys = new ArrayList<>(keys.size());
-        List<Long> stableTargets = new ArrayList<>(targets.size());
-        for (int i : order) {
-            stableKeys.add(keys.get(i));
-            stableTargets.add(targets.get(i));
-        }
-        setMissingInputs(power.restock(level, stableKeys, stableTargets));
-    }
-
-    private static void merge(List<AEKey> keys, List<Long> targets, AEKey key, long target) {
-        int existing = keys.indexOf(key);
-        if (existing >= 0) {
-            targets.set(existing, targets.get(existing) + target);
-        } else {
-            keys.add(key);
-            targets.add(target);
-        }
+        setMissingInputs(tally.restock(level, power));
     }
 
     int manualDemandFor(ItemResource resource) {
@@ -947,7 +894,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         long demand = reportedDemandFor(key);
         if (RecipeIngredientCache.INSTANCE.isValidVesselItem(resource) && !isBufferIngredient(key)) {
-            demand = Math.max(demand, tankRoom(key));
+            demand = Math.max(demand, tanks.room(key));
         }
         return (int) Math.max(0, Math.min(Integer.MAX_VALUE, demand));
     }
@@ -959,13 +906,13 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             if (template == null) {
                 continue;
             }
-            int index = template.keys().indexOf(key);
-            if (index >= 0) {
-                target += template.counts().get(index) * entry.getValue();
+            long count = Template.countOf(template.items(), key);
+            if (count >= 0) {
+                target += count * entry.getValue();
             }
-            int essence = template.essenceKeys().indexOf(key);
+            long essence = Template.countOf(template.essences(), key);
             if (essence >= 0) {
-                target += Math.min(template.essenceCounts().get(essence) * entry.getValue(), EssenceTank.capacity());
+                target += Math.min(essence * entry.getValue(), EssenceTank.capacity());
             }
         }
         return Math.max(0, target - bufferedAmount(key));
@@ -991,7 +938,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
                     total += essence.amount();
                 }
             }
-            total += tankAmount(itemKey);
+            total += tanks.amount(itemKey);
         }
         return total;
     }
@@ -1076,11 +1023,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         hash = 31 * hash + stall.ordinal();
         hash = 31 * hash + refusal.ordinal();
         hash = 31 * hash + Long.hashCode(pendingJobs());
-        for (EssenceTank tank : tanks) {
-            hash = 31 * hash + (tank.isEmpty() ? 0 : tank.essence().hashCode());
-            hash = 31 * hash + Long.hashCode(tank.amount());
-        }
-        return hash;
+        return tanks.signature(hash);
     }
 
     @Override
@@ -1092,14 +1035,6 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         return craftTicks <= 0 ? 1.0F : Math.min(1.0F, progress / (float) craftTicks);
     }
 
-    long pendingJobs() {
-        long total = 0;
-        for (long count : owed.values()) {
-            total += count;
-        }
-        return total;
-    }
-
     Stall stall() {
         return stall;
     }
@@ -1109,7 +1044,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     }
 
     EssenceTank tank(int index) {
-        return tanks[index];
+        return tanks.get(index);
     }
 
     void clearPending() {
@@ -1145,21 +1080,20 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     void clearBufferTo(Player player) {
         emptyHandlerTo(player, inputBuffer);
         emptyHandlerTo(player, outputBuffer);
-        for (EssenceTank tank : tanks) {
-            giveTankTo(player, tank);
-        }
-        setChanged();
-    }
-
-    private static void giveTankTo(Player player, EssenceTank tank) {
-        while (!tank.isEmpty()) {
-            AEItemKey key = tank.essence();
-            int chunk = (int) Math.min(tank.amount(), key.toStack(1).getMaxStackSize());
-            tank.extract(chunk, false);
-            ItemStack stack = key.toStack(chunk);
+        tanks.drainAll(stack -> {
             if (!player.getInventory().add(stack)) {
                 player.drop(stack, false);
             }
+        });
+        setChanged();
+    }
+
+    private static void forEachStack(AEItemKey key, long amount, Consumer<ItemStack> sink) {
+        long count = amount;
+        while (count > 0) {
+            int chunk = (int) Math.min(count, key.toStack(1).getMaxStackSize());
+            sink.accept(key.toStack(chunk));
+            count -= chunk;
         }
     }
 
@@ -1189,21 +1123,12 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             if (!(essence.what() instanceof AEItemKey key)) {
                 continue;
             }
-            long count = essence.amount();
-            while (count > 0) {
-                int chunk = (int) Math.min(count, key.toStack(1).getMaxStackSize());
-                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), key.toStack(chunk));
-                count -= chunk;
-            }
+            forEachStack(
+                    key,
+                    essence.amount(),
+                    stack -> Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack));
         }
-        for (EssenceTank tank : tanks) {
-            while (!tank.isEmpty()) {
-                AEItemKey key = tank.essence();
-                int chunk = (int) Math.min(tank.amount(), key.toStack(1).getMaxStackSize());
-                tank.extract(chunk, false);
-                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), key.toStack(chunk));
-            }
-        }
+        tanks.drainAll(stack -> Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack));
         clearContent();
     }
 
@@ -1211,9 +1136,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
     public void clearContent() {
         super.clearContent();
         claimedEssences.clear();
-        for (EssenceTank tank : tanks) {
-            tank.clear();
-        }
+        tanks.clear();
     }
 
     @Override
@@ -1221,10 +1144,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         super.saveAdditional(output);
         inputBuffer.serialize(output.child(INPUT_KEY));
         outputBuffer.serialize(output.child(OUTPUT_KEY));
-        ValueOutput.ValueOutputList tankList = output.childrenList(TANKS_KEY);
-        for (EssenceTank tank : tanks) {
-            tank.save(tankList.addChild());
-        }
+        tanks.save(output, TANKS_KEY);
         ItemCounts.save(output, OWED_KEY, owed);
         ItemCounts.save(output, RETURN_KEY, toReturn);
         returnDirections.save(output, RETURN_DIRS_KEY);
@@ -1261,16 +1181,7 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         super.loadAdditional(input);
         inputBuffer.deserialize(input.childOrEmpty(INPUT_KEY));
         outputBuffer.deserialize(input.childOrEmpty(OUTPUT_KEY));
-        int tankIndex = 0;
-        for (ValueInput tankInput : input.childrenListOrEmpty(TANKS_KEY)) {
-            if (tankIndex >= tanks.length) {
-                break;
-            }
-            tanks[tankIndex++].load(tankInput);
-        }
-        while (tankIndex < tanks.length) {
-            tanks[tankIndex++].clear();
-        }
+        tanks.load(input, TANKS_KEY);
         ItemCounts.load(owed, input, OWED_KEY);
         ItemCounts.load(toReturn, input, RETURN_KEY);
         returnDirections.load(input, RETURN_DIRS_KEY);
@@ -1293,21 +1204,12 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         pushingCpus.load(input);
         power.load(input.childOrEmpty(NODE_KEY));
-        stall = byName(Stall.values(), input.getStringOr(STALL_KEY, ""), Stall.NONE);
-        refusal = byName(Refusal.values(), input.getStringOr(REFUSAL_KEY, ""), Refusal.NONE);
+        stall = EnumNames.byName(Stall.values(), input.getStringOr(STALL_KEY, ""), Stall.NONE);
+        refusal = EnumNames.byName(Refusal.values(), input.getStringOr(REFUSAL_KEY, ""), Refusal.NONE);
         refusalTicks = refusal == Refusal.NONE
                 ? 0
                 : Math.max(1, Math.min(REFUSAL_MEMORY_TICKS, input.getIntOr(REFUSAL_TICKS_KEY, 0)));
         markScanNeeded();
-    }
-
-    private static <E extends Enum<E>> E byName(E[] values, String name, E fallback) {
-        for (E value : values) {
-            if (value.name().equals(name)) {
-                return value;
-            }
-        }
-        return fallback;
     }
 
     private void saveTemplates(ValueOutput output) {
@@ -1317,25 +1219,19 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             ItemCounts.putKey(entryOutput, entry.getKey());
             entryOutput.putString("Kind", entry.getValue().kind().name());
             saveStacks(
-                    entryOutput,
-                    "Stacks",
-                    entry.getValue().keys(),
-                    entry.getValue().counts());
+                    entryOutput, "Stacks", Template.columnsOf(entry.getValue().items()));
             saveStacks(
-                    entryOutput,
-                    "Essences",
-                    entry.getValue().essenceKeys(),
-                    entry.getValue().essenceCounts());
+                    entryOutput, "Essences", Template.columnsOf(entry.getValue().essences()));
             if (entry.getValue().recipe() != null) {
                 entryOutput.putString("Recipe", entry.getValue().recipe().toString());
             }
         }
     }
 
-    private static void saveStacks(ValueOutput output, String key, List<AEKey> keys, List<Long> counts) {
+    private static void saveStacks(ValueOutput output, String key, StackColumns columns) {
         ValueOutput.TypedOutputList<GenericStack> stacks = output.list(key, GenericStack.CODEC);
-        for (int i = 0; i < keys.size(); i++) {
-            stacks.add(new GenericStack(keys.get(i), counts.get(i)));
+        for (int i = 0; i < columns.keys().size(); i++) {
+            stacks.add(new GenericStack(columns.keys().get(i), columns.counts().get(i)));
         }
     }
 
@@ -1346,23 +1242,17 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
             if (item == null) {
                 continue;
             }
-            List<AEKey> keys = new ArrayList<>();
-            List<Long> counts = new ArrayList<>();
-            readStacks(entryInput, "Stacks", keys, counts);
-            List<AEKey> essenceKeys = new ArrayList<>();
-            List<Long> essenceCounts = new ArrayList<>();
-            readStacks(entryInput, "Essences", essenceKeys, essenceCounts);
-            if (keys.isEmpty() && essenceKeys.isEmpty()) {
+            StackColumns items = readStacks(entryInput, "Stacks");
+            StackColumns essences = readStacks(entryInput, "Essences");
+            if (items.keys().isEmpty() && essences.keys().isEmpty()) {
                 continue;
             }
             templates.put(
                     item,
                     new Template(
-                            byName(Kind.values(), entryInput.getStringOr("Kind", ""), Kind.INFUSION),
-                            List.copyOf(keys),
-                            List.copyOf(counts),
-                            List.copyOf(essenceKeys),
-                            List.copyOf(essenceCounts),
+                            EnumNames.byName(Kind.values(), entryInput.getStringOr("Kind", ""), Kind.INFUSION),
+                            Template.linesOf(items),
+                            Template.linesOf(essences),
                             entryInput
                                     .getString("Recipe")
                                     .map(Identifier::tryParse)
@@ -1370,11 +1260,14 @@ public class InfusedAwakeningMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
     }
 
-    private static void readStacks(ValueInput input, String key, List<AEKey> keys, List<Long> counts) {
+    private static StackColumns readStacks(ValueInput input, String key) {
+        List<AEKey> keys = new ArrayList<>();
+        List<Long> counts = new ArrayList<>();
         for (GenericStack stack : input.listOrEmpty(key, GenericStack.CODEC)) {
             keys.add(stack.what());
             counts.add(stack.amount());
         }
+        return new StackColumns(List.copyOf(keys), List.copyOf(counts));
     }
 
     @Override

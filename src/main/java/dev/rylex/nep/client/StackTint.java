@@ -28,7 +28,7 @@ public final class StackTint {
 
     private static final int RGB_MASK = 0xFFFFFF;
     private static final int TINT_LAYERS = 2;
-    private static final int OPAQUE_ALPHA = 128;
+    private static final int MIN_ALPHA = 128;
 
     private StackTint() {}
 
@@ -58,7 +58,7 @@ public final class StackTint {
             return OptionalInt.empty();
         }
         OptionalInt tinted = modelTint(probe);
-        return tinted.isPresent() ? tinted : averageSprite(probe);
+        return tinted.isPresent() ? tinted : averageSprite(stack, probe);
     }
 
     private static OptionalInt modelTint(Probe probe) {
@@ -74,7 +74,7 @@ public final class StackTint {
         return OptionalInt.empty();
     }
 
-    private static OptionalInt averageSprite(Probe probe) {
+    private static OptionalInt averageSprite(ItemStack stack, Probe probe) {
         try {
             Material.Baked particle = probe.pickParticleMaterial(RandomSource.create(0L));
             if (particle == null) {
@@ -90,7 +90,7 @@ public final class StackTint {
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
                     int argb = sprite.getPixelRGBA(0, x, y);
-                    if ((argb >>> 24) < OPAQUE_ALPHA) {
+                    if ((argb >>> 24) < MIN_ALPHA) {
                         continue;
                     }
                     red += (argb >> 16) & 0xFF;
@@ -104,6 +104,7 @@ public final class StackTint {
             }
             return OptionalInt.of((int) (red / counted) << 16 | (int) (green / counted) << 8 | (int) (blue / counted));
         } catch (RuntimeException error) {
+            Nep.LOGGER.debug("Could not average the sprite of {}", stack, error);
             return OptionalInt.empty();
         }
     }

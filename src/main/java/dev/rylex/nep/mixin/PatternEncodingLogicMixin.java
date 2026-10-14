@@ -74,8 +74,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
 
     @Override
     public void nep$setOrigin(PatternOrigin origin) {
-        this.nep$origin = origin;
-        this.nep$version++;
+        nep$adopt(origin);
         saveChanges();
     }
 
@@ -86,14 +85,12 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
 
     @Inject(method = "onEncodedInputChanged", at = @At("HEAD"))
     private void nep$forgetRecipeOnInputChange(CallbackInfo ci) {
-        this.nep$origin = PatternOrigin.MANUAL;
-        this.nep$version++;
+        nep$adopt(PatternOrigin.MANUAL);
     }
 
     @Inject(method = "onEncodedOutputChanged", at = @At("HEAD"))
     private void nep$forgetRecipeOnOutputChange(CallbackInfo ci) {
-        this.nep$origin = PatternOrigin.MANUAL;
-        this.nep$version++;
+        nep$adopt(PatternOrigin.MANUAL);
     }
 
     @Inject(method = "loadEncodedPattern", at = @At("HEAD"), cancellable = true)
@@ -127,8 +124,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
                 PatternGrid.fill(getEncodedInputInv(), PatternContents.condenseInputs(details));
                 PatternGrid.fill(getEncodedOutputInv(), details.getOutputs());
             }
-            this.nep$origin = PatternOrigin.ofRecipe(nepPattern.nepRecipeId());
-            this.nep$version++;
+            nep$adopt(PatternOrigin.ofRecipe(nepPattern.nepRecipeId()));
             return;
         }
         if (grid != null) {
@@ -136,8 +132,7 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
         }
         Identifier source = pattern.get(NepComponents.SOURCE_RECIPE.get());
         if (source != null) {
-            this.nep$origin = PatternOrigin.ofRecipe(source);
-            this.nep$version++;
+            nep$adopt(PatternOrigin.ofRecipe(source));
         }
     }
 
@@ -152,9 +147,15 @@ public abstract class PatternEncodingLogicMixin implements PatternRecipeHolder, 
     @Inject(method = "readFromNBT", at = @At("RETURN"))
     private void nep$readFromNBT(ValueInput input, CallbackInfo ci) {
         Identifier recipe = input.read(NEP_RECIPE_TAG, Identifier.CODEC).orElse(null);
-        this.nep$origin = input.getBooleanOr(NEP_RECIPE_VIEWER_TAG, false)
-                ? PatternOrigin.RECIPE_VIEWER
-                : PatternOrigin.ofRecipe(recipe);
+        nep$adopt(
+                input.getBooleanOr(NEP_RECIPE_VIEWER_TAG, false)
+                        ? PatternOrigin.RECIPE_VIEWER
+                        : PatternOrigin.ofRecipe(recipe));
+    }
+
+    @Unique
+    private void nep$adopt(PatternOrigin origin) {
+        this.nep$origin = origin;
         this.nep$version++;
     }
 }

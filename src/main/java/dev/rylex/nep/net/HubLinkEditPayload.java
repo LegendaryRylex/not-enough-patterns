@@ -2,6 +2,7 @@ package dev.rylex.nep.net;
 
 import appeng.api.stacks.AEKey;
 import dev.rylex.nep.Nep;
+import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -18,11 +19,15 @@ public record HubLinkEditPayload(
         SET_INSERT_FILTER,
         SET_RETURN_FILTER,
         TOGGLE_INSERT_MODE,
-        TOGGLE_RETURN_MODE;
+        TOGGLE_RETURN_MODE,
+        SET_ROLE;
 
         static Action byOrdinal(int ordinal) {
             Action[] values = values();
-            return ordinal >= 0 && ordinal < values.length ? values[ordinal] : SET_PRIORITY;
+            if (ordinal < 0 || ordinal >= values.length) {
+                throw new DecoderException("Unknown hub link action " + ordinal);
+            }
+            return values[ordinal];
         }
     }
 

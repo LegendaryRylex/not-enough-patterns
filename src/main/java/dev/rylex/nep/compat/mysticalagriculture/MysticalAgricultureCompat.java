@@ -4,6 +4,7 @@ import appeng.api.AECapabilities;
 import com.blakebr0.mysticalagriculture.init.ModTileEntities;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
+import dev.rylex.nep.machine.MatrixCraftingMachine;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -52,7 +53,11 @@ public final class MysticalAgricultureCompat {
         event.registerBlockEntity(
                 AECapabilities.CRAFTING_MACHINE,
                 NepMysticalContent.MATRIX_BLOCK_ENTITY.get(),
-                (be, side) -> new InfusedAwakeningMatrixCraftingMachine(be));
+                (be, side) -> new MatrixCraftingMachine(
+                        be::readyForPatterns,
+                        be::pushMatrixPattern,
+                        NepMysticalContent.MATRIX_ITEM,
+                        NepMysticalContent.MATRIX));
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 NepMysticalContent.MATRIX_BLOCK_ENTITY.get(),

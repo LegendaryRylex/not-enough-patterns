@@ -4,6 +4,7 @@ import appeng.menu.AEBaseMenu;
 import dev.rylex.nep.NepItems;
 import dev.rylex.nep.NepSlotSemantics;
 import dev.rylex.nep.provider.ImportCardSlot;
+import dev.rylex.nep.provider.ImportCardSlots;
 import java.util.List;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -53,7 +54,7 @@ public abstract class AEBaseMenuQuickMoveClaimMixin {
             destinations = getQuickMoveDestinationSlots(stackToMove, false);
         } else {
             destinations = importSlots.stream()
-                    .filter(slot -> slot instanceof ImportCardSlot && !slot.hasItem())
+                    .filter(ImportCardSlots::isEmptyImportSlot)
                     .toList();
         }
 

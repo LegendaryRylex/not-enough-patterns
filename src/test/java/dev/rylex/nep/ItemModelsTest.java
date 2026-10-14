@@ -30,7 +30,13 @@ class ItemModelsTest {
             "oritech_encoding_module",
             "particle_collision_matrix",
             "particle_collision_controller",
-            "accelerator_linker");
+            "accelerator_linker",
+            "particle_collision_core",
+            "occultism_encoding_module",
+            "spirit_provider",
+            "bound_spirit_matrix",
+            "ritual_controller",
+            "spirit_infused_book");
 
     private static List<String> expectedItems() {
         List<String> paths = new ArrayList<>(COMPAT_GATED);
@@ -50,6 +56,19 @@ class ItemModelsTest {
                     .toList();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    private static void collectModels(JsonObject node, List<String> into) {
+        if (node.has("model") && node.get("model").isJsonPrimitive()) {
+            into.add(node.get("model").getAsString());
+        }
+        if (node.has("fallback")) {
+            collectModels(node.getAsJsonObject("fallback"), into);
+        }
+        if (node.has("cases")) {
+            node.getAsJsonArray("cases")
+                    .forEach(entry -> collectModels(entry.getAsJsonObject().getAsJsonObject("model"), into));
         }
     }
 
@@ -84,14 +103,21 @@ class ItemModelsTest {
         List<String> broken = new ArrayList<>();
         for (String path : definitions()) {
             JsonObject model = definition(path).getAsJsonObject("model");
-            if (model == null || !model.has("type") || !model.has("model")) {
+            if (model == null || !model.has("type")) {
                 broken.add(path + " is not a model definition");
                 continue;
             }
-            Identifier referenced = Identifier.parse(model.get("model").getAsString());
-            Path target = ProjectFiles.root().resolve(MODELS).resolve(referenced.getPath() + ".json");
-            if (!referenced.getNamespace().equals(Nep.MOD_ID) || !Files.isRegularFile(target)) {
-                broken.add(path + " -> " + referenced);
+            List<String> referencedModels = new ArrayList<>();
+            collectModels(model, referencedModels);
+            if (referencedModels.isEmpty()) {
+                broken.add(path + " names no model");
+            }
+            for (String name : referencedModels) {
+                Identifier referenced = Identifier.parse(name);
+                Path target = ProjectFiles.root().resolve(MODELS).resolve(referenced.getPath() + ".json");
+                if (!referenced.getNamespace().equals(Nep.MOD_ID) || !Files.isRegularFile(target)) {
+                    broken.add(path + " -> " + referenced);
+                }
             }
         }
 

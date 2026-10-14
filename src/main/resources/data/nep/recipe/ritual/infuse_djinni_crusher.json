@@ -1,0 +1,40 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "type": "occultism:ritual",
+  "activation_item": "occultism:book_of_binding_bound_djinni",
+  "duration": 120,
+  "ingredients": [
+    "#c:dusts/iron",
+    "#c:dusts/gold",
+    "#c:dusts/copper",
+    "#c:dusts/silver",
+    "occultism:book_of_binding_empty"
+  ],
+  "pentacle_id": "occultism:craft_djinni",
+  "result": {
+    "count": 1,
+    "id": "nep:spirit_infused_book",
+    "components": {
+      "nep:bound_spirit": {
+        "tier": "djinni",
+        "work": "crusher"
+      }
+    }
+  },
+  "ritual_dummy": {
+    "count": 1,
+    "id": "nep:spirit_infused_book",
+    "components": {
+      "nep:bound_spirit": {
+        "tier": "djinni",
+        "work": "crusher"
+      }
+    }
+  },
+  "ritual_type": "occultism:craft"
+}

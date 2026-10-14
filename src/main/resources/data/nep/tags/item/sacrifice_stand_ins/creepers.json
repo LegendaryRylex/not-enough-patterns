@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "occultism:soul_gem",
+      "required": false
+    },
+    {
+      "id": "occultism:fragile_soul_gem",
+      "required": false
+    },
+    "minecraft:creeper_spawn_egg"
+  ]
+}

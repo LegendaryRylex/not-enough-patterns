@@ -17,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
@@ -72,6 +73,8 @@ final class NepOritechContent {
 
     static final DeferredItem<BlockItem> MATRIX_ITEM = ITEMS.registerSimpleBlockItem(MATRIX);
 
+    static final DeferredItem<Item> CORE = ITEMS.registerSimpleItem("particle_collision_core");
+
     static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ParticleCollisionMatrixBlockEntity>>
             MATRIX_BLOCK_ENTITY = BLOCK_ENTITIES.register(
                     "particle_collision_matrix",
@@ -102,6 +105,7 @@ final class NepOritechContent {
         modBus.addListener(NepOritechContent::onBuildCreativeTab);
         modBus.addListener(NepOritechContent::onRegisterTooltipAppenders);
         NepConfigGates.register(MATRIX_ITEM, NepConfig::oritechParticleCollisionMatrix);
+        NepConfigGates.register(CORE, NepConfig::oritechParticleCollisionMatrix);
         NepConfigGates.register(CONTROLLER_ITEM, NepConfig::oritechParticleCollisionController);
         NepConfigGates.register(LINKER, NepConfig::oritechParticleCollisionController);
     }
@@ -119,6 +123,7 @@ final class NepOritechContent {
 
     private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == NepCreativeTabs.MAIN.getKey()) {
+            event.accept(CORE.get());
             event.accept(MATRIX_ITEM.get());
             event.accept(CONTROLLER_ITEM.get());
             event.accept(LINKER.get());

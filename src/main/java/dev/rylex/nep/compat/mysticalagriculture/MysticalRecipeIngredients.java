@@ -86,25 +86,21 @@ final class MysticalRecipeIngredients {
         return List.copyOf(pedestals);
     }
 
-    record Demand(Ingredient ingredient, int count) {}
-
-    static List<Demand> infusionDemands(IInfusionRecipe recipe) {
-        List<Demand> demands = new ArrayList<>();
-        demands.add(new Demand(recipe.getAltarIngredient(), 1));
+    static List<Ingredient> infusionDemands(IInfusionRecipe recipe) {
+        List<Ingredient> demands = new ArrayList<>();
+        demands.add(recipe.getAltarIngredient());
         for (Ingredient ingredient : recipe.getPedestalIngredients()) {
             if (!ingredient.isEmpty()) {
-                demands.add(new Demand(ingredient, 1));
+                demands.add(ingredient);
             }
         }
         return List.copyOf(demands);
     }
 
-    static List<Demand> awakeningDemands(IAwakeningRecipe recipe) {
-        List<Demand> demands = new ArrayList<>();
-        demands.add(new Demand(recipe.getAltarIngredient(), 1));
-        for (Ingredient ingredient : pedestalIngredients(recipe)) {
-            demands.add(new Demand(ingredient, 1));
-        }
+    static List<Ingredient> awakeningDemands(IAwakeningRecipe recipe) {
+        List<Ingredient> demands = new ArrayList<>();
+        demands.add(recipe.getAltarIngredient());
+        demands.addAll(pedestalIngredients(recipe));
         return List.copyOf(demands);
     }
 
@@ -116,10 +112,10 @@ final class MysticalRecipeIngredients {
         return requirementsOf(awakeningDemands(recipe), recipe.getEssenceIngredients());
     }
 
-    private static List<ManualRequirement> requirementsOf(List<Demand> demands, List<SizedIngredient> essences) {
+    private static List<ManualRequirement> requirementsOf(List<Ingredient> demands, List<SizedIngredient> essences) {
         List<ManualRequirement> requirements = new ArrayList<>(demands.size() + essences.size());
-        for (Demand demand : demands) {
-            requirements.add(new ManualRequirement(demand.ingredient(), demand.count(), true));
+        for (Ingredient demand : demands) {
+            requirements.add(new ManualRequirement(demand, 1, true));
         }
         for (SizedIngredient essence : essences) {
             if (essence.count() > 0) {

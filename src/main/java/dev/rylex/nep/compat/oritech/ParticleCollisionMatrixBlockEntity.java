@@ -2,12 +2,12 @@ package dev.rylex.nep.compat.oritech;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
+import dev.rylex.nep.machine.DemandTally;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.ManualCraftHost;
 import dev.rylex.nep.machine.ManualCraftOutcome;
@@ -18,6 +18,7 @@ import dev.rylex.nep.machine.MatrixEnergyBuffer;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.machine.MatrixStatus;
 import dev.rylex.nep.pattern.ParticleCollisionPattern;
+import dev.rylex.nep.util.EnumNames;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Containers;
@@ -44,13 +46,19 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.StacksResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import org.jetbrains.annotations.Nullable;
+import rearth.oritech.api.transfer.energy.DynamicEnergyStorage;
+import rearth.oritech.config.OritechConfig;
 import rearth.oritech.init.recipes.OritechRecipe;
+import rearth.oritech.util.MachineAddonController;
+import rearth.oritech.util.ScreenProvider;
 
-public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntity implements ManualCraftHost {
+public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntity
+        implements ManualCraftHost, MachineAddonController {
 
     static final int INPUT_SLOTS = 21;
     static final int OUTPUT_SLOTS = 9;
@@ -81,19 +89,39 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
     private static final String STALL_KEY = "Stall";
     private static final String REFUSAL_KEY = "Refusal";
     private static final String REFUSAL_TICKS_KEY = "RefusalTicks";
+    private static final String BATCH_KEY = "Batch";
+    private static final String ADDONS_KEY = "Addons";
+    private static final String ADDON_LIST_KEY = "AddonList";
+    private static final String CORE_KEY = "Core";
+    private static final String LAYERED_KEY = "LayeredExtenders";
+    private static final int ADDON_CHECK_INTERVAL = 20;
 
     private final MatrixEnergyBuffer energy =
             new MatrixEnergyBuffer(NepConfig.oritechMatrixCapacity(), NepConfig.oritechMatrixChargeRate());
 
-    private final Map<AEItemKey, Template> templates = new HashMap<>();
+    private final Map<AEItemKey, CollisionTemplate> templates = new HashMap<>();
     private final ResourceHandler<ItemResource> outputView = new OutputView();
     private final ResourceHandler<ItemResource> machineView =
             MachineItemView.demandLimited(inputBuffer, outputView, this::manualDemandFor);
+
+    private final MatrixAddonStorage addonStorage = new MatrixAddonStorage(energy);
+    private final List<BlockPos> connectedAddons = new ArrayList<>();
+    private final List<BlockPos> openAddonSlots = new ArrayList<>();
+    private final List<AddonEntry> addonEntries = new ArrayList<>();
+    private final MatrixCoreSlot coreSlot = new MatrixCoreSlot(this::onCoreChanged);
+    private boolean coreChanged;
+    private boolean layeredExtenders;
+    private int addonRevision;
+    private BaseAddonData addonData = BaseAddonData.DEFAULT_ADDON_DATA;
+    private float speedMultiplier = 1.0F;
+    private float efficiencyMultiplier = 1.0F;
+    private int extraChambers;
 
     private long paid;
     private long craftCost;
     private long craftSpeed;
     private int progress;
+    private int activeBatch = 1;
 
     private boolean energyFault;
     private int energyIdleTicks;
@@ -102,13 +130,19 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
     private int refusalTicks;
 
     enum Stall {
-        NONE,
-        INGREDIENTS,
-        OUTPUT_FULL,
-        NO_RECIPE;
+        NONE(0),
+        INGREDIENTS(1),
+        OUTPUT_FULL(2),
+        NO_RECIPE(3);
+
+        private final int severity;
+
+        Stall(int severity) {
+            this.severity = severity;
+        }
 
         private static Stall worse(Stall first, Stall second) {
-            return first.ordinal() >= second.ordinal() ? first : second;
+            return first.severity >= second.severity ? first : second;
         }
     }
 
@@ -122,8 +156,6 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         TOO_MANY_INPUTS,
         BUFFER_FULL
     }
-
-    private record Template(List<AEKey> keys, List<Long> counts, Identifier recipe) {}
 
     public ParticleCollisionMatrixBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(
@@ -152,6 +184,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         }
         flushOutput(level);
         refreshCapacity();
+        refreshAddons(level);
         if (!NepConfig.oritechParticleCollisionMatrix()) {
             setPowerFault(false);
             setEnergyFault(false);
@@ -216,17 +249,204 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         hash = 31 * hash + Long.hashCode(craftCost);
         hash = 31 * hash + Long.hashCode(craftSpeed);
         hash = 31 * hash + Long.hashCode(pendingJobs());
+        hash = 31 * hash + addonData.hashCode();
+        hash = 31 * hash + addonEntries.hashCode();
+        hash = 31 * hash + coreSlot.getResource(0).getItem().hashCode();
+        hash = 31 * hash + activeBatch;
         return hash;
     }
 
     private void refreshCapacity() {
-        if (energy.resize(NepConfig.oritechMatrixCapacity(), NepConfig.oritechMatrixChargeRate())) {
+        if (energy.resize(
+                NepConfig.oritechMatrixCapacity() + addonData.energyBonusCapacity(),
+                NepConfig.oritechMatrixChargeRate() + addonData.energyBonusTransfer())) {
             setChanged();
         }
     }
 
-    int craftTicks() {
+    private void onCoreChanged() {
+        coreChanged = level != null && !level.isClientSide();
+        addonRevision++;
+        setChanged();
+    }
+
+    private void refreshAddons(Level level) {
+        if (coreChanged) {
+            coreChanged = false;
+            initAddons();
+            return;
+        }
+        long phase = level.getGameTime() + getBlockPos().hashCode();
+        if (Math.floorMod(phase, ADDON_CHECK_INTERVAL) == 0
+                && (addonEntries.size() != connectedAddons.size()
+                        || MatrixAddons.outOfDate(level, getBlockPos(), connectedAddons))) {
+            initAddons();
+        }
+    }
+
+    int baseCraftTicks() {
         return NepConfig.oritechMatrixCraftTicks();
+    }
+
+    int craftTicks() {
+        int base = baseCraftTicks();
+        return base <= 0 ? 0 : Math.max(1, Math.round(base * speedMultiplier));
+    }
+
+    float speedMultiplier() {
+        return speedMultiplier;
+    }
+
+    float efficiencyMultiplier() {
+        return efficiencyMultiplier;
+    }
+
+    int extraChambers() {
+        return extraChambers;
+    }
+
+    List<AddonEntry> addonEntries() {
+        return addonEntries;
+    }
+
+    int addonRevision() {
+        return addonRevision;
+    }
+
+    MatrixCoreSlot coreSlot() {
+        return coreSlot;
+    }
+
+    int extenderLimit() {
+        return (int) getCoreQuality();
+    }
+
+    boolean layeredExtenders() {
+        return layeredExtenders;
+    }
+
+    private void setAddonEntries(List<AddonEntry> entries) {
+        List<AddonEntry> sorted = new ArrayList<>(entries);
+        sorted.sort(Comparator.comparing(entry -> entry.block().toString()));
+        if (!sorted.equals(addonEntries)) {
+            addonEntries.clear();
+            addonEntries.addAll(sorted);
+            addonRevision++;
+            setChanged();
+        }
+    }
+
+    @Override
+    public float getCoreQuality() {
+        return MatrixAddons.coreQuality(coreSlot.stack(), MachineAddonController.super.getCoreQuality());
+    }
+
+    @Override
+    public void writeAddons(List<AddonBlock> addons) {
+        MachineAddonController.super.writeAddons(addons);
+        setAddonEntries(addons.stream().map(AddonEntry::of).toList());
+    }
+
+    @Override
+    public void resetAddons() {
+        MachineAddonController.super.resetAddons();
+        setAddonEntries(List.of());
+    }
+
+    int addonCount() {
+        return connectedAddons.size();
+    }
+
+    long addonCapacityBonus() {
+        return addonData.energyBonusCapacity();
+    }
+
+    private void applyAddonData(BaseAddonData data) {
+        addonData = data;
+        speedMultiplier = Math.max(0.01F, data.speed());
+        efficiencyMultiplier = Math.max(0.0F, data.efficiency());
+        extraChambers = Math.max(0, data.extraChambers());
+    }
+
+    @Override
+    public List<BlockPos> getConnectedAddons() {
+        return connectedAddons;
+    }
+
+    @Override
+    public List<BlockPos> getOpenAddonSlots() {
+        return openAddonSlots;
+    }
+
+    @Override
+    public BlockPos getPosForAddon() {
+        return getBlockPos();
+    }
+
+    @Override
+    public Level getWorldForAddon() {
+        return getLevel();
+    }
+
+    @Override
+    public Direction getFacingForAddon() {
+        return Direction.SOUTH;
+    }
+
+    @Override
+    public DynamicEnergyStorage getStorageForAddon() {
+        return addonStorage;
+    }
+
+    @Nullable
+    @Override
+    public StacksResourceHandler<ItemStack, ItemResource> getInventoryForAddon() {
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public ScreenProvider getScreenProvider() {
+        return null;
+    }
+
+    @Override
+    public List<Vec3i> getAddonSlots() {
+        return MatrixAddons.SLOTS;
+    }
+
+    @Override
+    public BaseAddonData getBaseAddonData() {
+        return addonData;
+    }
+
+    @Override
+    public void setBaseAddonData(BaseAddonData data) {
+        applyAddonData(data);
+        refreshCapacity();
+        setChanged();
+    }
+
+    @Override
+    public long getDefaultCapacity() {
+        return NepConfig.oritechMatrixCapacity();
+    }
+
+    @Override
+    public long getDefaultInsertRate() {
+        return NepConfig.oritechMatrixChargeRate();
+    }
+
+    @Override
+    public void updateEnergyContainer() {
+        refreshCapacity();
+    }
+
+    @Override
+    public List<AddonBlock> getAllAddons(@Nullable BlockPos brokenAddon) {
+        List<AddonBlock> found = new ArrayList<>(MachineAddonController.super.getAllAddons(brokenAddon));
+        found.removeIf(addon -> !MatrixAddons.honours(addon));
+        return found;
     }
 
     private boolean payForThisTick() {
@@ -273,7 +493,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
             if (owed.getOrDefault(wanted, 0L) <= 0) {
                 continue;
             }
-            Template template = templates.get(wanted);
+            CollisionTemplate template = templates.get(wanted);
             if (template == null) {
                 reason = Stall.worse(reason, Stall.NO_RECIPE);
                 continue;
@@ -289,7 +509,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         return false;
     }
 
-    private Stall claimIngredients(Level level, Template template) {
+    private Stall claimIngredients(Level level, CollisionTemplate template) {
         RecipeHolder<OritechRecipe> holder = OritechRecipeResolver.collisionById(level, template.recipe());
         if (holder == null) {
             return Stall.NO_RECIPE;
@@ -301,34 +521,52 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         if (!fitsInOutput(result)) {
             return Stall.OUTPUT_FULL;
         }
-        List<int[]> takes = planConsumption(holder.value().itemInputs());
+        List<Ingredient> particles = holder.value().itemInputs();
+        List<int[]> takes = planConsumption(particles);
         if (takes == null) {
             return Stall.INGREDIENTS;
         }
 
         claimedItems.clear();
+        claim(takes);
+        AEItemKey resultKey = AEItemKey.of(result);
+        long spare = Math.min(extraChambers, (resultKey == null ? 0L : owed.getOrDefault(resultKey, 0L)) - 1);
+        int batches = 1;
+        while (batches <= spare) {
+            List<int[]> more = planConsumption(particles);
+            if (more == null || !fitsInOutput(result.copyWithCount(result.getCount() * (batches + 1)))) {
+                break;
+            }
+            claim(more);
+            batches++;
+        }
+        activeBatch = batches;
+        activeResult = result;
+        craftSpeed = holder.value().time();
+        craftCost = Math.round(energyCost(holder.value()) * (double) efficiencyMultiplier);
+        paid = 0;
+        progress = 0;
+        setChanged();
+        if (NepConfig.debugLogging()) {
+            Nep.LOGGER.info(
+                    "Particle collision matrix {} started {} x{} in {} chamber(s) at speed {} for {} FE",
+                    getBlockPos(),
+                    activeResult.getItem(),
+                    activeResult.getCount(),
+                    activeBatch,
+                    craftSpeed,
+                    craftCost);
+        }
+        return Stall.NONE;
+    }
+
+    private void claim(List<int[]> takes) {
         for (int[] take : takes) {
             ItemStack taken = takeFromInput(take[0], take[1]);
             if (!taken.isEmpty()) {
                 claimedItems.add(taken);
             }
         }
-        activeResult = result;
-        craftSpeed = holder.value().time();
-        craftCost = energyCost(holder.value());
-        paid = 0;
-        progress = 0;
-        setChanged();
-        if (NepConfig.debugLogging()) {
-            Nep.LOGGER.info(
-                    "Particle collision matrix {} started {} x{} at speed {} for {} FE",
-                    getBlockPos(),
-                    activeResult.getItem(),
-                    activeResult.getCount(),
-                    craftSpeed,
-                    craftCost);
-        }
-        return Stall.NONE;
     }
 
     private ItemStack takeFromInput(int slot, int amount) {
@@ -397,7 +635,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
     }
 
     private void finishCraft(Level level) {
-        ItemStack result = activeResult.copy();
+        ItemStack result = activeResult.copyWithCount(activeResult.getCount() * activeBatch);
         if (!fitsInOutput(result)) {
             outputBlocked = true;
             return;
@@ -407,9 +645,10 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         AEItemKey produced = AEItemKey.of(result);
         if (produced != null && owed.getOrDefault(produced, 0L) > 0) {
             boolean manual = isManualJob(produced);
-            decrement(owed, produced, 1);
+            long settled = Math.min(activeBatch, owed.get(produced));
+            decrement(owed, produced, settled);
             if (manual) {
-                decrement(manualOwed, produced, 1);
+                decrement(manualOwed, produced, settled);
             }
             if (!owed.containsKey(produced)) {
                 templates.remove(produced);
@@ -418,7 +657,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
                 pushingCpus.clear();
             }
             if (!manual) {
-                toReturn.merge(produced, (long) result.getCount(), Long::sum);
+                toReturn.merge(produced, settled * activeResult.getCount(), Long::sum);
             }
         }
         completeCraft();
@@ -440,6 +679,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         craftCost = 0;
         craftSpeed = 0;
         progress = 0;
+        activeBatch = 1;
         outputBlocked = false;
         markScanNeeded();
         setChanged();
@@ -471,7 +711,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         if (isManualJob(producedItem)) {
             return reject(Refusal.MIXED_RECIPES, "a manual craft of " + producedItem + " is already queued");
         }
-        Template existing = templates.get(producedItem);
+        CollisionTemplate existing = templates.get(producedItem);
         if (existing != null && !existing.recipe().equals(recipe)) {
             return reject(
                     Refusal.MIXED_RECIPES,
@@ -533,7 +773,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         }
 
         AEItemKey produced = AEItemKey.of(result);
-        Template existing = templates.get(produced);
+        CollisionTemplate existing = templates.get(produced);
         if (existing != null && !recipe.equals(existing.recipe())) {
             return ManualCraftOutcome.failed(ManualCraftResult.BUSY);
         }
@@ -564,13 +804,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
     }
 
     private void captureTemplate(AEItemKey output, Map<AEItemKey, Long> items, Identifier recipe) {
-        List<AEKey> keys = new ArrayList<>(items.size());
-        List<Long> counts = new ArrayList<>(items.size());
-        for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
-            keys.add(entry.getKey());
-            counts.add(entry.getValue());
-        }
-        templates.put(output, new Template(List.copyOf(keys), List.copyOf(counts), recipe));
+        templates.put(output, CollisionTemplate.capture(items, recipe));
     }
 
     private void autoRequest(Level level) {
@@ -578,40 +812,19 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
             setMissingInputs(List.of());
             return;
         }
-        List<AEKey> keys = new ArrayList<>();
-        List<Long> targets = new ArrayList<>();
+        DemandTally tally = new DemandTally();
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-            Template template = templates.get(entry.getKey());
+            CollisionTemplate template = templates.get(entry.getKey());
             if (template == null || isManualJob(entry.getKey())) {
                 continue;
             }
-            for (int i = 0; i < template.keys().size(); i++) {
-                long target = template.counts().get(i) * entry.getValue();
-                int existing = keys.indexOf(template.keys().get(i));
-                if (existing >= 0) {
-                    targets.set(existing, targets.get(existing) + target);
-                } else {
-                    keys.add(template.keys().get(i));
-                    targets.add(target);
-                }
-            }
+            template.addDemand(tally, entry.getValue());
         }
-        if (keys.isEmpty()) {
+        if (tally.isEmpty()) {
             setMissingInputs(List.of());
             return;
         }
-        List<Integer> order = new ArrayList<>();
-        for (int i = 0; i < keys.size(); i++) {
-            order.add(i);
-        }
-        order.sort(Comparator.comparing(i -> keys.get(i).toString()));
-        List<AEKey> stableKeys = new ArrayList<>(keys.size());
-        List<Long> stableTargets = new ArrayList<>(targets.size());
-        for (int i : order) {
-            stableKeys.add(keys.get(i));
-            stableTargets.add(targets.get(i));
-        }
-        setMissingInputs(power.restock(level, stableKeys, stableTargets));
+        setMissingInputs(tally.restock(level, power));
     }
 
     int manualDemandFor(ItemResource resource) {
@@ -621,14 +834,11 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         }
         long target = 0;
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-            Template template = templates.get(entry.getKey());
+            CollisionTemplate template = templates.get(entry.getKey());
             if (template == null) {
                 continue;
             }
-            int index = template.keys().indexOf(key);
-            if (index >= 0) {
-                target += template.counts().get(index) * entry.getValue();
-            }
+            target += template.demandFor(key, entry.getValue());
         }
         return (int) Math.max(0, Math.min(Integer.MAX_VALUE, target - bufferedAmount(key)));
     }
@@ -704,6 +914,10 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         return craftSpeed;
     }
 
+    int activeBatch() {
+        return activeBatch;
+    }
+
     long storedEnergy() {
         return energy.stored();
     }
@@ -714,14 +928,6 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
 
     boolean hasEnergyFault() {
         return energyFault;
-    }
-
-    long pendingJobs() {
-        long total = 0;
-        for (long count : owed.values()) {
-            total += count;
-        }
-        return total;
     }
 
     Stall stall() {
@@ -777,7 +983,14 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         super.preRemoveSideEffects(pos, state);
     }
 
+    @Override
+    public void clearContent() {
+        super.clearContent();
+        coreSlot.put(ItemStack.EMPTY);
+    }
+
     void dropBuffers(Level level, BlockPos pos) {
+        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), coreSlot.stack());
         for (int slot = 0; slot < inputBuffer.size(); slot++) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), inputBuffer.stackAt(slot));
         }
@@ -813,6 +1026,14 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         output.putLong(COST_KEY, craftCost);
         output.putLong(SPEED_KEY, craftSpeed);
         output.putInt(PROGRESS_KEY, progress);
+        output.putInt(BATCH_KEY, activeBatch);
+        serializeAddonData(output.child(ADDONS_KEY));
+        ValueOutput.TypedOutputList<AddonEntry> entries = output.list(ADDON_LIST_KEY, AddonEntry.CODEC);
+        for (AddonEntry entry : addonEntries) {
+            entries.add(entry);
+        }
+        coreSlot.serialize(output.child(CORE_KEY));
+        output.putBoolean(LAYERED_KEY, OritechConfig.layeredExtenders.get());
         output.putBoolean(BLOCKED_KEY, outputBlocked);
         output.putBoolean(POWER_FAULT_KEY, powerFault);
         output.putBoolean(ENERGY_FAULT_KEY, energyFault);
@@ -832,6 +1053,15 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         super.loadAdditional(input);
         inputBuffer.deserialize(input.childOrEmpty(INPUT_KEY));
         outputBuffer.deserialize(input.childOrEmpty(OUTPUT_KEY));
+        input.child(ADDONS_KEY).ifPresent(this::deserializeAddonData);
+        List<AddonEntry> loadedEntries = new ArrayList<>();
+        for (AddonEntry entry : input.listOrEmpty(ADDON_LIST_KEY, AddonEntry.CODEC)) {
+            loadedEntries.add(entry);
+        }
+        setAddonEntries(loadedEntries);
+        input.child(CORE_KEY).ifPresent(coreSlot::deserialize);
+        layeredExtenders = input.getBooleanOr(LAYERED_KEY, false);
+        addonRevision++;
         energy.load(input.childOrEmpty(ENERGY_KEY));
         ItemCounts.load(owed, input, OWED_KEY);
         ItemCounts.load(toReturn, input, RETURN_KEY);
@@ -846,6 +1076,7 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         craftCost = input.getLongOr(COST_KEY, 0L);
         craftSpeed = input.getLongOr(SPEED_KEY, 0L);
         progress = input.getIntOr(PROGRESS_KEY, 0);
+        activeBatch = Math.max(1, input.getIntOr(BATCH_KEY, 1));
         outputBlocked = input.getBooleanOr(BLOCKED_KEY, false);
         powerFault = input.getBooleanOr(POWER_FAULT_KEY, false);
         energyFault = input.getBooleanOr(ENERGY_FAULT_KEY, false);
@@ -855,57 +1086,20 @@ public class ParticleCollisionMatrixBlockEntity extends BufferedMatrixBlockEntit
         }
         pushingCpus.load(input);
         power.load(input.childOrEmpty(NODE_KEY));
-        stall = byName(Stall.values(), input.getStringOr(STALL_KEY, ""), Stall.NONE);
-        refusal = byName(Refusal.values(), input.getStringOr(REFUSAL_KEY, ""), Refusal.NONE);
+        stall = EnumNames.byName(Stall.values(), input.getStringOr(STALL_KEY, ""), Stall.NONE);
+        refusal = EnumNames.byName(Refusal.values(), input.getStringOr(REFUSAL_KEY, ""), Refusal.NONE);
         refusalTicks = refusal == Refusal.NONE
                 ? 0
                 : Math.max(1, Math.min(REFUSAL_MEMORY_TICKS, input.getIntOr(REFUSAL_TICKS_KEY, 0)));
         markScanNeeded();
     }
 
-    private static <E extends Enum<E>> E byName(E[] values, String name, E fallback) {
-        for (E value : values) {
-            if (value.name().equals(name)) {
-                return value;
-            }
-        }
-        return fallback;
-    }
-
     private void saveTemplates(ValueOutput output) {
-        ValueOutput.ValueOutputList list = output.childrenList(TEMPLATE_KEY);
-        for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
-            ValueOutput entryOutput = list.addChild();
-            ItemCounts.putKey(entryOutput, entry.getKey());
-            ValueOutput.TypedOutputList<GenericStack> stacks = entryOutput.list("Stacks", GenericStack.CODEC);
-            for (int i = 0; i < entry.getValue().keys().size(); i++) {
-                stacks.add(new GenericStack(
-                        entry.getValue().keys().get(i),
-                        entry.getValue().counts().get(i)));
-            }
-            entryOutput.putString("Recipe", entry.getValue().recipe().toString());
-        }
+        CollisionTemplate.save(templates, output, TEMPLATE_KEY);
     }
 
     private void loadTemplates(ValueInput input) {
-        templates.clear();
-        for (ValueInput entryInput : input.childrenListOrEmpty(TEMPLATE_KEY)) {
-            AEItemKey item = ItemCounts.key(entryInput);
-            Identifier recipe =
-                    entryInput.getString("Recipe").map(Identifier::tryParse).orElse(null);
-            if (item == null || recipe == null) {
-                continue;
-            }
-            List<AEKey> keys = new ArrayList<>();
-            List<Long> counts = new ArrayList<>();
-            for (GenericStack stack : entryInput.listOrEmpty("Stacks", GenericStack.CODEC)) {
-                keys.add(stack.what());
-                counts.add(stack.amount());
-            }
-            if (!keys.isEmpty()) {
-                templates.put(item, new Template(List.copyOf(keys), List.copyOf(counts), recipe));
-            }
-        }
+        CollisionTemplate.load(templates, input, TEMPLATE_KEY, true);
     }
 
     @Override

@@ -29,6 +29,7 @@ public record ManualCraftOutcome(ManualCraftResult status, int batches, ItemStac
             case NO_FIELD -> Component.translatable("nep.manual.no_field");
             case NO_LINE -> Component.translatable("nep.manual.no_line");
             case NO_IMPETUS -> Component.translatable("nep.manual.no_impetus");
+            case NO_SPIRIT -> Component.translatable("nep.manual.no_spirit");
         };
     }
 }

@@ -22,6 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningMatrixMenu> {
 
+    private static final String OUTPUT_FULL_HINT = "gui.nep.infused_awakening_matrix.stall.output_full.hint";
     private static final Identifier TEXTURE = Nep.id("textures/gui/infused_awakening_matrix.png");
 
     private static final int TITLE_ON_PANEL = 0xFF3A2E1C;
@@ -125,8 +126,10 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
             drawTrailing(graphics, queuedText, LINE_TWO_Y, craftingX + font.width(craftingText), READOUT_DIM);
         }
 
-        Component tankLine =
-                Component.translatable("gui.nep.infused_awakening_matrix.tanks_line", filledTanks(matrix), 4);
+        Component tankLine = Component.translatable(
+                "gui.nep.infused_awakening_matrix.tanks_line",
+                filledTanks(matrix),
+                InfusedAwakeningMatrixBlockEntity.TANKS);
         graphics.text(font, tankLine, READOUT_X, LINE_THREE_Y, READOUT_DIM, false);
         drawTrailing(
                 graphics,
@@ -172,53 +175,67 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
 
     private static Component faultLine(
             InfusedAwakeningMatrixBlockEntity.Stall stall, InfusedAwakeningMatrixBlockEntity.Refusal refusal) {
-        String key =
-                switch (stall) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.infused_awakening_matrix.stall.ingredients";
-                    case ESSENCE -> "gui.nep.infused_awakening_matrix.stall.essence";
-                    case OUTPUT_FULL -> "gui.nep.infused_awakening_matrix.output_blocked";
-                    case NO_RECIPE -> "gui.nep.infused_awakening_matrix.stall.no_recipe";
-                };
+        String key = stallKey(stall);
         if (key != null) {
             return Component.translatable(key);
         }
-        String refused =
-                switch (refusal) {
-                    case NONE -> null;
-                    case NOT_A_MYSTICAL_PATTERN -> "gui.nep.infused_awakening_matrix.refused.not_a_mystical_pattern";
-                    case NO_ITEM_OUTPUT -> "gui.nep.infused_awakening_matrix.refused.no_item_output";
-                    case UNKNOWN_RECIPE -> "gui.nep.infused_awakening_matrix.refused.unknown_recipe";
-                    case MISMATCHED_INPUTS -> "gui.nep.infused_awakening_matrix.refused.mismatched_inputs";
-                    case MIXED_RECIPES -> "gui.nep.infused_awakening_matrix.refused.mixed_recipes";
-                    case MODULE_DISABLED -> "gui.nep.infused_awakening_matrix.refused.module_disabled";
-                    case ITEMS_ONLY -> "gui.nep.infused_awakening_matrix.refused.items_only";
-                    case TOO_MANY_INPUTS -> "gui.nep.infused_awakening_matrix.refused.too_many_inputs";
-                    case BUFFER_FULL -> "gui.nep.infused_awakening_matrix.refused.buffer_full";
-                };
+        String refused = refusalKey(refusal);
         return refused == null
                 ? Component.translatable("gui.nep.infused_awakening_matrix.idle")
                 : Component.translatable(refused);
     }
 
+    @Nullable
+    private static String stallKey(InfusedAwakeningMatrixBlockEntity.Stall stall) {
+        return switch (stall) {
+            case NONE -> null;
+            case INGREDIENTS -> "gui.nep.infused_awakening_matrix.stall.ingredients";
+            case ESSENCE -> "gui.nep.infused_awakening_matrix.stall.essence";
+            case OUTPUT_FULL -> "gui.nep.infused_awakening_matrix.output_blocked";
+            case NO_RECIPE -> "gui.nep.infused_awakening_matrix.stall.no_recipe";
+        };
+    }
+
+    @Nullable
+    private static String stallHintKey(InfusedAwakeningMatrixBlockEntity.Stall stall) {
+        if (stall == InfusedAwakeningMatrixBlockEntity.Stall.OUTPUT_FULL) {
+            return OUTPUT_FULL_HINT;
+        }
+        String key = stallKey(stall);
+        return key == null ? null : key + ".hint";
+    }
+
+    @Nullable
+    private static String refusalKey(InfusedAwakeningMatrixBlockEntity.Refusal refusal) {
+        return switch (refusal) {
+            case NONE -> null;
+            case NOT_A_MYSTICAL_PATTERN -> "gui.nep.infused_awakening_matrix.refused.not_a_mystical_pattern";
+            case NO_ITEM_OUTPUT -> "gui.nep.infused_awakening_matrix.refused.no_item_output";
+            case UNKNOWN_RECIPE -> "gui.nep.infused_awakening_matrix.refused.unknown_recipe";
+            case MISMATCHED_INPUTS -> "gui.nep.infused_awakening_matrix.refused.mismatched_inputs";
+            case MIXED_RECIPES -> "gui.nep.infused_awakening_matrix.refused.mixed_recipes";
+            case MODULE_DISABLED -> "gui.nep.infused_awakening_matrix.refused.module_disabled";
+            case ITEMS_ONLY -> "gui.nep.infused_awakening_matrix.refused.items_only";
+            case TOO_MANY_INPUTS -> "gui.nep.infused_awakening_matrix.refused.too_many_inputs";
+            case BUFFER_FULL -> "gui.nep.infused_awakening_matrix.refused.buffer_full";
+        };
+    }
+
     private static List<Component> statusHint(InfusedAwakeningMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return List.of(Component.translatable("gui.nep.infused_awakening_matrix.no_network_channels.hint")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         if (matrix.hasPowerFault()) {
             return List.of(Component.translatable("gui.nep.infused_awakening_matrix.stall.no_me_power.hint")
                     .withStyle(ChatFormatting.GRAY));
         }
-        String key =
-                switch (matrix.stall()) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.infused_awakening_matrix.stall.ingredients.hint";
-                    case ESSENCE -> "gui.nep.infused_awakening_matrix.stall.essence.hint";
-                    case OUTPUT_FULL -> "gui.nep.infused_awakening_matrix.stall.output_full.hint";
-                    case NO_RECIPE -> "gui.nep.infused_awakening_matrix.stall.no_recipe.hint";
-                };
+        String key = stallHintKey(matrix.stall());
         if (key == null && matrix.refusal() != InfusedAwakeningMatrixBlockEntity.Refusal.NONE) {
             key = refusalHint(matrix.refusal());
         }
         if (key == null && matrix.isOutputBlocked()) {
-            key = "gui.nep.infused_awakening_matrix.stall.output_full.hint";
+            key = OUTPUT_FULL_HINT;
         }
         return key == null ? List.of() : List.of(Component.translatable(key).withStyle(ChatFormatting.GRAY));
     }
@@ -260,6 +277,7 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
                 || matrix.refusal() != InfusedAwakeningMatrixBlockEntity.Refusal.NONE
                 || matrix.isOutputBlocked()
                 || matrix.hasPowerFault()
+                || matrix.hasChannelFault()
                 || !matrix.missingInputs().isEmpty();
     }
 
@@ -290,7 +308,7 @@ public class InfusedAwakeningMatrixScreen extends MatrixScreen<InfusedAwakeningM
             graphics.setComponentTooltipForNextFrame(font, tankTooltip(matrix.tank(index)), mouseX, mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, 32)) {
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, READOUT_HEIGHT)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

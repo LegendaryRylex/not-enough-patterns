@@ -3,6 +3,7 @@ package dev.rylex.nep.compat.oritech;
 import appeng.api.AECapabilities;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
+import dev.rylex.nep.machine.MatrixCraftingMachine;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -35,7 +36,11 @@ public final class OritechCompat {
         event.registerBlockEntity(
                 AECapabilities.CRAFTING_MACHINE,
                 NepOritechContent.MATRIX_BLOCK_ENTITY.get(),
-                (be, side) -> new ParticleCollisionMatrixCraftingMachine(be));
+                (be, side) -> new MatrixCraftingMachine(
+                        be::readyForPatterns,
+                        be::pushMatrixPattern,
+                        NepOritechContent.MATRIX_ITEM,
+                        NepOritechContent.MATRIX));
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 NepOritechContent.MATRIX_BLOCK_ENTITY.get(),

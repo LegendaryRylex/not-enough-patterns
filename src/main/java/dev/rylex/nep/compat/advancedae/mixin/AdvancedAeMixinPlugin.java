@@ -1,47 +1,16 @@
 package dev.rylex.nep.compat.advancedae.mixin;
 
-import java.util.List;
-import java.util.Set;
-import net.neoforged.fml.loading.FMLLoader;
-import org.objectweb.asm.tree.ClassNode;
-import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
-import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import dev.rylex.nep.mixin.ModGatedMixinPlugin;
 
-public class AdvancedAeMixinPlugin implements IMixinConfigPlugin {
+public class AdvancedAeMixinPlugin extends ModGatedMixinPlugin {
 
-    private static final String TARGET_MOD = "advanced_ae";
-
-    @Override
-    public void onLoad(String mixinPackage) {}
-
-    @Override
-    public String getRefMapperConfig() {
-        return null;
+    public AdvancedAeMixinPlugin() {
+        super(
+                "advanced_ae",
+                "AdvPatternProviderLogicMixin",
+                "AdvPatternProviderLogicHostMixin",
+                "AdvPatternProviderMenuMixin",
+                "AdvPatternProviderScreenMixin",
+                "SmallAdvPatternProviderScreenMixin");
     }
-
-    @Override
-    public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return true;
-    }
-
-    @Override
-    public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {}
-
-    @Override
-    public List<String> getMixins() {
-        return FMLLoader.getCurrent().getLoadingModList().getModFileById(TARGET_MOD) == null
-                ? List.of()
-                : List.of(
-                        "AdvPatternProviderLogicMixin",
-                        "AdvPatternProviderLogicHostMixin",
-                        "AdvPatternProviderMenuMixin",
-                        "AdvPatternProviderScreenMixin",
-                        "SmallAdvPatternProviderScreenMixin");
-    }
-
-    @Override
-    public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo info) {}
-
-    @Override
-    public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo info) {}
 }

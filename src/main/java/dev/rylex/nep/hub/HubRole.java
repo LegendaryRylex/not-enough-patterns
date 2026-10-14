@@ -54,6 +54,10 @@ public enum HubRole implements StringRepresentable {
         return values()[(ordinal() + 1) % values().length];
     }
 
+    public HubRole previous() {
+        return values()[(ordinal() + values().length - 1) % values().length];
+    }
+
     public static HubRole byOrdinal(int ordinal) {
         HubRole[] values = values();
         return ordinal >= 0 && ordinal < values.length ? values[ordinal] : INPUT;

@@ -1,0 +1,24 @@
+{
+  "type": "nep:decoder_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "category": "misc",
+  "pattern": [
+    " S ",
+    "LBL",
+    " S "
+  ],
+  "key": {
+    "S": "occultism:spirit_attuned_gem",
+    "L": "ae2:logic_processor",
+    "B": "ae2:blank_pattern"
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:occultism_encoding_module"
+  }
+}

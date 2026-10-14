@@ -12,6 +12,10 @@
     {
       "id": "nep:oritech_encoding_module",
       "required": false
+    },
+    {
+      "id": "nep:occultism_encoding_module",
+      "required": false
     }
   ]
 }

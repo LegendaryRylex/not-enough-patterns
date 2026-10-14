@@ -6,11 +6,14 @@ import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.hub.HubFilter;
+import dev.rylex.nep.hub.HubRole;
 import dev.rylex.nep.hub.MachineHubMenu;
 import dev.rylex.nep.hub.MachineHubState;
 import dev.rylex.nep.net.HubLinkEditPayload;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.KeyEvent;
@@ -43,6 +46,7 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
     private static final int CHIP_FACE = 0xFF3A342B;
     private static final int CHIP_HOVER = 0xFF574E40;
     private static final int PANEL_BACKDROP = 0xFF141210;
+    private static final int FILTER_BACKDROP = 0xA0141210;
 
     private static final int ROLE_X = 11;
     private static final int ICON_X = 25;
@@ -55,7 +59,7 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
     private static final int PANEL_LEFT = 9;
     private static final int PANEL_RIGHT = 207;
     private static final int PANEL_TOP = 20;
-    private static final int PANEL_BOTTOM = 205;
+    private static final int PANEL_BOTTOM = 201;
     private static final int PANEL_LABEL_X = 15;
     private static final int PANEL_VALUE_X = 81;
     private static final int PANEL_HEADER_Y = 24;
@@ -65,9 +69,9 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
     private static final int PANEL_PRIORITY_Y = 86;
     private static final int PANEL_INSERT_LABEL_Y = 104;
     private static final int PANEL_INSERT_SLOTS_Y = 122;
-    private static final int PANEL_RETURN_LABEL_Y = 148;
-    private static final int PANEL_RETURN_SLOTS_Y = 166;
-    private static final int PANEL_BACK_Y = 190;
+    private static final int PANEL_RETURN_LABEL_Y = 146;
+    private static final int PANEL_RETURN_SLOTS_Y = 164;
+    private static final int PANEL_BACK_Y = 186;
 
     private static final int CHIP_WIDTH = 108;
     private static final int CHIP_HEIGHT = 12;
@@ -182,7 +186,10 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
     }
 
     private void sendEdit(HubLinkEditPayload.Action action, int value, @Nullable AEKey key) {
-        int index = panelIndex();
+        sendEdit(panelIndex(), action, value, key);
+    }
+
+    private void sendEdit(int index, HubLinkEditPayload.Action action, int value, @Nullable AEKey key) {
         if (index >= 0) {
             ClientPacketDistributor.sendToServer(new HubLinkEditPayload(index, action, value, key));
         }
@@ -252,7 +259,11 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
             for (int row = 0; row < shownRows(); row++) {
                 int y = MachineHubMenu.ROW_Y + row * MachineHubMenu.ROW_HEIGHT;
                 if (within(mouseX, mouseY, ROLE_X, y, GLYPH_WIDTH, MachineHubMenu.ROW_HEIGHT)) {
-                    sendButton(MachineHubMenu.BUTTON_ROLE + scroll + row);
+                    sendEdit(
+                            scroll + row,
+                            HubLinkEditPayload.Action.SET_ROLE,
+                            stepRole(state.entries().get(scroll + row).role(), event.hasShiftDown()),
+                            null);
                     return true;
                 }
                 if (within(mouseX, mouseY, CONFIG_X, y, GLYPH_WIDTH, MachineHubMenu.ROW_HEIGHT)) {
@@ -268,48 +279,99 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
         return super.mouseClicked(event, doubleClick);
     }
 
-    private boolean clickPanel(MachineHubState.Entry entry, int mouseX, int mouseY, int button, boolean fastStep) {
+    private record PanelHit(int x, int y, int width, int height, Runnable action) {}
+
+    private record PanelTip(int x, int y, int width, int height, String key) {}
+
+    private record FilterSection(
+            String labelKey,
+            int labelY,
+            int slotsY,
+            HubLinkEditPayload.Action filterAction,
+            HubLinkEditPayload.Action modeAction,
+            Function<MachineHubState.Entry, HubFilter> filter,
+            Predicate<MachineHubState.Entry> used) {}
+
+    private static final FilterSection INSERT_SECTION = new FilterSection(
+            "gui.nep.machine_hub.panel.insert_filter",
+            PANEL_INSERT_LABEL_Y,
+            PANEL_INSERT_SLOTS_Y,
+            HubLinkEditPayload.Action.SET_INSERT_FILTER,
+            HubLinkEditPayload.Action.TOGGLE_INSERT_MODE,
+            MachineHubState.Entry::insertFilter,
+            entry -> entry.role().accepts());
+
+    private static final FilterSection RETURN_SECTION = new FilterSection(
+            "gui.nep.machine_hub.panel.return_filter",
+            PANEL_RETURN_LABEL_Y,
+            PANEL_RETURN_SLOTS_Y,
+            HubLinkEditPayload.Action.SET_RETURN_FILTER,
+            HubLinkEditPayload.Action.TOGGLE_RETURN_MODE,
+            MachineHubState.Entry::returnFilter,
+            entry -> entry.role().provides());
+
+    private static final List<FilterSection> FILTER_SECTIONS = List.of(INSERT_SECTION, RETURN_SECTION);
+
+    private static final PanelTip FACE_TIP =
+            new PanelTip(PANEL_VALUE_X, PANEL_FACE_Y, CHIP_WIDTH, CHIP_HEIGHT, "gui.nep.machine_hub.face.hint");
+    private static final PanelTip PRIORITY_TIP = new PanelTip(
+            PRIORITY_X, PANEL_PRIORITY_Y, PRIORITY_WIDTH, CHIP_HEIGHT, "gui.nep.machine_hub.priority.hint");
+    private static final PanelTip ROLE_TIP =
+            new PanelTip(PANEL_VALUE_X, PANEL_ROLE_Y, CHIP_WIDTH, CHIP_HEIGHT, "gui.nep.machine_hub.role.hint");
+
+    private List<PanelHit> panelHits(MachineHubState.Entry entry, boolean shift) {
+        int step = shift ? PRIORITY_FAST_STEP : PRIORITY_STEP;
+        List<PanelHit> hits = new ArrayList<>();
+        hits.add(new PanelHit(PANEL_LABEL_X, PANEL_BACK_Y, BACK_WIDTH, CHIP_HEIGHT, () -> panelPos = null));
+        hits.add(new PanelHit(
+                PANEL_VALUE_X,
+                PANEL_ROLE_Y,
+                CHIP_WIDTH,
+                CHIP_HEIGHT,
+                () -> sendEdit(HubLinkEditPayload.Action.SET_ROLE, stepRole(entry.role(), shift), null)));
+        hits.add(new PanelHit(
+                PANEL_VALUE_X,
+                PANEL_FACE_Y,
+                CHIP_WIDTH,
+                CHIP_HEIGHT,
+                () -> sendEdit(HubLinkEditPayload.Action.SET_FACE, stepFace(entry.face(), shift), null)));
+        hits.add(new PanelHit(
+                PRIORITY_DOWN_X,
+                PANEL_PRIORITY_Y,
+                STEP_WIDTH,
+                CHIP_HEIGHT,
+                () -> sendEdit(HubLinkEditPayload.Action.SET_PRIORITY, entry.priority() - step, null)));
+        hits.add(new PanelHit(
+                PRIORITY_UP_X,
+                PANEL_PRIORITY_Y,
+                STEP_WIDTH,
+                CHIP_HEIGHT,
+                () -> sendEdit(HubLinkEditPayload.Action.SET_PRIORITY, entry.priority() + step, null)));
+        for (FilterSection section : FILTER_SECTIONS) {
+            hits.add(new PanelHit(
+                    MODE_X, section.labelY(), MODE_WIDTH, CHIP_HEIGHT, () -> sendEdit(section.modeAction(), 0, null)));
+        }
+        return hits;
+    }
+
+    private boolean clickPanel(MachineHubState.Entry entry, int mouseX, int mouseY, int button, boolean shift) {
         if (button != 0 && button != 1) {
             return false;
         }
-        if (button == 0 && within(mouseX, mouseY, PANEL_LABEL_X, PANEL_BACK_Y, BACK_WIDTH, CHIP_HEIGHT)) {
-            panelPos = null;
-            return true;
+        if (button == 0) {
+            for (PanelHit hit : panelHits(entry, shift)) {
+                if (within(mouseX, mouseY, hit.x(), hit.y(), hit.width(), hit.height())) {
+                    hit.action().run();
+                    return true;
+                }
+            }
         }
-        if (button == 0 && within(mouseX, mouseY, PANEL_VALUE_X, PANEL_ROLE_Y, CHIP_WIDTH, CHIP_HEIGHT)) {
-            sendButton(MachineHubMenu.BUTTON_ROLE + panelIndex());
-            return true;
-        }
-        if (button == 0 && within(mouseX, mouseY, PANEL_VALUE_X, PANEL_FACE_Y, CHIP_WIDTH, CHIP_HEIGHT)) {
-            sendEdit(HubLinkEditPayload.Action.SET_FACE, nextFace(entry.face()), null);
-            return true;
-        }
-        int step = fastStep ? PRIORITY_FAST_STEP : PRIORITY_STEP;
-        if (button == 0 && within(mouseX, mouseY, PRIORITY_DOWN_X, PANEL_PRIORITY_Y, STEP_WIDTH, CHIP_HEIGHT)) {
-            sendEdit(HubLinkEditPayload.Action.SET_PRIORITY, entry.priority() - step, null);
-            return true;
-        }
-        if (button == 0 && within(mouseX, mouseY, PRIORITY_UP_X, PANEL_PRIORITY_Y, STEP_WIDTH, CHIP_HEIGHT)) {
-            sendEdit(HubLinkEditPayload.Action.SET_PRIORITY, entry.priority() + step, null);
-            return true;
-        }
-        if (button == 0 && within(mouseX, mouseY, MODE_X, PANEL_INSERT_LABEL_Y, MODE_WIDTH, CHIP_HEIGHT)) {
-            sendEdit(HubLinkEditPayload.Action.TOGGLE_INSERT_MODE, 0, null);
-            return true;
-        }
-        if (button == 0 && within(mouseX, mouseY, MODE_X, PANEL_RETURN_LABEL_Y, MODE_WIDTH, CHIP_HEIGHT)) {
-            sendEdit(HubLinkEditPayload.Action.TOGGLE_RETURN_MODE, 0, null);
-            return true;
-        }
-        int insertSlot = filterSlotAt(mouseX, mouseY, PANEL_INSERT_SLOTS_Y);
-        if (insertSlot >= 0) {
-            sendEdit(HubLinkEditPayload.Action.SET_INSERT_FILTER, insertSlot, keyFromCursor(button));
-            return true;
-        }
-        int returnSlot = filterSlotAt(mouseX, mouseY, PANEL_RETURN_SLOTS_Y);
-        if (returnSlot >= 0) {
-            sendEdit(HubLinkEditPayload.Action.SET_RETURN_FILTER, returnSlot, keyFromCursor(button));
-            return true;
+        for (FilterSection section : FILTER_SECTIONS) {
+            int slot = filterSlotAt(mouseX, mouseY, section.slotsY());
+            if (slot >= 0) {
+                sendEdit(section.filterAction(), slot, keyFromCursor(button));
+                return true;
+            }
         }
         return false;
     }
@@ -329,16 +391,13 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
             return List.of();
         }
         List<GhostTarget> targets = new ArrayList<>();
-        addGhostTargets(
-                targets,
-                PANEL_INSERT_SLOTS_Y,
-                HubLinkEditPayload.Action.SET_INSERT_FILTER,
-                entry.role().accepts());
-        addGhostTargets(
-                targets,
-                PANEL_RETURN_SLOTS_Y,
-                HubLinkEditPayload.Action.SET_RETURN_FILTER,
-                entry.role().provides());
+        for (FilterSection section : FILTER_SECTIONS) {
+            addGhostTargets(
+                    targets,
+                    section.slotsY(),
+                    section.filterAction(),
+                    section.used().test(entry));
+        }
         return targets;
     }
 
@@ -363,8 +422,15 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
         return -1;
     }
 
-    private static int nextFace(@Nullable Direction face) {
+    private static int stepFace(@Nullable Direction face, boolean back) {
+        if (back) {
+            return face == null ? Direction.values().length - 1 : face.ordinal() - 1;
+        }
         return face == null ? 0 : face.ordinal() + 1;
+    }
+
+    private static int stepRole(HubRole role, boolean back) {
+        return (back ? role.previous() : role.next()).ordinal();
     }
 
     @Override
@@ -482,14 +548,18 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
         graphics.fill(x + 1, top, right - 1, top + thumbHeight(), SCROLL_THUMB);
     }
 
+    private static Component entryName(MachineHubState.Entry entry) {
+        return entry.icon().isEmpty()
+                ? Component.translatable("gui.nep.machine_hub.unknown_block")
+                : entry.icon().getHoverName();
+    }
+
     private void drawRow(GuiGraphicsExtractor graphics, MachineHubState.Entry entry, int y) {
         graphics.text(font, entry.role().glyph(), ROLE_X, y + 3, READOUT_TEXT, false);
         if (!entry.icon().isEmpty()) {
             graphics.fakeItem(entry.icon(), ICON_X, y);
         }
-        Component name = entry.icon().isEmpty()
-                ? Component.translatable("gui.nep.machine_hub.unknown_block")
-                : entry.icon().getHoverName();
+        Component name = entryName(entry);
         int colour = entry.healthy() ? READOUT_TEXT : READOUT_WARN;
         graphics.text(font, trim(name, CONFIG_X - NAME_X - 4), NAME_X, y + 3, colour, false);
         boolean configured = !entry.insertFilter().isEmpty()
@@ -506,9 +576,7 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
         if (!entry.icon().isEmpty()) {
             graphics.fakeItem(entry.icon(), PANEL_LABEL_X, PANEL_HEADER_Y - 2);
         }
-        Component name = entry.icon().isEmpty()
-                ? Component.translatable("gui.nep.machine_hub.unknown_block")
-                : entry.icon().getHoverName();
+        Component name = entryName(entry);
         graphics.text(
                 font,
                 trim(name, PANEL_RIGHT - PANEL_LABEL_X - 26),
@@ -544,24 +612,9 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
                 false);
         drawChip(graphics, PRIORITY_UP_X, PANEL_PRIORITY_Y, STEP_WIDTH, Component.literal("+"), mouseX, mouseY);
 
-        drawFilter(
-                graphics,
-                entry.insertFilter(),
-                "gui.nep.machine_hub.panel.insert_filter",
-                PANEL_INSERT_LABEL_Y,
-                PANEL_INSERT_SLOTS_Y,
-                entry.role().accepts(),
-                mouseX,
-                mouseY);
-        drawFilter(
-                graphics,
-                entry.returnFilter(),
-                "gui.nep.machine_hub.panel.return_filter",
-                PANEL_RETURN_LABEL_Y,
-                PANEL_RETURN_SLOTS_Y,
-                entry.role().provides(),
-                mouseX,
-                mouseY);
+        for (FilterSection section : FILTER_SECTIONS) {
+            drawFilter(graphics, entry, section, mouseX, mouseY);
+        }
 
         drawChip(
                 graphics,
@@ -574,14 +627,12 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
     }
 
     private void drawFilter(
-            GuiGraphicsExtractor graphics,
-            HubFilter filter,
-            String labelKey,
-            int labelY,
-            int slotsY,
-            boolean used,
-            int mouseX,
-            int mouseY) {
+            GuiGraphicsExtractor graphics, MachineHubState.Entry entry, FilterSection section, int mouseX, int mouseY) {
+        HubFilter filter = section.filter().apply(entry);
+        String labelKey = section.labelKey();
+        int labelY = section.labelY();
+        int slotsY = section.slotsY();
+        boolean used = section.used().test(entry);
         graphics.text(
                 font,
                 Component.translatable(labelKey),
@@ -609,7 +660,8 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
             }
         }
         if (!used) {
-            graphics.fill(FILTER_X, slotsY, FILTER_X + HubFilter.SIZE * FILTER_SLOT, slotsY + FILTER_SLOT, 0xA0141210);
+            graphics.fill(
+                    FILTER_X, slotsY, FILTER_X + HubFilter.SIZE * FILTER_SLOT, slotsY + FILTER_SLOT, FILTER_BACKDROP);
         }
     }
 
@@ -655,48 +707,30 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
     }
 
     private void panelTooltips(GuiGraphicsExtractor graphics, MachineHubState.Entry entry, int mouseX, int mouseY) {
-        if (within(mouseX, mouseY, PANEL_VALUE_X, PANEL_FACE_Y, CHIP_WIDTH, CHIP_HEIGHT)) {
-            graphics.setComponentTooltipForNextFrame(
-                    font,
-                    List.of(Component.translatable("gui.nep.machine_hub.face.hint")
-                            .withStyle(ChatFormatting.GRAY)),
-                    mouseX,
-                    mouseY);
+        if (hintTooltip(graphics, FACE_TIP, mouseX, mouseY) || hintTooltip(graphics, PRIORITY_TIP, mouseX, mouseY)) {
             return;
         }
-        if (within(mouseX, mouseY, PRIORITY_X, PANEL_PRIORITY_Y, PRIORITY_WIDTH, CHIP_HEIGHT)) {
-            graphics.setComponentTooltipForNextFrame(
-                    font,
-                    List.of(Component.translatable("gui.nep.machine_hub.priority.hint")
-                            .withStyle(ChatFormatting.GRAY)),
+        for (FilterSection section : FILTER_SECTIONS) {
+            if (filterTooltip(
+                    graphics,
+                    section.filter().apply(entry),
+                    section.slotsY(),
+                    section.used().test(entry),
                     mouseX,
-                    mouseY);
-            return;
+                    mouseY)) {
+                return;
+            }
         }
-        if (filterTooltip(
-                        graphics,
-                        entry.insertFilter(),
-                        PANEL_INSERT_SLOTS_Y,
-                        entry.role().accepts(),
-                        mouseX,
-                        mouseY)
-                || filterTooltip(
-                        graphics,
-                        entry.returnFilter(),
-                        PANEL_RETURN_SLOTS_Y,
-                        entry.role().provides(),
-                        mouseX,
-                        mouseY)) {
-            return;
+        hintTooltip(graphics, ROLE_TIP, mouseX, mouseY);
+    }
+
+    private boolean hintTooltip(GuiGraphicsExtractor graphics, PanelTip tip, int mouseX, int mouseY) {
+        if (!within(mouseX, mouseY, tip.x(), tip.y(), tip.width(), tip.height())) {
+            return false;
         }
-        if (within(mouseX, mouseY, PANEL_VALUE_X, PANEL_ROLE_Y, CHIP_WIDTH, CHIP_HEIGHT)) {
-            graphics.setComponentTooltipForNextFrame(
-                    font,
-                    List.of(Component.translatable("gui.nep.machine_hub.role.hint")
-                            .withStyle(ChatFormatting.GRAY)),
-                    mouseX,
-                    mouseY);
-        }
+        graphics.setComponentTooltipForNextFrame(
+                font, List.of(Component.translatable(tip.key()).withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
+        return true;
     }
 
     private boolean filterTooltip(
@@ -724,9 +758,7 @@ public class MachineHubScreen extends MatrixScreen<MachineHubMenu> {
         BlockPos pos = entry.pos();
         lines.add(Component.translatable(
                 "gui.nep.machine_hub.entry",
-                entry.icon().isEmpty()
-                        ? Component.translatable("gui.nep.machine_hub.unknown_block")
-                        : entry.icon().getHoverName(),
+                entryName(entry),
                 Component.translatable("gui.nep.coords", pos.getX(), pos.getY(), pos.getZ())));
         lines.add(
                 Component.translatable("gui.nep.machine_hub.role", entry.role().displayName())

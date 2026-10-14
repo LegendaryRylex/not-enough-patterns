@@ -1,0 +1,93 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:component",
+    "component": "nep:bound_spirit",
+    "cases": [
+      {
+        "when": {
+          "tier": "foliot",
+          "work": "crusher"
+        },
+        "model": {
+          "type": "minecraft:model",
+          "model": "nep:item/spirit_infused_book_foliot_crusher"
+        }
+      },
+      {
+        "when": {
+          "tier": "foliot",
+          "work": "crystallizer"
+        },
+        "model": {
+          "type": "minecraft:model",
+          "model": "nep:item/spirit_infused_book_foliot_crystallizer"
+        }
+      },
+      {
+        "when": {
+          "tier": "djinni",
+          "work": "crusher"
+        },
+        "model": {
+          "type": "minecraft:model",
+          "model": "nep:item/spirit_infused_book_djinni_crusher"
+        }
+      },
+      {
+        "when": {
+          "tier": "djinni",
+          "work": "crystallizer"
+        },
+        "model": {
+          "type": "minecraft:model",
+          "model": "nep:item/spirit_infused_book_djinni_crystallizer"
+        }
+      },
+      {
+        "when": {
+          "tier": "afrit",
+          "work": "crusher"
+        },
+        "model": {
+          "type": "minecraft:model",
+          "model": "nep:item/spirit_infused_book_afrit_crusher"
+        }
+      },
+      {
+        "when": {
+          "tier": "afrit",
+          "work": "crystallizer"
+        },
+        "model": {
+          "type": "minecraft:model",
+          "model": "nep:item/spirit_infused_book_afrit_crystallizer"
+        }
+      },
+      {
+        "when": {
+          "tier": "marid",
+          "work": "crusher"
+        },
+        "model": {
+          "type": "minecraft:model",
+          "model": "nep:item/spirit_infused_book_marid_crusher"
+        }
+      },
+      {
+        "when": {
+          "tier": "marid",
+          "work": "crystallizer"
+        },
+        "model": {
+          "type": "minecraft:model",
+          "model": "nep:item/spirit_infused_book_marid_crystallizer"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "nep:item/spirit_infused_book"
+    }
+  }
+}

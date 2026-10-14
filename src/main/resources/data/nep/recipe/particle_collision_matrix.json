@@ -8,7 +8,7 @@
   ],
   "itemInputs": [
     "nep:particle_collision_controller",
-    "nep:matrix_circuitry"
+    "nep:particle_collision_core"
   ],
   "itemResults": [
     {

@@ -1,10 +1,10 @@
 package dev.rylex.nep.machine;
 
 import java.util.function.ToIntFunction;
-import javax.annotation.Nullable;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+import org.jetbrains.annotations.Nullable;
 
 public final class MachineItemView implements ResourceHandler<ItemResource> {
 

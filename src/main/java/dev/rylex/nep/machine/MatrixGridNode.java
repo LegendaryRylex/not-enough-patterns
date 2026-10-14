@@ -115,7 +115,7 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
             }
             for (int slot = 0; slot < keys.size() && slot < TRACKER_SIZE; slot++) {
                 AEKey key = keys.get(slot);
-                long missing = targets.get(slot) - owner.bufferedAmount(key);
+                long missing = missingFor(slot, keys, targets);
                 if (missing > 0) {
                     unavailable.add(new GenericStack(key, missing));
                 }
@@ -126,23 +126,13 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
         ICraftingService crafting = grid.getCraftingService();
         for (int slot = 0; slot < keys.size() && slot < TRACKER_SIZE; slot++) {
             AEKey key = keys.get(slot);
-            long missing = targets.get(slot) - owner.bufferedAmount(key);
+            long missing = missingFor(slot, keys, targets);
             if (missing <= 0) {
                 continue;
             }
             long capacity = missing - owner.acceptCrafted(key, missing, Actionable.SIMULATE);
-            long pulled = 0;
-            if (capacity > 0) {
-                long extracted = storage.extract(key, capacity, Actionable.MODULATE, source);
-                if (extracted > 0) {
-                    long refused = owner.acceptCrafted(key, extracted, Actionable.MODULATE);
-                    if (refused > 0) {
-                        storage.insert(key, refused, Actionable.MODULATE, source);
-                    }
-                    pulled = extracted - refused;
-                    missing -= pulled;
-                }
-            }
+            long pulled = capacity > 0 ? pullFromStock(storage, key, capacity) : 0;
+            missing -= pulled;
             boolean craftStarted = false;
             boolean craftable = false;
             if (missing > 0) {
@@ -170,6 +160,22 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
             }
         }
         return unavailable;
+    }
+
+    private long missingFor(int slot, List<AEKey> keys, List<Long> targets) {
+        return targets.get(slot) - owner.bufferedAmount(keys.get(slot));
+    }
+
+    private long pullFromStock(MEStorage storage, AEKey key, long capacity) {
+        long extracted = storage.extract(key, capacity, Actionable.MODULATE, source);
+        if (extracted <= 0) {
+            return 0;
+        }
+        long refused = owner.acceptCrafted(key, extracted, Actionable.MODULATE);
+        if (refused > 0) {
+            storage.insert(key, refused, Actionable.MODULATE, source);
+        }
+        return extracted - refused;
     }
 
     private void log(Level level, String subject, String message) {
@@ -210,6 +216,14 @@ public final class MatrixGridNode implements IInWorldGridNodeHost, ICraftingRequ
             return 0;
         }
         return grid.getStorageService().getInventory().insert(key, amount, Actionable.MODULATE, source);
+    }
+
+    public long extractFromNetwork(AEKey key, long amount) {
+        IGrid grid = mainNode.getGrid();
+        if (grid == null || amount <= 0) {
+            return 0;
+        }
+        return grid.getStorageService().getInventory().extract(key, amount, Actionable.MODULATE, source);
     }
 
     public void destroy() {

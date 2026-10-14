@@ -4,9 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -14,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class LangKeysTest {
@@ -31,33 +27,15 @@ class LangKeysTest {
         return JsonParser.parseString(ProjectFiles.read(LANG)).getAsJsonObject();
     }
 
-    private static List<Path> sources(String suffix) {
-        try (Stream<Path> files = Files.walk(ProjectFiles.root().resolve(SOURCE))) {
-            return files.filter(path -> path.getFileName().toString().endsWith(suffix))
-                    .sorted()
-                    .toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
     private static String relative(Path source) {
         return ProjectFiles.root().relativize(source).toString().replace('\\', '/');
-    }
-
-    private static String read(Path source) {
-        try {
-            return Files.readString(source);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     @Test
     void everyScreenTitleIsALangKeyOfItsOwn() {
         List<String> derived = new ArrayList<>();
-        for (Path screen : sources("Screen.java")) {
-            if (INHERITED_TITLE.matcher(read(screen)).find()) {
+        for (Path screen : ProjectFiles.walk(SOURCE, "Screen.java")) {
+            if (INHERITED_TITLE.matcher(ProjectFiles.read(screen)).find()) {
                 derived.add(relative(screen));
             }
         }
@@ -74,8 +52,8 @@ class LangKeysTest {
         List<String> keys = lang.keySet().stream().toList();
         List<String> missing = new ArrayList<>();
 
-        for (Path source : sources(".java")) {
-            Matcher literals = LITERAL.matcher(read(source));
+        for (Path source : ProjectFiles.walk(SOURCE, ".java")) {
+            Matcher literals = LITERAL.matcher(ProjectFiles.read(source));
             while (literals.find()) {
                 String candidate = literals.group(1);
                 if (!candidate.contains("nep")
@@ -102,7 +80,9 @@ class LangKeysTest {
         List<String> untitled = new ArrayList<>();
         for (Map.Entry<String, String> machine : Map.of(
                         "gui.nep.infused_awakening_matrix.title", "Infused Awakening Matrix",
-                        "gui.nep.machine_hub.title", "Machine Hub")
+                        "gui.nep.machine_hub.title", "Machine Hub",
+                        "gui.nep.bound_spirit_matrix.title", "Bound Spirit Matrix",
+                        "gui.nep.ritual_controller.title", "Ritual Controller")
                 .entrySet()) {
             if (!lang.has(machine.getKey())) {
                 untitled.add(machine.getValue() + " -> " + machine.getKey());

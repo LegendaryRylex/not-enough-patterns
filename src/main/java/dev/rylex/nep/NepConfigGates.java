@@ -60,7 +60,10 @@ public final class NepConfigGates {
         Map<Item, BooleanSupplier> map = resolved;
         if (map == null) {
             map = GATES.stream()
-                    .collect(Collectors.toUnmodifiableMap(gate -> gate.item().get(), Gate::enabled));
+                    .collect(Collectors.toUnmodifiableMap(
+                            gate -> gate.item().get(),
+                            Gate::enabled,
+                            (first, second) -> () -> first.getAsBoolean() && second.getAsBoolean()));
             resolved = map;
         }
         return map;

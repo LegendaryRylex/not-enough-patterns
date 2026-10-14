@@ -60,18 +60,18 @@ public final class PatternDecoderGameTest {
         PatternDecoderBlockEntity powered = decoder(helper, POWERED);
         helper.setBlock(POWERED.above(), AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
         powered.moduleSlots()
-                .set(DecoderModule.MYSTICAL_AGRICULTURE.ordinal(), module(DecoderModule.MYSTICAL_AGRICULTURE), 1);
+                .set(DecoderModule.MYSTICAL_AGRICULTURE.slot(), module(DecoderModule.MYSTICAL_AGRICULTURE), 1);
         PatternDecoderBlockEntity unpowered = decoder(helper, UNPOWERED);
         unpowered
                 .moduleSlots()
-                .set(DecoderModule.APOTHIC_ENCHANTING.ordinal(), module(DecoderModule.APOTHIC_ENCHANTING), 1);
+                .set(DecoderModule.APOTHIC_ENCHANTING.slot(), module(DecoderModule.APOTHIC_ENCHANTING), 1);
 
         helper.startSequence()
                 .thenIdle(60)
                 .thenExecute(() -> {
                     int unlocked = PatternDecoding.unlocked(node(powered));
                     int stranded = PatternDecoding.unlocked(node(unpowered));
-                    powered.moduleSlots().set(DecoderModule.MYSTICAL_AGRICULTURE.ordinal(), ItemResource.EMPTY, 0);
+                    powered.moduleSlots().set(DecoderModule.MYSTICAL_AGRICULTURE.slot(), ItemResource.EMPTY, 0);
                     int emptied = PatternDecoding.unlocked(node(powered));
                     restore.undo();
                     helper.assertTrue(
@@ -95,7 +95,7 @@ public final class PatternDecoderGameTest {
 
     private static void aDecoderRefusesAnythingButAnEncodingModule(GameTestHelper helper) {
         PatternDecoderBlockEntity decoder = decoder(helper, POWERED);
-        int apothicSlot = DecoderModule.APOTHIC_ENCHANTING.ordinal();
+        int apothicSlot = DecoderModule.APOTHIC_ENCHANTING.slot();
         helper.assertFalse(
                 decoder.moduleSlots().isValid(apothicSlot, ItemResource.of(Items.DIRT)),
                 "a decoder slot took a block of dirt");
@@ -103,7 +103,7 @@ public final class PatternDecoderGameTest {
         helper.assertTrue(
                 decoder.moduleSlots().isValid(apothicSlot, module), "a decoder slot refused an Encoding Module");
         helper.assertFalse(
-                decoder.moduleSlots().isValid(DecoderModule.MYSTICAL_AGRICULTURE.ordinal(), module),
+                decoder.moduleSlots().isValid(DecoderModule.MYSTICAL_AGRICULTURE.slot(), module),
                 "the Mystical Agriculture slot took the Apothic Enchanting module");
         helper.assertTrue(
                 decoder.moduleSlots().getCapacityAsLong(apothicSlot, module) == 1,

@@ -15,7 +15,7 @@ public class ModuleSlots extends ItemStacksResourceHandler {
     @Override
     public boolean isValid(int index, ItemResource resource) {
         return resource.getItem() instanceof EncodingModuleItem module
-                && module.module().ordinal() == index;
+                && module.module().slot() == index;
     }
 
     @Override
@@ -30,8 +30,8 @@ public class ModuleSlots extends ItemStacksResourceHandler {
         NonNullList<ItemStack> seated = NonNullList.withSize(PatternDecoderBlockEntity.SLOTS, ItemStack.EMPTY);
         for (ItemStack stack : saved.copyToList()) {
             if (stack.getItem() instanceof EncodingModuleItem module
-                    && seated.get(module.module().ordinal()).isEmpty()) {
-                seated.set(module.module().ordinal(), stack.copyWithCount(1));
+                    && seated.get(module.module().slot()).isEmpty()) {
+                seated.set(module.module().slot(), stack.copyWithCount(1));
             }
         }
         setStacks(seated);

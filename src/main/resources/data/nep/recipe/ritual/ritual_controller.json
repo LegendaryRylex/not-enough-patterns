@@ -1,0 +1,29 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "type": "occultism:ritual",
+  "activation_item": "occultism:book_of_binding_bound_foliot",
+  "duration": 120,
+  "ingredients": [
+    "ae2:pattern_provider",
+    "occultism:golden_sacrificial_bowl",
+    "ae2:engineering_processor",
+    "occultism:spirit_attuned_gem",
+    "#c:ingots/silver",
+    "#c:ingots/silver"
+  ],
+  "pentacle_id": "occultism:craft_foliot",
+  "result": {
+    "count": 1,
+    "id": "nep:ritual_controller"
+  },
+  "ritual_dummy": {
+    "count": 1,
+    "id": "nep:ritual_controller"
+  },
+  "ritual_type": "occultism:craft"
+}

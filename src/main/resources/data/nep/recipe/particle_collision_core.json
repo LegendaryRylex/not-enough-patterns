@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "oritech"
+    }
+  ],
+  "category": "misc",
+  "pattern": [
+    "COC",
+    "SMS",
+    "COC"
+  ],
+  "key": {
+    "C": "nep:matrix_circuitry",
+    "O": "oritech:overcharged_crystal",
+    "S": "oritech:superconductor",
+    "M": "ae2:molecular_assembler"
+  },
+  "result": {
+    "count": 1,
+    "id": "nep:particle_collision_core"
+  }
+}

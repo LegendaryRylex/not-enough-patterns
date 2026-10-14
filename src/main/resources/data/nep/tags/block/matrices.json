@@ -8,6 +8,10 @@
     {
       "id": "nep:particle_collision_matrix",
       "required": false
+    },
+    {
+      "id": "nep:bound_spirit_matrix",
+      "required": false
     }
   ]
 }

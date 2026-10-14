@@ -6,13 +6,21 @@ import dev.rylex.nep.compat.extendedae.ExtendedAePatternViewGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.AwakeningAltarCraftingMachineGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.InfusedAwakeningMatrixGameTest;
 import dev.rylex.nep.compat.mysticalagriculture.InfusionAltarCraftingMachineGameTest;
+import dev.rylex.nep.compat.occultism.BoundSpiritMatrixGameTest;
+import dev.rylex.nep.compat.occultism.InfusionRitualGameTest;
+import dev.rylex.nep.compat.occultism.RitualControllerGameTest;
+import dev.rylex.nep.compat.occultism.SpiritNameEquivalenceGameTest;
+import dev.rylex.nep.compat.occultism.SpiritProviderGameTest;
 import dev.rylex.nep.compat.oritech.ParticleCollisionControllerGameTest;
+import dev.rylex.nep.compat.oritech.ParticleCollisionMatrixAddonGameTest;
 import dev.rylex.nep.compat.oritech.ParticleCollisionMatrixGameTest;
+import dev.rylex.nep.compat.oritech.ParticleCollisionMatrixOritechThingsGameTest;
 import dev.rylex.nep.compat.oritech.ParticleCollisionPatternGameTest;
 import dev.rylex.nep.compat.thunderbolt.ThunderboltChannelGameTest;
 import dev.rylex.nep.decoder.PatternDecoderGameTest;
 import dev.rylex.nep.hub.ChannelModeGameTest;
 import dev.rylex.nep.hub.MachineHubGameTest;
+import dev.rylex.nep.hub.MachineHubScanGameTest;
 import dev.rylex.nep.machine.PushingCpuMixinGameTest;
 import dev.rylex.nep.pattern.PatternEncodingMixinGameTest;
 import dev.rylex.nep.pattern.ProcessingPatternConversionGameTest;
@@ -64,9 +72,11 @@ public final class NepGameTests {
         ProcessingPatternConversionGameTest.register(new Batch(event, "nep_pattern_conversion", SMALL));
         MachineHubGameTest.register(
                 new Batch(event, "nep_machine_hub", SMALL),
-                new Batch(event, "nep_machine_hub_wide", LARGE),
                 new Batch(event, "nep_machine_hub_channels", SMALL),
-                new Batch(event, "nep_machine_hub_adhoc", SMALL),
+                new Batch(event, "nep_machine_hub_adhoc", SMALL));
+        MachineHubScanGameTest.register(
+                new Batch(event, "nep_machine_hub_scan", SMALL),
+                new Batch(event, "nep_machine_hub_wide", LARGE),
                 new Batch(event, "nep_machine_hub_rules", SMALL));
         ChannelModeGameTest.register(new Batch(event, "nep_channel_modes", SMALL));
         PatternDecoderGameTest.register(new Batch(event, "nep_pattern_decoder", SMALL));
@@ -80,7 +90,23 @@ public final class NepGameTests {
         ParticleCollisionMatrixGameTest.register(
                 new Batch(event, "nep_particle_collision_matrix", SMALL),
                 new Batch(event, "nep_particle_collision_matrix_unpowered", SMALL));
+        ParticleCollisionMatrixAddonGameTest.register(
+                new Batch(event, "nep_particle_collision_matrix_addons", SMALL),
+                new Batch(event, "nep_particle_collision_matrix_addon_speed", SMALL),
+                new Batch(event, "nep_particle_collision_matrix_addon_efficiency", SMALL),
+                new Batch(event, "nep_particle_collision_matrix_addon_chambers", SMALL));
+        ParticleCollisionMatrixOritechThingsGameTest.register(
+                new Batch(event, "nep_particle_collision_matrix_oritech_things_addons", SMALL));
         ParticleCollisionControllerGameTest.register(new Batch(event, "nep_oritech_collision_controller", LARGE));
+        BoundSpiritMatrixGameTest.register(
+                new Batch(event, "nep_bound_spirit_matrix", SMALL),
+                new Batch(event, "nep_bound_spirit_matrix_operations", SMALL));
+        InfusionRitualGameTest.register(new Batch(event, "nep_infusion_ritual", LARGE));
+        RitualControllerGameTest.register(new Batch(event, "nep_ritual_controller", LARGE));
+        SpiritNameEquivalenceGameTest.register(new Batch(event, "nep_spirit_names", SMALL));
+        OfferedItemHopperGameTest.register(new Batch(event, "nep_offered_item_hopper", SMALL));
+        SpiritProviderGameTest.register(
+                new Batch(event, "nep_spirit_provider", LARGE), new Batch(event, "nep_spirit_provider_refusal", LARGE));
     }
 
     static Consumer<GameTestHelper> body(Identifier name) {

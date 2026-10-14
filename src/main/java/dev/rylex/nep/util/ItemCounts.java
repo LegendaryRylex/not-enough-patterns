@@ -13,7 +13,7 @@ public final class ItemCounts {
     private ItemCounts() {}
 
     private static final String KEY_TAG = "Key";
-    private static final String LEGACY_ID_TAG = "Id";
+    public static final String LEGACY_ID_TAG = "Id";
     private static final String COUNT_TAG = "Count";
 
     public static void save(ValueOutput output, String key, Map<AEItemKey, Long> map) {

@@ -5,6 +5,7 @@ import dev.rylex.nep.client.NepClient;
 import dev.rylex.nep.compat.apothic.ApothicCompat;
 import dev.rylex.nep.compat.extendedae.ExtendedAeCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat;
+import dev.rylex.nep.compat.occultism.OccultismCompat;
 import dev.rylex.nep.compat.oritech.OritechCompat;
 import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.guide.NepRecipes;
@@ -49,26 +50,22 @@ public final class Nep {
         modBus.addListener(this::commonSetup);
         modBus.addListener(ModConfigEvent.Loading.class, NepConfig::onConfigLoaded);
         modBus.addListener(ModConfigEvent.Reloading.class, NepConfig::onConfigLoaded);
-        if (ModList.get().isLoaded("apothic_enchanting")) {
-            ApothicCompat.init(modBus);
-            LOGGER.info("Apothic Enchanting integration enabled");
-        }
-        if (ModList.get().isLoaded("mysticalagriculture")) {
-            MysticalAgricultureCompat.init(modBus, dist);
-            LOGGER.info("Mystical Agriculture integration enabled");
-        }
-        if (ModList.get().isLoaded("oritech")) {
-            OritechCompat.init(modBus, dist);
-            LOGGER.info("Oritech integration enabled");
-        }
-        if (ModList.get().isLoaded("extendedae")) {
-            ExtendedAeCompat.init(modBus, dist);
-            LOGGER.info("ExtendedAE integration enabled");
-        }
+        integrate("apothic_enchanting", "Apothic Enchanting", () -> ApothicCompat.init(modBus));
+        integrate("mysticalagriculture", "Mystical Agriculture", () -> MysticalAgricultureCompat.init(modBus, dist));
+        integrate("occultism", "Occultism", () -> OccultismCompat.init(modBus, dist));
+        integrate("oritech", "Oritech", () -> OritechCompat.init(modBus, dist));
+        integrate("extendedae", "ExtendedAE", () -> ExtendedAeCompat.init(modBus, dist));
         if (dist.isClient()) {
             NepClient.init(container, modBus);
         }
         LOGGER.info("{} initialized", MOD_ID);
+    }
+
+    private static void integrate(String modId, String label, Runnable init) {
+        if (ModList.get().isLoaded(modId)) {
+            init.run();
+            LOGGER.info("{} integration enabled", label);
+        }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

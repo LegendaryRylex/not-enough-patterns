@@ -2,9 +2,7 @@ package dev.rylex.nep.compat.advancedae.mixin;
 
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.style.ScreenStyle;
-import dev.rylex.nep.NepSlotSemantics;
-import dev.rylex.nep.client.ImportUpgradePanels;
-import dev.rylex.nep.mixin.ScreenStyleAccessor;
+import dev.rylex.nep.compat.advancedae.AdvProviderUpgradePanel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.pedroksl.advanced_ae.client.gui.AdvPatternProviderScreen;
@@ -29,8 +27,6 @@ public abstract class AdvPatternProviderScreenMixin extends AEBaseScreen<AdvPatt
             Component title,
             ScreenStyle style,
             CallbackInfo ci) {
-        if (style instanceof ScreenStyleAccessor accessor) {
-            ImportUpgradePanels.add(menu.getSlots(NepSlotSemantics.IMPORT_UPGRADE), accessor.nep$widgets(), widgets);
-        }
+        AdvProviderUpgradePanel.add(style, menu, widgets);
     }
 }

@@ -14,6 +14,7 @@ Pattern providers only cope with machines shaped like a furnace: items in, items
 | Create               |   ✅   |   ❌   | Mechanical Crafting, Deploying, Filling, Sequenced Assembly |
 | Draconic Evolution   |   ✅   |   ❌   | Fusion Crafting                                             |
 | Mystical Agriculture |   ✅   |   ✅   | Infusion, Awakening                                         |
+| Occultism            |   ✅   |   ✅   | Spirit Fire, Crushing, Crystallizing, Rituals               |
 | Oritech              |   ✅   |   ✅   | Particle Collision                                          |
 
 Look a recipe up in JEI, hit the **+** button at a Pattern Encoding Terminal, and the right pattern comes back with the ingredients already worked out.
@@ -33,11 +34,11 @@ Full EMI support is postponed until NEP's full 1.0 release, until then I'll be a
 
 Every block NEP adds works aboard a **Sable** sub-level, which is what Create: Aeronautics builds its ships from. Screens stay open while the deck moves under you, the Sequenced Assembly Linker draws its overlay on the ship rather than where the sub-level is parked, and assembling a ship around a machine no longer duplicates what it was holding. Links have to stay on one sub-level: a controller cannot drive a machine that is on a different ship, or on the ground below it.
 
-Sable is optional. NEP carries the small companion library it needs, so nothing changes on installs without it.
+Sable is optional. NEP reaches it through Sable Companion, which Sable ships with itself, so nothing changes on installs without it.
 
 ## Modpack Permission
 
-You are free to include this mod in any Modpack on CurseForge or Modrinth (once the mod is on there).
+You are free to include unmodified releases of this mod in any Modpack on CurseForge or Modrinth (once the mod is on there), as long as the pack credits the mod and links to an official download page. The full terms are in `LICENSE`.
 
 ## Documentation
 
@@ -49,16 +50,15 @@ NEP is built with pack devs in mind: `nep-server.toml` is fully modular. Every i
 
 ## Planned Mod Support
 
-| Mod                    |Processes                                       |
-| ---------------------- |----------------------------------------------- |
-| Ars Nouveau            |Enchanting Core, Scribe's Table, Rituals(maybe) |
-| Cooking for Blockheads |Kitchen Suite                                   |
-| Enchanted              |Distillery, Kettle, Witch's Oven                |
-| Excessive Utilities    |QED(maybe), Rainbow Generator Controller(maybe) |
-| Farmer's Delight       |Cooking Pot, Skillet, Cutting Board             |
-| Farming For Blockheads |Market Trades                                   |
-| Iron's Spellbooks      |Alchemist Cauldron                              |
-| Malum                  |Spirit Altar                                    |
-| Mekanism               |Metallurgic Infuser                             |
-| Occultism              |Rituals                                         |
-| Pneumaticcraft         |Pressure Chamber, Heat Crafting                 |
+| Mod                    | Processes                                       |
+| ---------------------- | ----------------------------------------------- |
+| Ars Nouveau            | Enchanting Core, Scribe's Table, Rituals(maybe) |
+| Cooking for Blockheads | Kitchen Suite                                   |
+| Enchanted              | Distillery, Kettle, Witch's Oven                |
+| Excessive Utilities    | QED(maybe), Rainbow Generator Controller(maybe) |
+| Farmer's Delight       | Cooking Pot, Skillet, Cutting Board             |
+| Farming For Blockheads | Market Trades                                   |
+| Iron's Spellbooks      | Alchemist Cauldron                              |
+| Malum                  | Spirit Altar                                    |
+| Mekanism               | Metallurgic Infuser                             |
+| Pneumaticcraft         | Pressure Chamber, Heat Crafting                 |

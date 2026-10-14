@@ -6,12 +6,10 @@ import dev.rylex.nep.menu.ManualCraftMenu;
 import dev.rylex.nep.net.ManualCraftPayload;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
-import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.recipe.types.IRecipeType;
 import net.minecraft.network.chat.Component;
@@ -25,7 +23,7 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 public final class ManualTransferHandler<M extends AbstractContainerMenu & ManualCraftMenu, T>
-        implements IRecipeTransferHandler<M, T> {
+        extends RecipeMenuTransferHandler<M, T> {
 
     @FunctionalInterface
     public interface Requirements<T> {
@@ -33,10 +31,6 @@ public final class ManualTransferHandler<M extends AbstractContainerMenu & Manua
         List<ManualRequirement> of(T recipe, Level level);
     }
 
-    private final Class<M> menuClass;
-    private final MenuType<M> menuType;
-    private final IRecipeType<T> recipeType;
-    private final IRecipeTransferHandlerHelper helper;
     private final Requirements<T> requirements;
     private final PatternTransferHandler.RecipeId<T> identifier;
 
@@ -47,27 +41,9 @@ public final class ManualTransferHandler<M extends AbstractContainerMenu & Manua
             IRecipeTransferHandlerHelper helper,
             Requirements<T> requirements,
             PatternTransferHandler.RecipeId<T> identifier) {
-        this.menuClass = menuClass;
-        this.menuType = menuType;
-        this.recipeType = recipeType;
-        this.helper = helper;
+        super(menuClass, menuType, recipeType, helper);
         this.requirements = requirements;
         this.identifier = identifier;
-    }
-
-    @Override
-    public Class<? extends M> getContainerClass() {
-        return menuClass;
-    }
-
-    @Override
-    public Optional<MenuType<M>> getMenuType() {
-        return Optional.of(menuType);
-    }
-
-    @Override
-    public IRecipeType<T> getRecipeType() {
-        return recipeType;
     }
 
     @Override

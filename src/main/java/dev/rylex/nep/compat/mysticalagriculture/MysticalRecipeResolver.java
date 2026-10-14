@@ -9,13 +9,11 @@ import com.blakebr0.mysticalagriculture.init.ModRecipeTypes;
 import dev.rylex.nep.pattern.AwakeningPattern;
 import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.PatternStacks;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.util.RecipeCache;
 import dev.rylex.nep.util.Recipes;
 import dev.rylex.nep.util.Uniqueness;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.resources.Identifier;
@@ -44,11 +42,13 @@ final class MysticalRecipeResolver {
             Map<AEItemKey, Long> expectedItems,
             GenericStack result) {}
 
+    record ItemAmount(AEItemKey key, long amount) {}
+
     record AwakeningPlan(
             RecipeHolder<IAwakeningRecipe> holder,
             GenericStack altar,
             List<GenericStack> pedestals,
-            List<GenericStack> essences,
+            List<ItemAmount> essences,
             Map<AEItemKey, Long> expectedItems,
             GenericStack result) {}
 
@@ -136,52 +136,42 @@ final class MysticalRecipeResolver {
     @Nullable
     static InfusionPlan infusionPlan(
             RecipeHolder<IInfusionRecipe> holder, Level level, List<GenericStack> inputs, GenericStack result) {
-        GenericStack[] chosen = match(MysticalRecipeIngredients.infusion(holder.value(), level), inputs, result);
+        GenericStack[] chosen = IngredientMatching.matchAssign(
+                MysticalRecipeIngredients.infusion(holder.value(), level), inputs, result);
         if (chosen == null) {
             return null;
         }
-        Map<AEItemKey, Long> expected = expectedItems(inputs);
+        Map<AEItemKey, Long> expected = PatternStacks.expectedItems(inputs);
         if (expected == null) {
             return null;
         }
-        List<GenericStack> pedestals = new ArrayList<>(chosen.length - 1);
-        pedestals.addAll(List.of(chosen).subList(1, chosen.length));
-        return new InfusionPlan(holder, chosen[0], List.copyOf(pedestals), expected, result);
+        List<GenericStack> pedestals = List.copyOf(List.of(chosen).subList(1, chosen.length));
+        return new InfusionPlan(holder, chosen[0], pedestals, expected, result);
     }
 
     @Nullable
     static AwakeningPlan awakeningPlan(
             RecipeHolder<IAwakeningRecipe> holder, Level level, List<GenericStack> inputs, GenericStack result) {
-        GenericStack[] chosen = match(MysticalRecipeIngredients.awakening(holder.value(), level), inputs, result);
+        GenericStack[] chosen = IngredientMatching.matchAssign(
+                MysticalRecipeIngredients.awakening(holder.value(), level), inputs, result);
         if (chosen == null) {
             return null;
         }
-        Map<AEItemKey, Long> expected = expectedItems(inputs);
+        Map<AEItemKey, Long> expected = PatternStacks.expectedItems(inputs);
         if (expected == null) {
             return null;
         }
         int vessels = MysticalRecipeIngredients.AWAKENING_VESSELS;
         int firstVessel = chosen.length - vessels;
         List<GenericStack> pedestals = List.copyOf(List.of(chosen).subList(1, firstVessel));
-        List<GenericStack> essences = List.copyOf(List.of(chosen).subList(firstVessel, chosen.length));
-        return new AwakeningPlan(holder, chosen[0], pedestals, essences, expected, result);
-    }
-
-    private static GenericStack @Nullable [] match(
-            @Nullable EncodedIngredients expected, List<GenericStack> inputs, GenericStack result) {
-        return IngredientMatching.matchAssign(expected, inputs, result);
-    }
-
-    @Nullable
-    private static Map<AEItemKey, Long> expectedItems(List<GenericStack> inputs) {
-        Map<AEItemKey, Long> expected = new LinkedHashMap<>();
-        for (GenericStack stack : inputs) {
-            if (!(stack.what() instanceof AEItemKey key)) {
+        List<ItemAmount> essences = new ArrayList<>(vessels);
+        for (GenericStack essence : List.of(chosen).subList(firstVessel, chosen.length)) {
+            if (!(essence.what() instanceof AEItemKey key)) {
                 return null;
             }
-            expected.merge(key, stack.amount(), Long::sum);
+            essences.add(new ItemAmount(key, essence.amount()));
         }
-        return Map.copyOf(expected);
+        return new AwakeningPlan(holder, chosen[0], pedestals, List.copyOf(essences), expected, result);
     }
 
     @SuppressWarnings("unchecked")

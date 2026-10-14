@@ -6,6 +6,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.parts.encoding.EncodingMode;
 import appeng.parts.encoding.PatternEncodingLogic;
 import appeng.util.ConfigInventory;
+import dev.rylex.nep.Nep;
 import dev.rylex.nep.decoder.PatternDecoding;
 import dev.rylex.nep.pattern.RecipePattern;
 import java.util.ArrayList;
@@ -101,6 +102,7 @@ public final class RetainedSlots {
         try {
             return PatternDetailsHelper.encodeProcessingPattern(sparseInputs, sparseOutputs);
         } catch (RuntimeException e) {
+            Nep.LOGGER.debug("Could not encode a processing pattern for retained slots", e);
             return null;
         }
     }

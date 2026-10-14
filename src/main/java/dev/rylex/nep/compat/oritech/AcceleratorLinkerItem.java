@@ -117,7 +117,7 @@ public class AcceleratorLinkerItem extends Item {
         List<BlockPos> linked = accelerators(stack);
         for (int i = 0; i < ParticleCollisionControllerBlockEntity.LINKS; i++) {
             Component value = i < linked.size()
-                    ? Component.literal(format(linked.get(i))).withStyle(ChatFormatting.WHITE)
+                    ? format(linked.get(i)).copy().withStyle(ChatFormatting.WHITE)
                     : Component.translatable("tooltip.nep.accelerator_linker.unset")
                             .withStyle(ChatFormatting.DARK_GRAY);
             tooltip.accept(Component.translatable(
@@ -186,8 +186,7 @@ public class AcceleratorLinkerItem extends Item {
         return Math.max(dx, Math.max(dy, dz)) > range;
     }
 
-    private static String format(BlockPos pos) {
-        return Component.translatable("gui.nep.coords", pos.getX(), pos.getY(), pos.getZ())
-                .getString();
+    private static Component format(BlockPos pos) {
+        return Component.translatable("gui.nep.coords", pos.getX(), pos.getY(), pos.getZ());
     }
 }

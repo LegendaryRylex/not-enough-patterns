@@ -143,10 +143,16 @@ public final class ParticleCollisionMatrixGameTest {
 
     public static void anUnpoweredMatrixKeepsTheIngredientsItWasHanded(GameTestHelper helper) {
         ConfigOverrides.Restore restore = ConfigOverrides.override(ME_CHARGE_FIELD, false);
-        ParticleCollisionMatrixBlockEntity matrix = placeMatrix(helper);
-        recipe(helper);
-
-        helper.assertTrue(push(helper, matrix, 1), "the Matrix refused a particle collision pattern");
+        ParticleCollisionMatrixBlockEntity placed;
+        try {
+            placed = placeMatrix(helper);
+            recipe(helper);
+            helper.assertTrue(push(helper, placed, 1), "the Matrix refused a particle collision pattern");
+        } catch (RuntimeException e) {
+            restore.undo();
+            throw e;
+        }
+        ParticleCollisionMatrixBlockEntity matrix = placed;
 
         helper.runAfterDelay(120L, () -> {
             restore.undo();

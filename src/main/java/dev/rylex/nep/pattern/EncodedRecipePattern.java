@@ -5,6 +5,7 @@ import appeng.core.definitions.AEItems;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
+import java.util.stream.Stream;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -46,16 +47,8 @@ public record EncodedRecipePattern(
         if (AEItems.MISSING_CONTENT.is(result.what())) {
             return true;
         }
-        for (GenericStack input : inputs) {
-            if (AEItems.MISSING_CONTENT.is(input.what())) {
-                return true;
-            }
-        }
-        for (GenericStack kept : retained) {
-            if (AEItems.MISSING_CONTENT.is(kept.what())) {
-                return true;
-            }
-        }
-        return false;
+        return Stream.of(inputs, retained)
+                .flatMap(List::stream)
+                .anyMatch(stack -> AEItems.MISSING_CONTENT.is(stack.what()));
     }
 }

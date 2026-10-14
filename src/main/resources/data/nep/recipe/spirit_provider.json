@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "category": "misc",
+  "key": {
+    "B": "occultism:sacrificial_bowl",
+    "E": "ae2:engineering_processor",
+    "I": "#c:ingots/silver",
+    "S": "occultism:otherstone"
+  },
+  "pattern": [
+    "IBI",
+    "SES"
+  ],
+  "result": {
+    "count": 1,
+    "id": "nep:spirit_provider"
+  }
+}

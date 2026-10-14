@@ -12,10 +12,14 @@ final class PatternInput implements IPatternDetails.IInput {
     private final long multiplier;
     private final boolean retained;
 
-    PatternInput(AEKey what, long amount, boolean retained) {
+    @Nullable
+    private final InputSubstitution substitution;
+
+    PatternInput(AEKey what, long amount, boolean retained, @Nullable InputSubstitution substitution) {
         this.template = new GenericStack[] {new GenericStack(what, 1)};
         this.multiplier = amount;
         this.retained = retained;
+        this.substitution = substitution;
     }
 
     @Override
@@ -30,7 +34,8 @@ final class PatternInput implements IPatternDetails.IInput {
 
     @Override
     public boolean isValid(AEKey input, Level level) {
-        return input.matches(template[0]);
+        return input.matches(template[0])
+                || (substitution != null && substitution.accepts(template[0].what(), input, level));
     }
 
     @Nullable

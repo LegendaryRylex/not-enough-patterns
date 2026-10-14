@@ -37,6 +37,19 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
     private static final float PULSE_STALLED = 0.02F;
     private static final float PULSE_IDLE = 0.03F;
 
+    private static final float SPIN_RUNNING = 6.0F;
+    private static final float SPIN_GAIN = 14.0F;
+    private static final float SPIN_STALLED = 1.0F;
+    private static final float SPIN_IDLE = 3.0F;
+    private static final float BRIGHT_RUNNING = 0.72F;
+    private static final float BRIGHT_GAIN = 0.28F;
+    private static final float BRIGHT_STALLED = 0.45F;
+    private static final float BRIGHT_IDLE = 0.60F;
+    private static final float GLOW_RUNNING = 0.55F;
+    private static final float GLOW_GAIN = 0.45F;
+    private static final float GLOW_STALLED = 0.22F;
+    private static final float GLOW_IDLE = 0.40F;
+
     private static final float RING_SPIN = 0.6F;
     private static final float RING_OFFSET = 120.0F;
     private static final float RING_BRIGHTNESS = 1.0F;
@@ -198,15 +211,20 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
         if (!state.ready) {
             return;
         }
-        int overlay = OverlayTexture.NO_OVERLAY;
-        int fullBright = LightCoordsUtil.FULL_BRIGHT;
-
         pose.pushPose();
         pose.translate(0.5F, 0.5F, 0.5F);
         if (state.stalled) {
             pose.translate(state.shudderX, state.shudderY, 0.0F);
         }
+        submitCore(state, pose, collector);
+        submitRings(state, pose, collector);
+        RenderType plasma = MatrixPlasma.of(profile.plasma());
+        submitSkin(state, pose, collector, plasma);
+        submitHalo(state, pose, collector, plasma);
+        pose.popPose();
+    }
 
+    private void submitCore(State state, PoseStack pose, SubmitNodeCollector collector) {
         pose.pushPose();
         pose.mulPose(Axis.YP.rotationDegrees(state.yaw));
         pose.mulPose(Axis.XP.rotationDegrees(state.pitch));
@@ -216,9 +234,12 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
         collector.submitCustomGeometry(
                 pose,
                 RenderTypes.entityCutout(profile.texture()),
-                (last, buffer) -> mesh.emit(last, buffer, brightness, 1.0F, fullBright, overlay));
+                (last, buffer) -> mesh.emit(
+                        last, buffer, brightness, 1.0F, LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY));
         pose.popPose();
+    }
 
+    private void submitRings(State state, PoseStack pose, SubmitNodeCollector collector) {
         RenderType bars = RenderTypes.entityCutout(profile.ring());
         int light = state.lightCoords;
         for (int index = 0; index < MatrixRingMesh.RINGS.length; index++) {
@@ -231,19 +252,18 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
             pose.mulPose(PIVOTS[index].rotationDegrees(turns[2]));
             MatrixRingMesh ring = MatrixRingMesh.RINGS[index];
             collector.submitCustomGeometry(
-                    pose, bars, (last, buffer) -> ring.emit(last, buffer, RING_BRIGHTNESS, light, overlay));
+                    pose,
+                    bars,
+                    (last, buffer) -> ring.emit(last, buffer, RING_BRIGHTNESS, light, OverlayTexture.NO_OVERLAY));
             pose.popPose();
         }
+    }
 
-        RenderType plasma = MatrixPlasma.of(profile.plasma());
-        int coreTint = profile.coreTint();
-        float fineStrength = state.fineStrength;
-        float fineTiling = state.fineTiling;
-        float fineU = state.fineU;
-        float fineV = state.fineV;
-        float crossStrength = state.crossStrength;
-        float crossU = state.crossU;
-        float crossV = state.crossV;
+    private void submitSkin(State state, PoseStack pose, SubmitNodeCollector collector, RenderType plasma) {
+        MatrixCoreShell.Pass fine = new MatrixCoreShell.Pass(
+                profile.coreTint(), state.fineStrength, state.fineTiling, state.fineU, state.fineV);
+        MatrixCoreShell.Pass cross = new MatrixCoreShell.Pass(
+                profile.coreTint(), state.crossStrength, CROSS_TILING, state.crossU, state.crossV);
         pose.pushPose();
         pose.mulPose(Axis.YP.rotationDegrees(state.skinYaw));
         pose.mulPose(Axis.ZP.rotationDegrees(state.skinRoll));
@@ -253,31 +273,23 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
                     last,
                     buffer,
                     MatrixCoreShell.Layer.FINE,
-                    coreTint,
-                    fineStrength,
-                    fineTiling,
-                    fineU,
-                    fineV,
-                    fullBright,
-                    overlay);
+                    fine,
+                    LightCoordsUtil.FULL_BRIGHT,
+                    OverlayTexture.NO_OVERLAY);
             MatrixCoreShell.SPHERE.emit(
                     last,
                     buffer,
                     MatrixCoreShell.Layer.BROAD,
-                    coreTint,
-                    crossStrength,
-                    CROSS_TILING,
-                    crossU,
-                    crossV,
-                    fullBright,
-                    overlay);
+                    cross,
+                    LightCoordsUtil.FULL_BRIGHT,
+                    OverlayTexture.NO_OVERLAY);
         });
         pose.popPose();
+    }
 
-        int bodyTint = profile.bodyTint();
-        float broadStrength = state.broadStrength;
-        float broadU = state.broadU;
-        float broadV = state.broadV;
+    private void submitHalo(State state, PoseStack pose, SubmitNodeCollector collector, RenderType plasma) {
+        MatrixCoreShell.Pass broad = new MatrixCoreShell.Pass(
+                profile.bodyTint(), state.broadStrength, BROAD_TILING, state.broadU, state.broadV);
         pose.pushPose();
         pose.mulPose(Axis.YP.rotationDegrees(state.yaw));
         pose.mulPose(Axis.XP.rotationDegrees(state.pitch));
@@ -289,15 +301,9 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
                         last,
                         buffer,
                         MatrixCoreShell.Layer.BROAD,
-                        bodyTint,
-                        broadStrength,
-                        BROAD_TILING,
-                        broadU,
-                        broadV,
-                        fullBright,
-                        overlay));
-        pose.popPose();
-
+                        broad,
+                        LightCoordsUtil.FULL_BRIGHT,
+                        OverlayTexture.NO_OVERLAY));
         pose.popPose();
     }
 
@@ -308,9 +314,9 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
 
     private static float spinRate(MatrixStatus status, float progress) {
         return switch (status) {
-            case RUNNING -> 6.0F + 14.0F * progress;
-            case STALLED -> 1.0F;
-            case IDLE -> 3.0F;
+            case RUNNING -> SPIN_RUNNING + SPIN_GAIN * progress;
+            case STALLED -> SPIN_STALLED;
+            case IDLE -> SPIN_IDLE;
         };
     }
 
@@ -337,9 +343,9 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
     private static float brightness(MatrixStatus status, float progress, float flash) {
         float base =
                 switch (status) {
-                    case RUNNING -> 0.72F + 0.28F * progress;
-                    case STALLED -> 0.45F;
-                    case IDLE -> 0.60F;
+                    case RUNNING -> BRIGHT_RUNNING + BRIGHT_GAIN * progress;
+                    case STALLED -> BRIGHT_STALLED;
+                    case IDLE -> BRIGHT_IDLE;
                 };
         return Math.min(1.0F, base + flash * FLASH_GLOW);
     }
@@ -347,9 +353,9 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost>
     private static float glow(MatrixStatus status, float progress, float flash) {
         float base =
                 switch (status) {
-                    case RUNNING -> 0.55F + 0.45F * progress;
-                    case STALLED -> 0.22F;
-                    case IDLE -> 0.40F;
+                    case RUNNING -> GLOW_RUNNING + GLOW_GAIN * progress;
+                    case STALLED -> GLOW_STALLED;
+                    case IDLE -> GLOW_IDLE;
                 };
         return Math.min(1.0F, base + flash * FLASH_SURGE);
     }

@@ -30,6 +30,7 @@ import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
@@ -137,54 +138,46 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
 
     @Nullable
     private ResourceHandler<ItemResource> itemHandler(Side side) {
-        if (!(level instanceof ServerLevel serverLevel)) {
-            return null;
-        }
-        return itemCaches
-                .computeIfAbsent(
-                        side,
-                        at -> BlockCapabilityCache.create(
-                                Capabilities.Item.BLOCK, serverLevel, at.pos(), at.face(), this::stillLinked, () -> {}))
-                .getCapability();
+        return cached(itemCaches, Capabilities.Item.BLOCK, side);
     }
 
     @Nullable
     private ResourceHandler<FluidResource> fluidHandler(Side side) {
+        return cached(fluidCaches, Capabilities.Fluid.BLOCK, side);
+    }
+
+    @Nullable
+    private <T> T cached(
+            Map<Side, BlockCapabilityCache<T, Direction>> caches, BlockCapability<T, Direction> capability, Side side) {
         if (!(level instanceof ServerLevel serverLevel)) {
             return null;
         }
-        return fluidCaches
-                .computeIfAbsent(
+        return caches.computeIfAbsent(
                         side,
                         at -> BlockCapabilityCache.create(
-                                Capabilities.Fluid.BLOCK,
-                                serverLevel,
-                                at.pos(),
-                                at.face(),
-                                this::stillLinked,
-                                () -> {}))
+                                capability, serverLevel, at.pos(), at.face(), this::stillLinked, () -> {}))
                 .getCapability();
     }
 
     public boolean canLink(BlockPos pos) {
+        return canLink(pos, HubRules.load());
+    }
+
+    private boolean canLink(BlockPos pos, HubRules rules) {
         if (level == null || pos.equals(worldPosition)) {
             return false;
         }
         if (level.getBlockEntity(pos) instanceof MachineHubBlockEntity || HubScan.networkBlock(level, pos)) {
             return false;
         }
-        if (HubRules.load().unlinkable(level.getBlockState(pos))) {
+        if (rules.unlinkable(level.getBlockState(pos))) {
             return false;
         }
         return withinRange(pos);
     }
 
     public boolean withinRange(BlockPos pos) {
-        int range = NepConfig.machineHubLinkRange();
-        int dx = Math.abs(pos.getX() - worldPosition.getX());
-        int dy = Math.abs(pos.getY() - worldPosition.getY());
-        int dz = Math.abs(pos.getZ() - worldPosition.getZ());
-        return Math.max(dx, Math.max(dy, dz)) <= range;
+        return !HubScan.beyond(worldPosition, pos, NepConfig.machineHubLinkRange());
     }
 
     public int applyPlan(List<HubLink> plan) {
@@ -195,8 +188,9 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
         List<HubLink> accepted = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();
         int limit = NepConfig.machineHubMaximumLinks();
+        HubRules rules = HubRules.load();
         for (HubLink link : plan) {
-            if (accepted.size() >= limit || !seen.add(link.pos()) || !canLink(link.pos())) {
+            if (accepted.size() >= limit || !seen.add(link.pos()) || !canLink(link.pos(), rules)) {
                 continue;
             }
             accepted.add(carryOver(existing.get(link.pos()), link));
@@ -232,8 +226,8 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
         setLinks(List.of());
     }
 
-    public void cycleRole(int index) {
-        editLink(index, link -> link.withRole(link.role().next()));
+    public void setRole(int index, HubRole role) {
+        editLink(index, link -> link.withRole(role));
     }
 
     public void setFace(int index, @Nullable Direction face) {

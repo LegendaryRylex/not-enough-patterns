@@ -18,7 +18,7 @@ public final class PatternDecoding {
         }
         int held = 0;
         for (DecoderGridNode decoder : grid.getActiveMachines(DecoderGridNode.class)) {
-            held |= decoder.modules();
+            held |= decoder.heldMask();
         }
         return held;
     }

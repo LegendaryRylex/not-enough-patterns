@@ -3,30 +3,26 @@ package dev.rylex.nep.compat.oritech;
 import com.mojang.serialization.MapCodec;
 import dev.rylex.nep.machine.MatrixStatus;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public class ParticleCollisionMatrixBlock extends BaseEntityBlock {
+public class ParticleCollisionMatrixBlock extends ParticleCollisionBlock<ParticleCollisionMatrixBlockEntity> {
 
     public static final MapCodec<ParticleCollisionMatrixBlock> CODEC = simpleCodec(ParticleCollisionMatrixBlock::new);
 
     public static final EnumProperty<MatrixStatus> STATUS = MatrixStatus.PROPERTY;
 
     public ParticleCollisionMatrixBlock(Properties properties) {
-        super(properties);
+        super(
+                properties,
+                ParticleCollisionMatrixBlockEntity.class,
+                NepOritechContent.MATRIX_BLOCK_ENTITY::get,
+                ParticleCollisionMatrixBlockEntity::serverTick);
         registerDefaultState(defaultBlockState().setValue(STATUS, MatrixStatus.IDLE));
     }
 
@@ -40,46 +36,14 @@ public class ParticleCollisionMatrixBlock extends BaseEntityBlock {
         builder.add(STATUS);
     }
 
-    @Override
-    protected RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
-
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new ParticleCollisionMatrixBlockEntity(NepOritechContent.MATRIX_BLOCK_ENTITY.get(), pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
-            Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide()) {
-            return null;
-        }
-        return createTickerHelper(
-                type, NepOritechContent.MATRIX_BLOCK_ENTITY.get(), ParticleCollisionMatrixBlockEntity::serverTick);
-    }
-
-    @Override
-    protected boolean hasAnalogOutputSignal(BlockState state) {
-        return true;
-    }
-
-    @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction fromDirection) {
-        return level.getBlockEntity(pos) instanceof ParticleCollisionMatrixBlockEntity matrix
-                ? matrix.comparatorOutput()
-                : 0;
-    }
-
-    @Override
-    protected InteractionResult useWithoutItem(
-            BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ParticleCollisionMatrixBlockEntity matrix) {
-            player.openMenu(matrix, buffer -> buffer.writeBlockPos(pos));
-        }
-        return InteractionResult.SUCCESS;
+    int comparatorOutput(ParticleCollisionMatrixBlockEntity entity) {
+        return entity.comparatorOutput();
     }
 }

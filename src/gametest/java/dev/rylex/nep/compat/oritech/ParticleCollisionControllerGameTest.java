@@ -73,7 +73,19 @@ public final class ParticleCollisionControllerGameTest {
             ParticleAcceleratorBlockEntity east,
             ParticleAcceleratorBlockEntity west) {}
 
-    private static GameTestSequence ring(GameTestHelper helper, AtomicReference<Ring> built) {
+    private record BuiltRing(GameTestSequence sequence, AtomicReference<Ring> reference) {
+
+        Ring get() {
+            return reference.get();
+        }
+    }
+
+    private static BuiltRing ring(GameTestHelper helper) {
+        AtomicReference<Ring> built = new AtomicReference<>();
+        return new BuiltRing(buildRing(helper, built), built);
+    }
+
+    private static GameTestSequence buildRing(GameTestHelper helper, AtomicReference<Ring> built) {
         return helper.startSequence()
                 .thenExecute(() -> {
                     for (BlockPos ring : List.of(WEST_RING, MIDDLE_RING, EAST_RING)) {
@@ -165,8 +177,8 @@ public final class ParticleCollisionControllerGameTest {
     }
 
     public static void anUnmeasuredRingRefusesEveryPattern(GameTestHelper helper) {
-        AtomicReference<Ring> built = new AtomicReference<>();
-        ring(helper, built)
+        BuiltRing built = ring(helper);
+        built.sequence()
                 .thenExecute(() -> {
                     Ring ring = built.get();
                     helper.assertValueEqual(ring.controller().topSpeed(), 0L, "top speed of a ring nothing has flown");
@@ -182,8 +194,8 @@ public final class ParticleCollisionControllerGameTest {
     }
 
     public static void aMeasuredRingRunsAStaggeredCollision(GameTestHelper helper) {
-        AtomicReference<Ring> built = new AtomicReference<>();
-        ring(helper, built)
+        BuiltRing built = ring(helper);
+        built.sequence()
                 .thenExecute(() -> AcceleratorProbe.load(built.get().east(), new ItemStack(Items.COBBLESTONE)))
                 .thenWaitUntil(() -> helper.assertTrue(
                         built.get().controller().topSpeed() > 0,
@@ -225,8 +237,8 @@ public final class ParticleCollisionControllerGameTest {
     }
 
     public static void aMagneticFieldLiftsTheSpeedLimitAndTakesTheFastParticle(GameTestHelper helper) {
-        AtomicReference<Ring> built = new AtomicReference<>();
-        ring(helper, built)
+        BuiltRing built = ring(helper);
+        built.sequence()
                 .thenExecute(() -> linkField(helper, built.get()))
                 .thenIdle(2)
                 .thenExecute(() -> {
@@ -257,8 +269,8 @@ public final class ParticleCollisionControllerGameTest {
     }
 
     public static void aParticleLostUnderTheFieldCapsItAndStopsTheRetries(GameTestHelper helper) {
-        AtomicReference<Ring> built = new AtomicReference<>();
-        ring(helper, built)
+        BuiltRing built = ring(helper);
+        built.sequence()
                 .thenExecute(() -> linkField(helper, built.get()))
                 .thenIdle(2)
                 .thenExecute(() -> helper.assertTrue(

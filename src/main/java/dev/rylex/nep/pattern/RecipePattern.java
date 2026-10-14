@@ -8,6 +8,7 @@ import dev.rylex.nep.pattern.encoding.SyntheticRecipes;
 import dev.rylex.nep.util.Recipes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.resources.Identifier;
@@ -15,6 +16,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class RecipePattern implements NepPattern {
 
@@ -26,14 +28,15 @@ public abstract class RecipePattern implements NepPattern {
     private final List<GenericStack> outputs;
 
     protected RecipePattern(AEItemKey definition, DataComponentType<EncodedRecipePattern> component, Level level) {
-        this(definition, component, level, UnaryOperator.identity());
+        this(definition, component, level, UnaryOperator.identity(), null);
     }
 
     protected RecipePattern(
             AEItemKey definition,
             DataComponentType<EncodedRecipePattern> component,
             Level level,
-            UnaryOperator<GenericStack> adapt) {
+            UnaryOperator<GenericStack> adapt,
+            @Nullable InputSubstitution substitution) {
         this.definition = definition;
         EncodedRecipePattern encoded = definition.get(component);
         if (encoded == null) {
@@ -54,16 +57,8 @@ public abstract class RecipePattern implements NepPattern {
             throw new IllegalArgumentException("Pattern references unknown recipe " + encoded.recipe());
         }
 
-        for (GenericStack input : encoded.inputs()) {
-            if (input.amount() <= 0) {
-                throw new IllegalArgumentException("Pattern has an empty ingredient");
-            }
-        }
-        for (GenericStack kept : encoded.retained()) {
-            if (kept.amount() <= 0) {
-                throw new IllegalArgumentException("Pattern has an empty kept ingredient");
-            }
-        }
+        requirePositive(encoded.inputs(), "Pattern has an empty ingredient");
+        requirePositive(encoded.retained(), "Pattern has an empty kept ingredient");
 
         this.recipe = encoded.recipe();
         this.consumed = PatternContents.condense(adapt(encoded.inputs(), adapt));
@@ -71,12 +66,33 @@ public abstract class RecipePattern implements NepPattern {
         this.inputs = new PatternInput[consumed.size() + retained.size()];
         int slot = 0;
         for (GenericStack input : consumed) {
-            inputs[slot++] = new PatternInput(input.what(), input.amount(), false);
+            inputs[slot++] = new PatternInput(input.what(), input.amount(), false, substitution);
         }
         for (GenericStack kept : retained) {
-            inputs[slot++] = new PatternInput(kept.what(), kept.amount(), true);
+            inputs[slot++] = new PatternInput(kept.what(), kept.amount(), true, substitution);
         }
         this.outputs = List.of(adapt.apply(encoded.result()));
+    }
+
+    private static void requirePositive(List<GenericStack> stacks, String message) {
+        for (GenericStack stack : stacks) {
+            if (stack.amount() <= 0) {
+                throw new IllegalArgumentException(message);
+            }
+        }
+    }
+
+    @Nullable
+    protected static InputSubstitution substitutionFor(
+            DataComponentType<EncodedRecipePattern> component,
+            AEItemKey definition,
+            @Nullable Level level,
+            BiFunction<Identifier, Level, InputSubstitution> substitutions) {
+        if (level == null) {
+            return null;
+        }
+        EncodedRecipePattern encoded = definition.get(component);
+        return encoded == null ? null : substitutions.apply(encoded.recipe(), level);
     }
 
     private static List<GenericStack> adapt(List<GenericStack> stacks, UnaryOperator<GenericStack> adapt) {

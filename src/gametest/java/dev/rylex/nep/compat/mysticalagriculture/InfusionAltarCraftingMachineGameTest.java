@@ -1,17 +1,15 @@
 package dev.rylex.nep.compat.mysticalagriculture;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import com.blakebr0.mysticalagriculture.api.crafting.IInfusionRecipe;
 import com.blakebr0.mysticalagriculture.init.ModBlocks;
 import com.blakebr0.mysticalagriculture.tileentity.InfusionAltarTileEntity;
 import com.blakebr0.mysticalagriculture.tileentity.InfusionPedestalTileEntity;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.NepGameTests;
-import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,53 +70,27 @@ public final class InfusionAltarCraftingMachineGameTest {
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(ALTAR), null);
-        helper.assertTrue(machine != null, "the Infusion Altar exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(
+                helper, ALTAR, "the Infusion Altar exposed no crafting machine capability");
     }
 
     private static RecipeHolder<IInfusionRecipe> eightPedestalRecipe(GameTestHelper helper) {
-        RecipeHolder<IInfusionRecipe> best = null;
-        for (RecipeHolder<IInfusionRecipe> holder : MysticalRecipeResolver.infusionCandidates(helper.getLevel())) {
-            if (!holder.id().identifier().getNamespace().equals("mysticalagriculture")) {
-                continue;
-            }
-            EncodedIngredients expected = MysticalRecipeIngredients.infusion(holder.value(), helper.getLevel());
-            if (expected == null || expected.inputs().size() != MysticalRecipeIngredients.INFUSION_PEDESTALS + 1) {
-                continue;
-            }
-            if (best == null || holder.id().identifier().compareTo(best.id().identifier()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no infusion recipe filling all eight pedestals was loaded");
-        return best;
+        return MysticalFixtures.firstById(
+                helper,
+                MysticalRecipeResolver.infusionCandidates(helper.getLevel()),
+                holder -> {
+                    if (!holder.id().identifier().getNamespace().equals("mysticalagriculture")) {
+                        return false;
+                    }
+                    EncodedIngredients expected = MysticalRecipeIngredients.infusion(holder.value(), helper.getLevel());
+                    return expected != null
+                            && expected.inputs().size() == MysticalRecipeIngredients.INFUSION_PEDESTALS + 1;
+                },
+                "no infusion recipe filling all eight pedestals was loaded");
     }
 
     private static IPatternDetails patternFor(GameTestHelper helper, RecipeHolder<IInfusionRecipe> holder) {
-        EncodedIngredients expected = MysticalRecipeIngredients.infusion(holder.value(), helper.getLevel());
-        helper.assertTrue(expected != null, "the recipe produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded = InfusionPattern.encode(
-                holder.id().identifier(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the infusion pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
+        return MysticalFixtures.infusionPattern(helper, holder);
     }
 
     private static void assertNothingStranded(
