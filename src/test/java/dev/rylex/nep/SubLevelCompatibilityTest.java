@@ -2,14 +2,10 @@ package dev.rylex.nep;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class SubLevelCompatibilityTest {
@@ -60,16 +56,8 @@ class SubLevelCompatibilityTest {
     }
 
     private static void forEachSourceFile(SourceVisitor visitor) {
-        try (Stream<Path> files = Files.walk(SOURCE_ROOT)) {
-            files.filter(path -> path.toString().endsWith(".java")).forEach(path -> {
-                try {
-                    visitor.visit(SOURCE_ROOT.relativize(path), Files.readString(path));
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            });
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        for (Path path : ProjectFiles.walk(SOURCE_ROOT, ".java")) {
+            visitor.visit(SOURCE_ROOT.relativize(path), ProjectFiles.read(path));
         }
     }
 }

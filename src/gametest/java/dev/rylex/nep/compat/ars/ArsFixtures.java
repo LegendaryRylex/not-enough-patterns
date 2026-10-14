@@ -2,22 +2,29 @@ package dev.rylex.nep.compat.ars;
 
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
+import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import appeng.blockentity.storage.DriveBlockEntity;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
 import com.hollingsworth.arsnouveau.ArsNouveau;
+import com.hollingsworth.arsnouveau.common.crafting.recipes.EnchantingApparatusRecipe;
 import com.hollingsworth.arsnouveau.common.lib.RitualLib;
+import dev.rylex.nep.pattern.ApparatusPattern;
+import dev.rylex.nep.pattern.encoding.EncodedIngredients;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.Level;
 
 final class ArsFixtures {
 
@@ -69,14 +76,14 @@ final class ArsFixtures {
         return storage(helper).extract(key, Long.MAX_VALUE, Actionable.SIMULATE, source());
     }
 
-    static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
+    static void resetApparatusCaches() {
+        EnchantingApparatusCraftingMachine.clearCache();
+        ArsRecipeResolver.clearCache();
+    }
+
+    static void resetImbuementCaches() {
+        ImbuementCraftingMachine.clearCache();
+        ArsRecipeResolver.clearCache();
     }
 
     static ResourceLocation sanctuary() {
@@ -85,5 +92,24 @@ final class ArsFixtures {
 
     private static IActionSource source() {
         return IActionSource.empty();
+    }
+
+    static List<GenericStack> firstOptions(EncodedIngredients encoded) {
+        List<GenericStack> inputs = new ArrayList<>();
+        for (List<GenericStack> options : encoded.inputs()) {
+            inputs.add(options.get(0));
+        }
+        return inputs;
+    }
+
+    static IPatternDetails resolvableApparatus(
+            RecipeHolder<EnchantingApparatusRecipe> holder,
+            List<GenericStack> inputs,
+            EncodedIngredients expected,
+            Level level) {
+        ItemStack encoded =
+                ApparatusPattern.encode(holder.id(), inputs, expected.outputs().get(0));
+        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, level);
+        return details != null && ArsRecipeResolver.resolve(details, level) != null ? details : null;
     }
 }

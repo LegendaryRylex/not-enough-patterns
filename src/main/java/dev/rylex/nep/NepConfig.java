@@ -16,197 +16,230 @@ public final class NepConfig {
 
     public static final int CHAIN_FOCUSING_REMAINDER_TICKS = 10;
 
-    private static final ModConfigSpec.BooleanValue DEBUG_LOGGING;
-    private static final ModConfigSpec.IntValue IMPORT_CARD_GRACE;
-    private static final ModConfigSpec.BooleanValue PROCESSING_PATTERN_CONVERSION;
-    private static final ModConfigSpec.BooleanValue MANUAL_CRAFTING;
-    private static final ModConfigSpec.BooleanValue MACHINE_HUB;
-    private static final ModConfigSpec.IntValue MACHINE_HUB_LINK_RANGE;
-    private static final ModConfigSpec.IntValue MACHINE_HUB_MAXIMUM_LINKS;
-    private static final ModConfigSpec.IntValue MACHINE_HUB_SCAN_BUDGET;
-    private static final ModConfigSpec.IntValue MACHINE_HUB_CASING_DEPTH;
-    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_SCAN_WHITELIST;
-    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_SCAN_BLACKLIST;
-    private static final ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_LINK_BLACKLIST;
-    private static final ModConfigSpec.IntValue MACHINE_HUB_CHANNELS;
-    private static final ModConfigSpec.IntValue MACHINE_HUB_CHANNELS_PER_LINK;
-    private static final ModConfigSpec.BooleanValue REQUIRE_DECODER;
-    private static final ModConfigSpec.IntValue PATTERN_DECODER_CHANNELS;
-    private static final ModConfigSpec.IntValue PATTERN_DECODER_IDLE_ME_DRAIN;
+    private static ModConfigSpec.BooleanValue DEBUG_LOGGING;
+    private static ModConfigSpec.IntValue IMPORT_CARD_GRACE;
+    private static ModConfigSpec.BooleanValue PROCESSING_PATTERN_CONVERSION;
+    private static ModConfigSpec.BooleanValue MANUAL_CRAFTING;
+    private static ModConfigSpec.BooleanValue MACHINE_HUB;
+    private static ModConfigSpec.IntValue MACHINE_HUB_LINK_RANGE;
+    private static ModConfigSpec.IntValue MACHINE_HUB_MAXIMUM_LINKS;
+    private static ModConfigSpec.IntValue MACHINE_HUB_SCAN_BUDGET;
+    private static ModConfigSpec.IntValue MACHINE_HUB_CASING_DEPTH;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_SCAN_WHITELIST;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_SCAN_BLACKLIST;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> MACHINE_HUB_LINK_BLACKLIST;
+    private static ModConfigSpec.IntValue MACHINE_HUB_CHANNELS;
+    private static ModConfigSpec.IntValue MACHINE_HUB_CHANNELS_PER_LINK;
+    private static ModConfigSpec.BooleanValue REQUIRE_DECODER;
+    private static ModConfigSpec.IntValue PATTERN_DECODER_CHANNELS;
+    private static ModConfigSpec.IntValue PATTERN_DECODER_IDLE_ME_DRAIN;
     private static final Map<DecoderModule, ModConfigSpec.BooleanValue> DECODER_MODULES =
             new EnumMap<>(DecoderModule.class);
-    private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_EMPOWERING;
-    private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_ATOMIC_RECONSTRUCTION;
-    private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_MATRIX;
-    private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_MATRIX_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_ENERGY_COST;
-    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_CHARGE_RATE;
-    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_CAPACITY;
-    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_EMPOWERING_CRAFT_TICKS;
-    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_RECONSTRUCTION_CRAFT_TICKS;
-    private static final ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_MATRIX_ME_CHARGE;
-    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_CHANNELS;
-    private static final ModConfigSpec.BooleanValue APOTHIC_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue APOTHIC_INFUSION;
-    private static final ModConfigSpec.IntValue APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE;
-    private static final ModConfigSpec.BooleanValue APOTHIC_INFUSION_PREFER_EXPERIENCE_FLUID;
-    private static final ModConfigSpec.IntValue APOTHIC_INFUSION_MILLIBUCKETS_PER_EXPERIENCE;
-    private static final ModConfigSpec.BooleanValue COMPACT_CRAFTING_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue COMPACT_CRAFTING_MATRIX;
-    private static final ModConfigSpec.BooleanValue COMPACT_CRAFTING_MATRIX_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_CRAFT_TIME;
-    private static final ModConfigSpec.ConfigValue<String> COMPACT_CRAFTING_MATRIX_MAXIMUM_FIELD_SIZE;
-    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_ME_DRAIN;
-    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_CHANNELS;
-    private static final ModConfigSpec.BooleanValue COMPACT_CRAFTING_CONTROLLER;
-    private static final ModConfigSpec.BooleanValue COMPACT_CRAFTING_CONTROLLER_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_BLOCKS_PER_TICK;
-    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_ME_DRAIN;
-    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_CHANNELS;
-    private static final ModConfigSpec.BooleanValue CREATE_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue CREATE_FILLING;
-    private static final ModConfigSpec.BooleanValue CREATE_MECHANICAL_CRAFTING;
-    private static final ModConfigSpec.BooleanValue CREATE_MECHANICAL_CRAFTING_ALLOW_REGULAR;
-    private static final ModConfigSpec.BooleanValue CREATE_DEPLOYING;
-    private static final ModConfigSpec.BooleanValue CREATE_DEPLOYING_LOG_STRIPPING;
-    private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_LINK_RANGE;
-    private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_TANK_CAPACITY;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_HALT_GRACE;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_RECLAIM_GRACE;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_CHANNELS;
-    private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX;
-    private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_GUARANTEED_RESULTS;
-    private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_DRAIN;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS_MINIMUM;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_MINIMUM_SPEED;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CRAFT_TICKS;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_TANK_CAPACITY;
-    private static final ModConfigSpec.LongValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY;
-    private static final ModConfigSpec.LongValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE;
-    private static final ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_CHARGE;
-    private static final ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHANNELS;
-    private static final ModConfigSpec.BooleanValue DRACONIC_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue DRACONIC_FUSION_CRAFTING;
-    private static final ModConfigSpec.BooleanValue DRACONIC_FUSION_MATRIX;
-    private static final ModConfigSpec.BooleanValue DRACONIC_FUSION_MATRIX_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_ENERGY_COST;
-    private static final ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_CHARGE_RATE;
-    private static final ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_CAPACITY;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CRAFT_TICKS;
-    private static final ModConfigSpec.BooleanValue DRACONIC_FUSION_MATRIX_ME_CHARGE;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_ME_DRAIN;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CHANNELS;
-    private static final ModConfigSpec.ConfigValue<String> DRACONIC_FUSION_MATRIX_MAXIMUM_TIER;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_MAX_CORES;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CORE_SWAP_GRACE;
-    private static final ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_WYVERN_CAPACITY;
-    private static final ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_DRACONIC_CAPACITY;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_DRACONIC_CRAFT_TIME;
-    private static final ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_CHAOTIC_CAPACITY;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CHAOTIC_ENERGY_COST;
-    private static final ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CHAOTIC_CRAFT_TICKS;
-    private static final ModConfigSpec.BooleanValue MYSTICAL_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue MYSTICAL_INFUSION;
-    private static final ModConfigSpec.BooleanValue MYSTICAL_AWAKENING;
-    private static final ModConfigSpec.BooleanValue MYSTICAL_MATRIX;
-    private static final ModConfigSpec.BooleanValue MYSTICAL_MATRIX_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_CRAFT_TICKS;
-    private static final ModConfigSpec.LongValue MYSTICAL_MATRIX_TANK_CAPACITY;
-    private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_ME_DRAIN;
-    private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.BooleanValue MALUM_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue MALUM_SPIRIT_INFUSION;
-    private static final ModConfigSpec.BooleanValue MALUM_SPIRIT_FOCUSING;
-    private static final ModConfigSpec.BooleanValue MALUM_RUNEWORKING;
-    private static final ModConfigSpec.IntValue MALUM_PURE_SPIRIT_DROP_CHANCE;
-    private static final ModConfigSpec.IntValue MALUM_REAPING_RITE_KILL_RANGE;
-    private static final ModConfigSpec.IntValue MALUM_REAPING_EXECUTION_THRESHOLD;
-    private static final ModConfigSpec.IntValue MALUM_REAPING_NETWORK_RANGE;
-    private static final ModConfigSpec.IntValue MALUM_REAPING_SWEEP_TICKS;
-    private static final ModConfigSpec.BooleanValue MALUM_REAPING_SPARKS;
-    private static final ModConfigSpec.BooleanValue MALUM_MATRIX;
-    private static final ModConfigSpec.BooleanValue MALUM_MATRIX_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_CRAFT_TICKS;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_ME_DRAIN;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_CHANNELS;
-    private static final ModConfigSpec.LongValue MALUM_MATRIX_SPIRIT_STOCK;
-    private static final ModConfigSpec.BooleanValue MALUM_MATRIX_OBELISK_SLOT;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_MAX_OBELISKS;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_OBELISK_CRAFT_TICKS;
-    private static final ModConfigSpec.BooleanValue MALUM_MATRIX_FOCUSING;
-    private static final ModConfigSpec.BooleanValue MALUM_MATRIX_RUNEWORKING;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_IMPETUS_DURABILITY;
-    private static final ModConfigSpec.BooleanValue MALUM_MATRIX_CONSUME_IMPETUS;
-    private static final ModConfigSpec.BooleanValue MALUM_MATRIX_CATALYZER_SLOT;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_MAX_CATALYZERS;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_CATALYZER_CRAFT_TIME;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_CATALYZER_RESTORATION;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_CATALYZER_CHAIN_FOCUSING;
-    private static final ModConfigSpec.IntValue MALUM_MATRIX_CATALYZER_FORTUNE;
+    private static ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_OVERRIDE;
+    private static ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_EMPOWERING;
+    private static ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_ATOMIC_RECONSTRUCTION;
+    private static ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_MATRIX;
+    private static ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_ENERGY_COST;
+    private static ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_CHARGE_RATE;
+    private static ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_CAPACITY;
+    private static ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_EMPOWERING_CRAFT_TICKS;
+    private static ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_RECONSTRUCTION_CRAFT_TICKS;
+    private static ModConfigSpec.BooleanValue ACTUALLY_ADDITIONS_MATRIX_ME_CHARGE;
+    private static ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue ACTUALLY_ADDITIONS_MATRIX_CHANNELS;
+    private static ModConfigSpec.BooleanValue APOTHIC_OVERRIDE;
+    private static ModConfigSpec.BooleanValue APOTHIC_INFUSION;
+    private static ModConfigSpec.IntValue APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE;
+    private static ModConfigSpec.BooleanValue APOTHIC_INFUSION_PREFER_EXPERIENCE_FLUID;
+    private static ModConfigSpec.IntValue APOTHIC_INFUSION_MILLIBUCKETS_PER_EXPERIENCE;
+    private static ModConfigSpec.BooleanValue COMPACT_CRAFTING_OVERRIDE;
+    private static ModConfigSpec.BooleanValue COMPACT_CRAFTING_MATRIX;
+    private static ModConfigSpec.BooleanValue COMPACT_CRAFTING_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_CRAFT_TIME;
+    private static ModConfigSpec.ConfigValue<String> COMPACT_CRAFTING_MATRIX_MAXIMUM_FIELD_SIZE;
+    private static ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue COMPACT_CRAFTING_MATRIX_CHANNELS;
+    private static ModConfigSpec.BooleanValue COMPACT_CRAFTING_CONTROLLER;
+    private static ModConfigSpec.BooleanValue COMPACT_CRAFTING_CONTROLLER_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_BLOCKS_PER_TICK;
+    private static ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_ME_DRAIN;
+    private static ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue COMPACT_CRAFTING_CONTROLLER_CHANNELS;
+    private static ModConfigSpec.BooleanValue CREATE_OVERRIDE;
+    private static ModConfigSpec.BooleanValue CREATE_FILLING;
+    private static ModConfigSpec.BooleanValue CREATE_MECHANICAL_CRAFTING;
+    private static ModConfigSpec.BooleanValue CREATE_MECHANICAL_CRAFTING_ALLOW_REGULAR;
+    private static ModConfigSpec.BooleanValue CREATE_DEPLOYING;
+    private static ModConfigSpec.BooleanValue CREATE_DEPLOYING_LOG_STRIPPING;
+    private static ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_LINK_RANGE;
+    private static ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_TANK_CAPACITY;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_HALT_GRACE;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_RECLAIM_GRACE;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_CHANNELS;
+    private static ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX;
+    private static ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_GUARANTEED_RESULTS;
+    private static ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS_MINIMUM;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_MINIMUM_SPEED;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CRAFT_TICKS;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_TANK_CAPACITY;
+    private static ModConfigSpec.LongValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY;
+    private static ModConfigSpec.LongValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE;
+    private static ModConfigSpec.BooleanValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_CHARGE;
+    private static ModConfigSpec.IntValue CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHANNELS;
+    private static ModConfigSpec.BooleanValue DRACONIC_OVERRIDE;
+    private static ModConfigSpec.BooleanValue DRACONIC_FUSION_CRAFTING;
+    private static ModConfigSpec.BooleanValue DRACONIC_FUSION_MATRIX;
+    private static ModConfigSpec.BooleanValue DRACONIC_FUSION_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_ENERGY_COST;
+    private static ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_CHARGE_RATE;
+    private static ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_CAPACITY;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CRAFT_TICKS;
+    private static ModConfigSpec.BooleanValue DRACONIC_FUSION_MATRIX_ME_CHARGE;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CHANNELS;
+    private static ModConfigSpec.ConfigValue<String> DRACONIC_FUSION_MATRIX_MAXIMUM_TIER;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_MAX_CORES;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CORE_SWAP_GRACE;
+    private static ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_WYVERN_CAPACITY;
+    private static ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_DRACONIC_CAPACITY;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_DRACONIC_CRAFT_TIME;
+    private static ModConfigSpec.LongValue DRACONIC_FUSION_MATRIX_CHAOTIC_CAPACITY;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CHAOTIC_ENERGY_COST;
+    private static ModConfigSpec.IntValue DRACONIC_FUSION_MATRIX_CHAOTIC_CRAFT_TICKS;
+    private static ModConfigSpec.BooleanValue MYSTICAL_OVERRIDE;
+    private static ModConfigSpec.BooleanValue MYSTICAL_INFUSION;
+    private static ModConfigSpec.BooleanValue MYSTICAL_AWAKENING;
+    private static ModConfigSpec.BooleanValue MYSTICAL_MATRIX;
+    private static ModConfigSpec.BooleanValue MYSTICAL_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue MYSTICAL_MATRIX_CRAFT_TICKS;
+    private static ModConfigSpec.LongValue MYSTICAL_MATRIX_TANK_CAPACITY;
+    private static ModConfigSpec.IntValue MYSTICAL_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue MYSTICAL_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.BooleanValue MALUM_OVERRIDE;
+    private static ModConfigSpec.BooleanValue MALUM_SPIRIT_INFUSION;
+    private static ModConfigSpec.BooleanValue MALUM_SPIRIT_FOCUSING;
+    private static ModConfigSpec.BooleanValue MALUM_RUNEWORKING;
+    private static ModConfigSpec.IntValue MALUM_PURE_SPIRIT_DROP_CHANCE;
+    private static ModConfigSpec.IntValue MALUM_REAPING_RITE_KILL_RANGE;
+    private static ModConfigSpec.IntValue MALUM_REAPING_EXECUTION_THRESHOLD;
+    private static ModConfigSpec.IntValue MALUM_REAPING_NETWORK_RANGE;
+    private static ModConfigSpec.IntValue MALUM_REAPING_SWEEP_TICKS;
+    private static ModConfigSpec.BooleanValue MALUM_REAPING_SPARKS;
+    private static ModConfigSpec.BooleanValue MALUM_MATRIX;
+    private static ModConfigSpec.BooleanValue MALUM_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_CRAFT_TICKS;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_CHANNELS;
+    private static ModConfigSpec.LongValue MALUM_MATRIX_SPIRIT_STOCK;
+    private static ModConfigSpec.BooleanValue MALUM_MATRIX_OBELISK_SLOT;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_MAX_OBELISKS;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_OBELISK_CRAFT_TICKS;
+    private static ModConfigSpec.BooleanValue MALUM_MATRIX_FOCUSING;
+    private static ModConfigSpec.BooleanValue MALUM_MATRIX_RUNEWORKING;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_IMPETUS_DURABILITY;
+    private static ModConfigSpec.BooleanValue MALUM_MATRIX_CONSUME_IMPETUS;
+    private static ModConfigSpec.BooleanValue MALUM_MATRIX_CATALYZER_SLOT;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_MAX_CATALYZERS;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_CATALYZER_CRAFT_TIME;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_CATALYZER_RESTORATION;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_CATALYZER_CHAIN_FOCUSING;
+    private static ModConfigSpec.IntValue MALUM_MATRIX_CATALYZER_FORTUNE;
 
-    private static final ModConfigSpec.IntValue MYSTICAL_MATRIX_CHANNELS;
+    private static ModConfigSpec.IntValue MYSTICAL_MATRIX_CHANNELS;
 
-    private static final ModConfigSpec.BooleanValue ARS_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue ARS_ENCHANTING_APPARATUS;
-    private static final ModConfigSpec.BooleanValue ARS_IMBUEMENT_CHAMBER;
-    private static final ModConfigSpec.BooleanValue ARS_ARCANE_LECTERN;
-    private static final ModConfigSpec.IntValue ARS_ARCANE_LECTERN_MAX_TYPES;
-    private static final ModConfigSpec.IntValue ARS_ARCANE_LECTERN_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ARS_ARCANE_LECTERN_SCRIBES_RANGE;
-    private static final ModConfigSpec.BooleanValue ARS_RITUAL_CONDUCTOR;
-    private static final ModConfigSpec.IntValue ARS_RITUAL_CONDUCTOR_RANGE;
-    private static final ModConfigSpec.IntValue ARS_RITUAL_CONDUCTOR_INTERVAL;
-    private static final ModConfigSpec.IntValue ARS_RITUAL_CONDUCTOR_COLLECTION_RADIUS;
-    private static final ModConfigSpec.IntValue ARS_RITUAL_CONDUCTOR_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.BooleanValue ARS_MATRIX;
-    private static final ModConfigSpec.BooleanValue ARS_MATRIX_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_APPARATUS_CRAFT_TICKS;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_IMBUEMENT_CRAFT_TICKS;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_SOURCE_JAR_RANGE;
-    private static final ModConfigSpec.BooleanValue ARS_MATRIX_ME_SOURCE;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_MAX_ACCELERATE;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_ACCELERATE_MINIMUM_CRAFT_TICKS;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_MAX_DAMPEN;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_DAMPEN_SOURCE_DISCOUNT;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ARS_MATRIX_CHANNELS;
+    private static ModConfigSpec.BooleanValue ARS_OVERRIDE;
+    private static ModConfigSpec.BooleanValue ARS_ENCHANTING_APPARATUS;
+    private static ModConfigSpec.BooleanValue ARS_IMBUEMENT_CHAMBER;
+    private static ModConfigSpec.BooleanValue ARS_ARCANE_LECTERN;
+    private static ModConfigSpec.IntValue ARS_ARCANE_LECTERN_MAX_TYPES;
+    private static ModConfigSpec.IntValue ARS_ARCANE_LECTERN_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue ARS_ARCANE_LECTERN_SCRIBES_RANGE;
+    private static ModConfigSpec.BooleanValue ARS_RITUAL_CONDUCTOR;
+    private static ModConfigSpec.IntValue ARS_RITUAL_CONDUCTOR_RANGE;
+    private static ModConfigSpec.IntValue ARS_RITUAL_CONDUCTOR_INTERVAL;
+    private static ModConfigSpec.IntValue ARS_RITUAL_CONDUCTOR_COLLECTION_RADIUS;
+    private static ModConfigSpec.IntValue ARS_RITUAL_CONDUCTOR_IDLE_ME_DRAIN;
+    private static ModConfigSpec.BooleanValue ARS_MATRIX;
+    private static ModConfigSpec.BooleanValue ARS_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue ARS_MATRIX_APPARATUS_CRAFT_TICKS;
+    private static ModConfigSpec.IntValue ARS_MATRIX_IMBUEMENT_CRAFT_TICKS;
+    private static ModConfigSpec.IntValue ARS_MATRIX_SOURCE_JAR_RANGE;
+    private static ModConfigSpec.BooleanValue ARS_MATRIX_ME_SOURCE;
+    private static ModConfigSpec.IntValue ARS_MATRIX_MAX_ACCELERATE;
+    private static ModConfigSpec.IntValue ARS_MATRIX_ACCELERATE_MINIMUM_CRAFT_TICKS;
+    private static ModConfigSpec.IntValue ARS_MATRIX_MAX_DAMPEN;
+    private static ModConfigSpec.IntValue ARS_MATRIX_DAMPEN_SOURCE_DISCOUNT;
+    private static ModConfigSpec.IntValue ARS_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue ARS_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue ARS_MATRIX_CHANNELS;
 
-    private static final ModConfigSpec.BooleanValue ORITECH_OVERRIDE;
-    private static final ModConfigSpec.BooleanValue ORITECH_PARTICLE_COLLISION;
-    private static final ModConfigSpec.BooleanValue ORITECH_MATRIX;
-    private static final ModConfigSpec.BooleanValue ORITECH_MATRIX_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue ORITECH_MATRIX_ENERGY_COST;
-    private static final ModConfigSpec.IntValue ORITECH_MATRIX_CHARGE_RATE;
-    private static final ModConfigSpec.IntValue ORITECH_MATRIX_CAPACITY;
-    private static final ModConfigSpec.IntValue ORITECH_MATRIX_CRAFT_TICKS;
-    private static final ModConfigSpec.BooleanValue ORITECH_MATRIX_ME_CHARGE;
-    private static final ModConfigSpec.IntValue ORITECH_MATRIX_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ORITECH_MATRIX_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ORITECH_MATRIX_CHANNELS;
-    private static final ModConfigSpec.BooleanValue ORITECH_CONTROLLER;
-    private static final ModConfigSpec.BooleanValue ORITECH_CONTROLLER_AUTO_REQUEST;
-    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_LINK_RANGE;
-    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_COLLISION_TIMEOUT;
-    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_IDLE_ME_DRAIN;
-    private static final ModConfigSpec.IntValue ORITECH_CONTROLLER_CHANNELS;
+    private static ModConfigSpec.BooleanValue OCCULTISM_OVERRIDE;
+    private static ModConfigSpec.BooleanValue OCCULTISM_SPIRIT_PROVIDER;
+    private static ModConfigSpec.IntValue OCCULTISM_SPIRIT_PROVIDER_RANGE;
+    private static ModConfigSpec.IntValue OCCULTISM_SPIRIT_PROVIDER_QUEUE;
+    private static ModConfigSpec.BooleanValue OCCULTISM_MATRIX;
+    private static ModConfigSpec.BooleanValue OCCULTISM_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue OCCULTISM_MATRIX_SPIRIT_FIRE_TICKS;
+    private static ModConfigSpec.IntValue OCCULTISM_MATRIX_CRAFT_TIME;
+    private static ModConfigSpec.IntValue OCCULTISM_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue OCCULTISM_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue OCCULTISM_MATRIX_CHANNELS;
+    private static ModConfigSpec.BooleanValue RITUAL_CONTROLLER;
+    private static ModConfigSpec.BooleanValue RITUAL_CONTROLLER_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue RITUAL_CONTROLLER_BOWL_RANGE;
+    private static ModConfigSpec.IntValue RITUAL_CONTROLLER_TIER_SPEED;
+    private static ModConfigSpec.BooleanValue RITUAL_CONTROLLER_REPAIR;
+    private static ModConfigSpec.BooleanValue RITUAL_CONTROLLER_STAND_INS;
+    private static ModConfigSpec.IntValue RITUAL_CONTROLLER_ME_DRAIN;
+    private static ModConfigSpec.IntValue RITUAL_CONTROLLER_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue RITUAL_CONTROLLER_CHANNELS;
+    private static ModConfigSpec.BooleanValue ORITECH_OVERRIDE;
+    private static ModConfigSpec.BooleanValue ORITECH_PARTICLE_COLLISION;
+    private static ModConfigSpec.BooleanValue ORITECH_MATRIX;
+    private static ModConfigSpec.BooleanValue ORITECH_MATRIX_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue ORITECH_MATRIX_ENERGY_COST;
+    private static ModConfigSpec.IntValue ORITECH_MATRIX_CHARGE_RATE;
+    private static ModConfigSpec.IntValue ORITECH_MATRIX_CAPACITY;
+    private static ModConfigSpec.IntValue ORITECH_MATRIX_CRAFT_TICKS;
+    private static ModConfigSpec.BooleanValue ORITECH_MATRIX_ME_CHARGE;
+    private static ModConfigSpec.IntValue ORITECH_MATRIX_ME_DRAIN;
+    private static ModConfigSpec.IntValue ORITECH_MATRIX_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue ORITECH_MATRIX_CHANNELS;
+    private static ModConfigSpec.BooleanValue ORITECH_CONTROLLER;
+    private static ModConfigSpec.BooleanValue ORITECH_CONTROLLER_AUTO_REQUEST;
+    private static ModConfigSpec.IntValue ORITECH_CONTROLLER_LINK_RANGE;
+    private static ModConfigSpec.IntValue ORITECH_CONTROLLER_COLLISION_TIMEOUT;
+    private static ModConfigSpec.IntValue ORITECH_CONTROLLER_ME_DRAIN;
+    private static ModConfigSpec.IntValue ORITECH_CONTROLLER_IDLE_ME_DRAIN;
+    private static ModConfigSpec.IntValue ORITECH_CONTROLLER_CHANNELS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        defineSection1(builder);
+        defineSection2(builder);
+        defineSection3(builder);
+        defineSection4(builder);
+        defineSection5(builder);
+        defineSection6(builder);
+        defineSection7(builder);
+        defineSection8(builder);
+        defineSection9(builder);
+        defineSection10(builder);
+        SPEC = builder.build();
+    }
 
+    private static void defineSection1(ModConfigSpec.Builder builder) {
         builder.comment(
                         "Per-mod integration modules with individual per-machine integration toggles.",
                         "Disabled integrations stop encoding patterns and stop pattern providers from pushing to those machines; already-encoded patterns stay in the world and resume working when the integration is re-enabled.")
@@ -321,7 +354,9 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.apothic_enchanting.infusion.millibucketsPerExperience")
                 .defineInRange("millibucketsPerExperience", 20, 1, 1_000);
         builder.pop();
+    }
 
+    private static void defineSection2(ModConfigSpec.Builder builder) {
         builder.pop();
 
         builder.comment("Compact Crafting integration.")
@@ -436,7 +471,9 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.create.deploying.logStripping")
                 .define("logStripping", true);
         builder.pop();
+    }
 
+    private static void defineSection3(ModConfigSpec.Builder builder) {
         builder.comment("Mechanical Crafter Module:")
                 .translation("nep.configuration.modules.create.mechanicalCrafting")
                 .push("mechanicalCrafting");
@@ -560,7 +597,9 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.create.sequencedAssemblyMatrix.meNetworkChannels")
                 .defineInRange("meNetworkChannels", 15, 0, 128);
         builder.pop();
+    }
 
+    private static void defineSection4(ModConfigSpec.Builder builder) {
         builder.pop();
 
         builder.comment("Draconic Evolution integration.")
@@ -676,7 +715,9 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.draconicevolution.fusionMatrix.upgrades.chaoticCraftTicks")
                 .defineInRange("chaoticMinimumCraftTicks", 4, 1, 24_000);
         builder.pop();
+    }
 
+    private static void defineSection5(ModConfigSpec.Builder builder) {
         builder.pop();
 
         builder.pop();
@@ -797,7 +838,9 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.malum.riteOfReaping.sparks")
                 .define("sparks", true);
         builder.pop();
+    }
 
+    private static void defineSection6(ModConfigSpec.Builder builder) {
         builder.comment("Focused Spirit Matrix:")
                 .translation("nep.configuration.modules.malum.focusedSpiritMatrix")
                 .push("focusedSpiritMatrix");
@@ -918,7 +961,9 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.malum.focusedSpiritMatrix.focusing.catalyzerFortune")
                 .defineInRange("catalyzerFortunePercent", 25, 0, 1000);
         builder.pop();
+    }
 
+    private static void defineSection7(ModConfigSpec.Builder builder) {
         builder.pop();
 
         builder.pop();
@@ -1061,7 +1106,127 @@ public final class NepConfig {
                 .translation("nep.configuration.modules.ars_nouveau.arcaneEnchantingMatrix.meNetworkChannels")
                 .defineInRange("meNetworkChannels", 15, 0, 128);
         builder.pop();
+    }
 
+    private static void defineSection8(ModConfigSpec.Builder builder) {
+        builder.pop();
+
+        builder.comment("Occultism integration.")
+                .translation("nep.configuration.modules.occultism")
+                .push("occultism");
+        OCCULTISM_OVERRIDE = builder.comment(
+                        "Master override for Occultism integration.",
+                        "When disabled, every Occultism module below is disabled regardless of its own toggle.")
+                .translation("nep.configuration.modules.occultism.override")
+                .define("allow_occultism_module", true);
+
+        builder.comment("Bound Spirit Matrix:")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix")
+                .push("boundSpiritMatrix");
+        OCCULTISM_MATRIX = builder.comment(
+                        "The Bound Spirit Matrix runs spirit fire, crushing and crystallizing recipes inside a single block.",
+                        "Spirit fire always works; crushing and crystallizing need a Spirit-Infused Book of that job, whose spirit tier sets the recipes it can run, its speed and its output.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.enabled")
+                .define("enabled", true);
+        OCCULTISM_MATRIX_AUTO_REQUEST = builder.comment(
+                        "Treats the Matrix as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a craft it owes is left without materials.",
+                        "When disabled, a Matrix left short of materials stalls until you manually restock it.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.autoRequest")
+                .define("autoRequest", true);
+        OCCULTISM_MATRIX_SPIRIT_FIRE_TICKS = builder.comment(
+                        "Ticks the Matrix spends on a spirit fire craft. 20 ticks is one second.",
+                        "Real spirit fire converts an item the moment it lands in the flames, so it has no per-item duration.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.spiritFireCraftTicks")
+                .defineInRange("spiritFireCraftTicks", 20, 1, 24_000);
+        OCCULTISM_MATRIX_CRAFT_TIME = builder.comment(
+                        "Time a crushing or crystallizing craft takes, as a percentage of what the bound spirit would take in the world.",
+                        "That base time is the recipe's own duration scaled by Occultism's per-tier time multiplier, so a stronger spirit is faster here too.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.craftTime")
+                .defineInRange("craftTimePercent", 100, 1, 10_000);
+        OCCULTISM_MATRIX_ME_DRAIN = builder.comment(
+                        "Energy the Matrix draws from its ME network while crafting, in AE per tick. Progress stops whenever the network cannot supply this much power.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.meNetworkDrain")
+                .defineInRange("meNetworkDrain", 500, 0, 1_000_000);
+        OCCULTISM_MATRIX_IDLE_ME_DRAIN = builder.comment(
+                        "Energy the Matrix draws from its ME network while idle, in AE per tick. This standing cost is read once when the Matrix joins a network, so changing it needs a world reload.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.idleMeNetworkDrain")
+                .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        OCCULTISM_MATRIX_CHANNELS = builder.comment(
+                        "Channels the Matrix takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Matrix joins a network, so changing it needs a world reload. Set to 0 for a Matrix that takes up no channels at all.")
+                .translation("nep.configuration.modules.occultism.boundSpiritMatrix.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 15, 0, 128);
+        builder.pop();
+
+        builder.comment("Spirit Provider:")
+                .translation("nep.configuration.modules.occultism.spiritProvider")
+                .push("spiritProvider");
+        OCCULTISM_SPIRIT_PROVIDER = builder.comment(
+                        "The Spirit Provider takes crushing, crystallizing, smelting and trading crafts from a pattern provider against it and lays the inputs out for a working spirit to collect.",
+                        "Only a spirit whose work area covers the Provider is served, and its finished products go back through the pattern provider instead of onto the ground.")
+                .translation("nep.configuration.modules.occultism.spiritProvider.enabled")
+                .define("enabled", true);
+        OCCULTISM_SPIRIT_PROVIDER_RANGE = builder.comment(
+                        "How far, in blocks along each axis, the Provider looks for working spirits.",
+                        "A spirit further away than this is never served, even when its work area covers the Provider.")
+                .translation("nep.configuration.modules.occultism.spiritProvider.searchRange")
+                .defineInRange("searchRange", 16, 1, 64);
+        OCCULTISM_SPIRIT_PROVIDER_QUEUE = builder.comment(
+                        "Most crafts the Provider holds at once, counting those still waiting for a spirit.",
+                        "A pattern provider is turned away while the Provider is full, and tries again later.")
+                .translation("nep.configuration.modules.occultism.spiritProvider.queueLimit")
+                .defineInRange("queueLimit", 8, 1, 256);
+        builder.pop();
+
+        builder.comment("Ritual Controller:")
+                .translation("nep.configuration.modules.occultism.ritualController")
+                .push("ritualController");
+        RITUAL_CONTROLLER = builder.comment(
+                        "The Ritual Controller runs Occultism crafting rituals from ritual patterns on a real pentacle: it lays the ingredients into the sacrificial bowls, starts the ritual at the golden bowl and collects the result.",
+                        "It needs a Spirit-Infused Book, whose spirit tier sets the highest pentacle it may run and how fast its rituals go.")
+                .translation("nep.configuration.modules.occultism.ritualController.enabled")
+                .define("enabled", true);
+        RITUAL_CONTROLLER_AUTO_REQUEST = builder.comment(
+                        "Treats the Controller as a requester, allowing it to auto-pull, auto-craft, and auto-request a set of recipe ingredients from the ME network when a ritual it owes is left without materials.",
+                        "When disabled, a Controller left short of materials stalls until you restock it by hand.")
+                .translation("nep.configuration.modules.occultism.ritualController.autoRequest")
+                .define("autoRequest", true);
+        RITUAL_CONTROLLER_BOWL_RANGE = builder.comment(
+                        "How far, in blocks along each axis, the Controller looks for the golden sacrificial bowl it drives.",
+                        "The nearest golden bowl in range is the one it uses.")
+                .translation("nep.configuration.modules.occultism.ritualController.bowlRange")
+                .defineInRange("bowlRange", 4, 1, 16);
+        RITUAL_CONTROLLER_TIER_SPEED = builder.comment(
+                        "Extra ritual speed for each spirit tier above foliot, as a percentage of the ritual's normal pace.",
+                        "At 50, a djinni book runs rituals 1.5 times as fast, an afrit book twice as fast and a marid book 2.5 times as fast.")
+                .translation("nep.configuration.modules.occultism.ritualController.tierSpeed")
+                .defineInRange("tierSpeedPercent", 50, 0, 1000);
+        RITUAL_CONTROLLER_REPAIR = builder.comment(
+                        "Lets the Controller repair damaged items stored on its ME network with Occultism's repair rituals while it has no pattern work, once repairing is switched on in its screen.")
+                .translation("nep.configuration.modules.occultism.ritualController.repair")
+                .define("repair", true);
+        RITUAL_CONTROLLER_STAND_INS = builder.comment(
+                        "Lets the Controller satisfy a ritual's sacrifice with a stand-in item instead of a slain mob, such as a spawn egg or a soul gem holding the right creature.",
+                        "Which items stand in for which mobs is set by nep:sacrifice_stand_in recipes.")
+                .translation("nep.configuration.modules.occultism.ritualController.sacrificeStandIns")
+                .define("sacrificeStandIns", true);
+        RITUAL_CONTROLLER_ME_DRAIN = builder.comment(
+                        "Energy the Controller draws from its ME network while a ritual runs, in AE per tick. A Controller that loses network power lets the ritual in progress finish, but starts no new one.")
+                .translation("nep.configuration.modules.occultism.ritualController.meNetworkDrain")
+                .defineInRange("meNetworkDrain", 100, 0, 1_000_000);
+        RITUAL_CONTROLLER_IDLE_ME_DRAIN = builder.comment(
+                        "Energy the Controller draws from its ME network while idle, in AE per tick. This standing cost is read once when the Controller joins a network, so changing it needs a world reload.")
+                .translation("nep.configuration.modules.occultism.ritualController.idleMeNetworkDrain")
+                .defineInRange("idleMeNetworkDrain", 10, 0, 1_000_000);
+        RITUAL_CONTROLLER_CHANNELS = builder.comment(
+                        "Channels the Controller takes up on its ME network. Any value above 8 has to pass through dense cables.",
+                        "This is read once when the Controller joins a network, so changing it needs a world reload. Set to 0 for a Controller that takes up no channels at all.")
+                .translation("nep.configuration.modules.occultism.ritualController.meNetworkChannels")
+                .defineInRange("meNetworkChannels", 7, 0, 128);
+        builder.pop();
+    }
+
+    private static void defineSection9(ModConfigSpec.Builder builder) {
         builder.pop();
 
         builder.comment("Oritech integration.")
@@ -1180,7 +1345,9 @@ public final class NepConfig {
                 .translation("nep.configuration.patterns.processingPatternConversion")
                 .define("processingPatternConversion", true);
         builder.pop();
+    }
 
+    private static void defineSection10(ModConfigSpec.Builder builder) {
         builder.comment("Machine behaviour outside any one integration.")
                 .translation("nep.configuration.machines")
                 .push("machines");
@@ -1297,8 +1464,25 @@ public final class NepConfig {
                 .translation("nep.configuration.debug.logging")
                 .define("verbose_logging", false);
         builder.pop();
+    }
 
-        SPEC = builder.build();
+    private static int clampedIdle(ModConfigSpec.IntValue idle, int active) {
+        return Math.min(SPEC.isLoaded() ? idle.get() : idle.getDefault(), active);
+    }
+
+    private static void warnIdleAboveActive(
+            String machine, ModConfigSpec.IntValue idle, ModConfigSpec.IntValue active) {
+        int idleDrain = idle.get();
+        int activeDrain = active.get();
+        if (idleDrain > activeDrain) {
+            Nep.LOGGER.warn(
+                    "{} idleMeNetworkDrain ({} AE/t) is above meNetworkDrain ({} AE/t); the idle"
+                            + " drain is clamped to {} AE/t, so working costs no more than sitting idle.",
+                    machine,
+                    idleDrain,
+                    activeDrain,
+                    activeDrain);
+        }
     }
 
     public static void onConfigLoaded(ModConfigEvent event) {
@@ -1306,16 +1490,29 @@ public final class NepConfig {
             return;
         }
         NepConfigGates.changed();
-        int idleDrain = CREATE_SEQUENCED_ASSEMBLY_MATRIX_IDLE_ME_DRAIN.get();
-        int activeDrain = CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_DRAIN.get();
-        if (idleDrain > activeDrain) {
-            Nep.LOGGER.warn(
-                    "Assembly Matrix idleMeNetworkDrain ({} AE/t) is above meNetworkDrain ({} AE/t); the idle"
-                            + " drain is clamped to {} AE/t, so assembling costs no more than sitting idle.",
-                    idleDrain,
-                    activeDrain,
-                    activeDrain);
-        }
+        warnIdleAboveActive(
+                "Actually Additions Matrix",
+                ACTUALLY_ADDITIONS_MATRIX_IDLE_ME_DRAIN,
+                ACTUALLY_ADDITIONS_MATRIX_ME_DRAIN);
+        warnIdleAboveActive(
+                "Compact Crafting Matrix", COMPACT_CRAFTING_MATRIX_IDLE_ME_DRAIN, COMPACT_CRAFTING_MATRIX_ME_DRAIN);
+        warnIdleAboveActive(
+                "Compact Crafting Controller",
+                COMPACT_CRAFTING_CONTROLLER_IDLE_ME_DRAIN,
+                COMPACT_CRAFTING_CONTROLLER_ME_DRAIN);
+        warnIdleAboveActive(
+                "Assembly Matrix",
+                CREATE_SEQUENCED_ASSEMBLY_MATRIX_IDLE_ME_DRAIN,
+                CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_DRAIN);
+        warnIdleAboveActive(
+                "Draconic Fusion Matrix", DRACONIC_FUSION_MATRIX_IDLE_ME_DRAIN, DRACONIC_FUSION_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Infused Awakening Matrix", MYSTICAL_MATRIX_IDLE_ME_DRAIN, MYSTICAL_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Focused Spirit Matrix", MALUM_MATRIX_IDLE_ME_DRAIN, MALUM_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Ars Matrix", ARS_MATRIX_IDLE_ME_DRAIN, ARS_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Occultism Matrix", OCCULTISM_MATRIX_IDLE_ME_DRAIN, OCCULTISM_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Ritual Controller", RITUAL_CONTROLLER_IDLE_ME_DRAIN, RITUAL_CONTROLLER_ME_DRAIN);
+        warnIdleAboveActive("Oritech Matrix", ORITECH_MATRIX_IDLE_ME_DRAIN, ORITECH_MATRIX_ME_DRAIN);
+        warnIdleAboveActive("Oritech Controller", ORITECH_CONTROLLER_IDLE_ME_DRAIN, ORITECH_CONTROLLER_ME_DRAIN);
         int minimumStress = CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS_MINIMUM.get();
         int maximumStress = CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS.get();
         if (minimumStress > maximumStress) {
@@ -1334,7 +1531,7 @@ public final class NepConfig {
     }
 
     public static int importCardGrace() {
-        return SPEC.isLoaded() ? IMPORT_CARD_GRACE.get() : 200;
+        return SPEC.isLoaded() ? IMPORT_CARD_GRACE.get() : IMPORT_CARD_GRACE.getDefault();
     }
 
     public static boolean debugLogging() {
@@ -1346,7 +1543,7 @@ public final class NepConfig {
     }
 
     public static boolean processingPatternConversion() {
-        return SPEC.isLoaded() && PROCESSING_PATTERN_CONVERSION.get();
+        return SPEC.isLoaded() ? PROCESSING_PATTERN_CONVERSION.get() : PROCESSING_PATTERN_CONVERSION.getDefault();
     }
 
     public static boolean requireDecoder() {
@@ -1358,11 +1555,11 @@ public final class NepConfig {
     }
 
     public static int patternDecoderChannels() {
-        return SPEC.isLoaded() ? PATTERN_DECODER_CHANNELS.get() : 1;
+        return SPEC.isLoaded() ? PATTERN_DECODER_CHANNELS.get() : PATTERN_DECODER_CHANNELS.getDefault();
     }
 
     public static int patternDecoderIdleMeDrain() {
-        return SPEC.isLoaded() ? PATTERN_DECODER_IDLE_ME_DRAIN.get() : 5;
+        return SPEC.isLoaded() ? PATTERN_DECODER_IDLE_ME_DRAIN.get() : PATTERN_DECODER_IDLE_ME_DRAIN.getDefault();
     }
 
     public static boolean machineHubEnabled() {
@@ -1370,39 +1567,45 @@ public final class NepConfig {
     }
 
     public static int machineHubLinkRange() {
-        return SPEC.isLoaded() ? MACHINE_HUB_LINK_RANGE.get() : 16;
+        return SPEC.isLoaded() ? MACHINE_HUB_LINK_RANGE.get() : MACHINE_HUB_LINK_RANGE.getDefault();
     }
 
     public static int machineHubMaximumLinks() {
-        return SPEC.isLoaded() ? MACHINE_HUB_MAXIMUM_LINKS.get() : 24;
+        return SPEC.isLoaded() ? MACHINE_HUB_MAXIMUM_LINKS.get() : MACHINE_HUB_MAXIMUM_LINKS.getDefault();
     }
 
     public static int machineHubScanBudget() {
-        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : 128;
+        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BUDGET.get() : MACHINE_HUB_SCAN_BUDGET.getDefault();
     }
 
     public static int machineHubCasingDepth() {
-        return SPEC.isLoaded() ? MACHINE_HUB_CASING_DEPTH.get() : 3;
+        return SPEC.isLoaded() ? MACHINE_HUB_CASING_DEPTH.get() : MACHINE_HUB_CASING_DEPTH.getDefault();
     }
 
     public static List<? extends String> machineHubScanWhitelist() {
-        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_WHITELIST.get() : List.of();
+        return SPEC.isLoaded()
+                ? MACHINE_HUB_SCAN_WHITELIST.get()
+                : List.copyOf(MACHINE_HUB_SCAN_WHITELIST.getDefault());
     }
 
     public static List<? extends String> machineHubScanBlacklist() {
-        return SPEC.isLoaded() ? MACHINE_HUB_SCAN_BLACKLIST.get() : List.of();
+        return SPEC.isLoaded()
+                ? MACHINE_HUB_SCAN_BLACKLIST.get()
+                : List.copyOf(MACHINE_HUB_SCAN_BLACKLIST.getDefault());
     }
 
     public static List<? extends String> machineHubLinkBlacklist() {
-        return SPEC.isLoaded() ? MACHINE_HUB_LINK_BLACKLIST.get() : List.of();
+        return SPEC.isLoaded()
+                ? MACHINE_HUB_LINK_BLACKLIST.get()
+                : List.copyOf(MACHINE_HUB_LINK_BLACKLIST.getDefault());
     }
 
     public static int machineHubChannels() {
-        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS.get() : 11;
+        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS.get() : MACHINE_HUB_CHANNELS.getDefault();
     }
 
     public static int machineHubChannelsPerLink() {
-        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS_PER_LINK.get() : 1;
+        return SPEC.isLoaded() ? MACHINE_HUB_CHANNELS_PER_LINK.get() : MACHINE_HUB_CHANNELS_PER_LINK.getDefault();
     }
 
     public static boolean actuallyAdditionsOverride() {
@@ -1426,23 +1629,33 @@ public final class NepConfig {
     }
 
     public static int actuallyAdditionsMatrixEnergyCostPercent() {
-        return SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_ENERGY_COST.get() : 100;
+        return SPEC.isLoaded()
+                ? ACTUALLY_ADDITIONS_MATRIX_ENERGY_COST.get()
+                : ACTUALLY_ADDITIONS_MATRIX_ENERGY_COST.getDefault();
     }
 
     public static int actuallyAdditionsMatrixChargeRate() {
-        return SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_CHARGE_RATE.get() : 40_000;
+        return SPEC.isLoaded()
+                ? ACTUALLY_ADDITIONS_MATRIX_CHARGE_RATE.get()
+                : ACTUALLY_ADDITIONS_MATRIX_CHARGE_RATE.getDefault();
     }
 
     public static int actuallyAdditionsMatrixCapacity() {
-        return SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_CAPACITY.get() : 320_000;
+        return SPEC.isLoaded()
+                ? ACTUALLY_ADDITIONS_MATRIX_CAPACITY.get()
+                : ACTUALLY_ADDITIONS_MATRIX_CAPACITY.getDefault();
     }
 
     public static int actuallyAdditionsMatrixEmpoweringCraftTicks() {
-        return SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_EMPOWERING_CRAFT_TICKS.get() : 20;
+        return SPEC.isLoaded()
+                ? ACTUALLY_ADDITIONS_MATRIX_EMPOWERING_CRAFT_TICKS.get()
+                : ACTUALLY_ADDITIONS_MATRIX_EMPOWERING_CRAFT_TICKS.getDefault();
     }
 
     public static int actuallyAdditionsMatrixAtomicReconstructionCraftTicks() {
-        return SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_RECONSTRUCTION_CRAFT_TICKS.get() : 4;
+        return SPEC.isLoaded()
+                ? ACTUALLY_ADDITIONS_MATRIX_RECONSTRUCTION_CRAFT_TICKS.get()
+                : ACTUALLY_ADDITIONS_MATRIX_RECONSTRUCTION_CRAFT_TICKS.getDefault();
     }
 
     public static boolean actuallyAdditionsMatrixMeCharge() {
@@ -1450,16 +1663,19 @@ public final class NepConfig {
     }
 
     public static int actuallyAdditionsMatrixMeDrain() {
-        return SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded()
+                ? ACTUALLY_ADDITIONS_MATRIX_ME_DRAIN.get()
+                : ACTUALLY_ADDITIONS_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int actuallyAdditionsMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, actuallyAdditionsMatrixMeDrain());
+        return clampedIdle(ACTUALLY_ADDITIONS_MATRIX_IDLE_ME_DRAIN, actuallyAdditionsMatrixMeDrain());
     }
 
     public static int actuallyAdditionsMatrixChannels() {
-        return SPEC.isLoaded() ? ACTUALLY_ADDITIONS_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded()
+                ? ACTUALLY_ADDITIONS_MATRIX_CHANNELS.get()
+                : ACTUALLY_ADDITIONS_MATRIX_CHANNELS.getDefault();
     }
 
     public static boolean apothicOverride() {
@@ -1471,7 +1687,9 @@ public final class NepConfig {
     }
 
     public static int apothicInfusionExperiencePerBottle() {
-        return SPEC.isLoaded() ? APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE.get() : 70;
+        return SPEC.isLoaded()
+                ? APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE.get()
+                : APOTHIC_INFUSION_EXPERIENCE_PER_BOTTLE.getDefault();
     }
 
     public static boolean apothicInfusionPreferExperienceFluid() {
@@ -1479,7 +1697,9 @@ public final class NepConfig {
     }
 
     public static int apothicInfusionMillibucketsPerExperience() {
-        return SPEC.isLoaded() ? APOTHIC_INFUSION_MILLIBUCKETS_PER_EXPERIENCE.get() : 20;
+        return SPEC.isLoaded()
+                ? APOTHIC_INFUSION_MILLIBUCKETS_PER_EXPERIENCE.get()
+                : APOTHIC_INFUSION_MILLIBUCKETS_PER_EXPERIENCE.getDefault();
     }
 
     public static boolean compactCraftingOverride() {
@@ -1495,24 +1715,27 @@ public final class NepConfig {
     }
 
     public static int compactCraftingMatrixCraftTimePercent() {
-        return SPEC.isLoaded() ? COMPACT_CRAFTING_MATRIX_CRAFT_TIME.get() : 100;
+        return SPEC.isLoaded()
+                ? COMPACT_CRAFTING_MATRIX_CRAFT_TIME.get()
+                : COMPACT_CRAFTING_MATRIX_CRAFT_TIME.getDefault();
     }
 
     public static String compactCraftingMatrixMaximumFieldSize() {
-        return SPEC.isLoaded() ? COMPACT_CRAFTING_MATRIX_MAXIMUM_FIELD_SIZE.get() : "absurd";
+        return SPEC.isLoaded()
+                ? COMPACT_CRAFTING_MATRIX_MAXIMUM_FIELD_SIZE.get()
+                : COMPACT_CRAFTING_MATRIX_MAXIMUM_FIELD_SIZE.getDefault();
     }
 
     public static int compactCraftingMatrixMeDrain() {
-        return SPEC.isLoaded() ? COMPACT_CRAFTING_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded() ? COMPACT_CRAFTING_MATRIX_ME_DRAIN.get() : COMPACT_CRAFTING_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int compactCraftingMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? COMPACT_CRAFTING_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, compactCraftingMatrixMeDrain());
+        return clampedIdle(COMPACT_CRAFTING_MATRIX_IDLE_ME_DRAIN, compactCraftingMatrixMeDrain());
     }
 
     public static int compactCraftingMatrixChannels() {
-        return SPEC.isLoaded() ? COMPACT_CRAFTING_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded() ? COMPACT_CRAFTING_MATRIX_CHANNELS.get() : COMPACT_CRAFTING_MATRIX_CHANNELS.getDefault();
     }
 
     public static boolean compactCraftingMiniaturizationController() {
@@ -1524,20 +1747,25 @@ public final class NepConfig {
     }
 
     public static int compactCraftingControllerBlocksPerTick() {
-        return SPEC.isLoaded() ? COMPACT_CRAFTING_CONTROLLER_BLOCKS_PER_TICK.get() : 1;
+        return SPEC.isLoaded()
+                ? COMPACT_CRAFTING_CONTROLLER_BLOCKS_PER_TICK.get()
+                : COMPACT_CRAFTING_CONTROLLER_BLOCKS_PER_TICK.getDefault();
     }
 
     public static int compactCraftingControllerMeDrain() {
-        return SPEC.isLoaded() ? COMPACT_CRAFTING_CONTROLLER_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded()
+                ? COMPACT_CRAFTING_CONTROLLER_ME_DRAIN.get()
+                : COMPACT_CRAFTING_CONTROLLER_ME_DRAIN.getDefault();
     }
 
     public static int compactCraftingControllerIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? COMPACT_CRAFTING_CONTROLLER_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, compactCraftingControllerMeDrain());
+        return clampedIdle(COMPACT_CRAFTING_CONTROLLER_IDLE_ME_DRAIN, compactCraftingControllerMeDrain());
     }
 
     public static int compactCraftingControllerChannels() {
-        return SPEC.isLoaded() ? COMPACT_CRAFTING_CONTROLLER_CHANNELS.get() : 7;
+        return SPEC.isLoaded()
+                ? COMPACT_CRAFTING_CONTROLLER_CHANNELS.get()
+                : COMPACT_CRAFTING_CONTROLLER_CHANNELS.getDefault();
     }
 
     public static boolean createOverride() {
@@ -1549,7 +1777,9 @@ public final class NepConfig {
     }
 
     public static boolean createMechanicalCraftingAllowRegular() {
-        return SPEC.isLoaded() && CREATE_MECHANICAL_CRAFTING_ALLOW_REGULAR.get();
+        return SPEC.isLoaded()
+                ? CREATE_MECHANICAL_CRAFTING_ALLOW_REGULAR.get()
+                : CREATE_MECHANICAL_CRAFTING_ALLOW_REGULAR.getDefault();
     }
 
     public static boolean createDeploying() {
@@ -1569,7 +1799,9 @@ public final class NepConfig {
     }
 
     public static int createSequencedAssemblyLinkRange() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_LINK_RANGE.get() : 16;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_LINK_RANGE.get()
+                : CREATE_SEQUENCED_ASSEMBLY_LINK_RANGE.getDefault();
     }
 
     public static boolean createSequencedAssemblyAutoRequest() {
@@ -1577,15 +1809,21 @@ public final class NepConfig {
     }
 
     public static int createSequencedAssemblyTankCapacity() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_TANK_CAPACITY.get() : 64_000;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_TANK_CAPACITY.get()
+                : CREATE_SEQUENCED_ASSEMBLY_TANK_CAPACITY.getDefault();
     }
 
     public static int createSequencedAssemblyHaltGrace() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_HALT_GRACE.get() : 100;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_HALT_GRACE.get()
+                : CREATE_SEQUENCED_ASSEMBLY_HALT_GRACE.getDefault();
     }
 
     public static int createSequencedAssemblyReclaimGrace() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_RECLAIM_GRACE.get() : 200;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_RECLAIM_GRACE.get()
+                : CREATE_SEQUENCED_ASSEMBLY_RECLAIM_GRACE.getDefault();
     }
 
     public static boolean createSequencedAssemblyMatrix() {
@@ -1601,49 +1839,68 @@ public final class NepConfig {
     }
 
     public static int createSequencedAssemblyMatrixMeDrain() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_DRAIN.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int createSequencedAssemblyMatrixStress() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS.get() : 294_912;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS.getDefault();
     }
 
     public static int createSequencedAssemblyMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, createSequencedAssemblyMatrixMeDrain());
+        return clampedIdle(CREATE_SEQUENCED_ASSEMBLY_MATRIX_IDLE_ME_DRAIN, createSequencedAssemblyMatrixMeDrain());
     }
 
     public static int createSequencedAssemblyMatrixChannels() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHANNELS.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHANNELS.getDefault();
     }
 
     public static int createSequencedAssemblyChannels() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_CHANNELS.get() : 7;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_CHANNELS.get()
+                : CREATE_SEQUENCED_ASSEMBLY_CHANNELS.getDefault();
     }
 
     public static int createSequencedAssemblyMatrixStressMinimum() {
-        int minimum = SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS_MINIMUM.get() : 8_192;
+        int minimum = SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS_MINIMUM.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_STRESS_MINIMUM.getDefault();
         return Math.min(minimum, createSequencedAssemblyMatrixStress());
     }
 
     public static int createSequencedAssemblyMatrixMinimumSpeed() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_MINIMUM_SPEED.get() : 32;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_MINIMUM_SPEED.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_MINIMUM_SPEED.getDefault();
     }
 
     public static int createSequencedAssemblyMatrixCraftTicks() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_CRAFT_TICKS.get() : 5;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_CRAFT_TICKS.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_CRAFT_TICKS.getDefault();
     }
 
     public static int createSequencedAssemblyMatrixTankCapacity() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_TANK_CAPACITY.get() : 64_000;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_TANK_CAPACITY.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_TANK_CAPACITY.getDefault();
     }
 
     public static long createSequencedAssemblyMatrixEnergyCapacity() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY.get() : 1_000_000L;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_ENERGY_CAPACITY.getDefault();
     }
 
     public static long createSequencedAssemblyMatrixChargeRate() {
-        return SPEC.isLoaded() ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE.get() : 100_000L;
+        return SPEC.isLoaded()
+                ? CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE.get()
+                : CREATE_SEQUENCED_ASSEMBLY_MATRIX_CHARGE_RATE.getDefault();
     }
 
     public static boolean createSequencedAssemblyMatrixMeCharge() {
@@ -1667,19 +1924,25 @@ public final class NepConfig {
     }
 
     public static int draconicFusionMatrixEnergyCostPercent() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_ENERGY_COST.get() : 100;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_ENERGY_COST.get()
+                : DRACONIC_FUSION_MATRIX_ENERGY_COST.getDefault();
     }
 
     public static long draconicFusionMatrixChargeRate() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CHARGE_RATE.get() : 10_000_000L;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_CHARGE_RATE.get()
+                : DRACONIC_FUSION_MATRIX_CHARGE_RATE.getDefault();
     }
 
     public static long draconicFusionMatrixCapacity() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CAPACITY.get() : 2_000_000L;
+        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CAPACITY.get() : DRACONIC_FUSION_MATRIX_CAPACITY.getDefault();
     }
 
     public static int draconicFusionMatrixCraftTicks() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CRAFT_TICKS.get() : 20;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_CRAFT_TICKS.get()
+                : DRACONIC_FUSION_MATRIX_CRAFT_TICKS.getDefault();
     }
 
     public static boolean draconicFusionMatrixMeCharge() {
@@ -1687,53 +1950,68 @@ public final class NepConfig {
     }
 
     public static int draconicFusionMatrixMeDrain() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_ME_DRAIN.get() : DRACONIC_FUSION_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int draconicFusionMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, draconicFusionMatrixMeDrain());
+        return clampedIdle(DRACONIC_FUSION_MATRIX_IDLE_ME_DRAIN, draconicFusionMatrixMeDrain());
     }
 
     public static int draconicFusionMatrixChannels() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CHANNELS.get() : DRACONIC_FUSION_MATRIX_CHANNELS.getDefault();
     }
 
     public static int draconicFusionMatrixMaxCores() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_MAX_CORES.get() : 16;
+        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_MAX_CORES.get() : DRACONIC_FUSION_MATRIX_MAX_CORES.getDefault();
     }
 
     public static int draconicFusionMatrixCoreSwapGrace() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CORE_SWAP_GRACE.get() : 100;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_CORE_SWAP_GRACE.get()
+                : DRACONIC_FUSION_MATRIX_CORE_SWAP_GRACE.getDefault();
     }
 
     public static long draconicFusionMatrixWyvernCapacity() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_WYVERN_CAPACITY.get() : 50_000_000L;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_WYVERN_CAPACITY.get()
+                : DRACONIC_FUSION_MATRIX_WYVERN_CAPACITY.getDefault();
     }
 
     public static long draconicFusionMatrixDraconicCapacity() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_DRACONIC_CAPACITY.get() : 256_000_000L;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_DRACONIC_CAPACITY.get()
+                : DRACONIC_FUSION_MATRIX_DRACONIC_CAPACITY.getDefault();
     }
 
     public static int draconicFusionMatrixDraconicCraftTimeReductionPercent() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_DRACONIC_CRAFT_TIME.get() : 38;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_DRACONIC_CRAFT_TIME.get()
+                : DRACONIC_FUSION_MATRIX_DRACONIC_CRAFT_TIME.getDefault();
     }
 
     public static long draconicFusionMatrixChaoticCapacity() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CHAOTIC_CAPACITY.get() : 1_024_000_000L;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_CHAOTIC_CAPACITY.get()
+                : DRACONIC_FUSION_MATRIX_CHAOTIC_CAPACITY.getDefault();
     }
 
     public static int draconicFusionMatrixChaoticEnergyCostReductionPercent() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CHAOTIC_ENERGY_COST.get() : 50;
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_CHAOTIC_ENERGY_COST.get()
+                : DRACONIC_FUSION_MATRIX_CHAOTIC_ENERGY_COST.getDefault();
     }
 
     public static int draconicFusionMatrixChaoticMinimumCraftTicks() {
-        int floor = SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_CHAOTIC_CRAFT_TICKS.get() : 4;
+        int floor = SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_CHAOTIC_CRAFT_TICKS.get()
+                : DRACONIC_FUSION_MATRIX_CHAOTIC_CRAFT_TICKS.getDefault();
         return Math.min(floor, draconicFusionMatrixCraftTicks());
     }
 
     public static String draconicFusionMatrixMaximumTier() {
-        return SPEC.isLoaded() ? DRACONIC_FUSION_MATRIX_MAXIMUM_TIER.get() : "chaotic";
+        return SPEC.isLoaded()
+                ? DRACONIC_FUSION_MATRIX_MAXIMUM_TIER.get()
+                : DRACONIC_FUSION_MATRIX_MAXIMUM_TIER.getDefault();
     }
 
     public static boolean mysticalOverride() {
@@ -1757,20 +2035,19 @@ public final class NepConfig {
     }
 
     public static int mysticalInfusedAwakeningMatrixCraftTicks() {
-        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CRAFT_TICKS.get() : 100;
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CRAFT_TICKS.get() : MYSTICAL_MATRIX_CRAFT_TICKS.getDefault();
     }
 
     public static long mysticalInfusedAwakeningMatrixTankCapacity() {
-        return SPEC.isLoaded() ? MYSTICAL_MATRIX_TANK_CAPACITY.get() : 40L;
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_TANK_CAPACITY.get() : MYSTICAL_MATRIX_TANK_CAPACITY.getDefault();
     }
 
     public static int mysticalInfusedAwakeningMatrixMeDrain() {
-        return SPEC.isLoaded() ? MYSTICAL_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_ME_DRAIN.get() : MYSTICAL_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int mysticalInfusedAwakeningMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? MYSTICAL_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, mysticalInfusedAwakeningMatrixMeDrain());
+        return clampedIdle(MYSTICAL_MATRIX_IDLE_ME_DRAIN, mysticalInfusedAwakeningMatrixMeDrain());
     }
 
     public static boolean malumOverride() {
@@ -1790,27 +2067,30 @@ public final class NepConfig {
     }
 
     public static int malumPureSpiritDropChance() {
-        return malumOverride() ? MALUM_PURE_SPIRIT_DROP_CHANCE.get() : 5;
+        return malumOverride() ? MALUM_PURE_SPIRIT_DROP_CHANCE.get() : 0;
     }
 
-    public static int malumReapingreapingRiteKillRange() {
-        return MALUM_REAPING_RITE_KILL_RANGE.get();
+    public static int malumReapingRiteKillRange() {
+        return SPEC.isLoaded() ? MALUM_REAPING_RITE_KILL_RANGE.get() : MALUM_REAPING_RITE_KILL_RANGE.getDefault();
     }
 
     public static float malumReapingExecutionThreshold() {
-        return MALUM_REAPING_EXECUTION_THRESHOLD.get() / 100.0F;
+        return (SPEC.isLoaded()
+                        ? MALUM_REAPING_EXECUTION_THRESHOLD.get()
+                        : MALUM_REAPING_EXECUTION_THRESHOLD.getDefault())
+                / 100.0F;
     }
 
     public static int malumReapingNetworkRange() {
-        return MALUM_REAPING_NETWORK_RANGE.get();
+        return SPEC.isLoaded() ? MALUM_REAPING_NETWORK_RANGE.get() : MALUM_REAPING_NETWORK_RANGE.getDefault();
     }
 
     public static int malumReapingSweepTicks() {
-        return MALUM_REAPING_SWEEP_TICKS.get();
+        return SPEC.isLoaded() ? MALUM_REAPING_SWEEP_TICKS.get() : MALUM_REAPING_SWEEP_TICKS.getDefault();
     }
 
     public static boolean malumReapingSparks() {
-        return MALUM_REAPING_SPARKS.get();
+        return SPEC.isLoaded() ? MALUM_REAPING_SPARKS.get() : MALUM_REAPING_SPARKS.getDefault();
     }
 
     public static boolean malumFocusedSpiritMatrix() {
@@ -1822,24 +2102,23 @@ public final class NepConfig {
     }
 
     public static int malumFocusedSpiritMatrixCraftTicks() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_CRAFT_TICKS.get() : 90;
+        return SPEC.isLoaded() ? MALUM_MATRIX_CRAFT_TICKS.get() : MALUM_MATRIX_CRAFT_TICKS.getDefault();
     }
 
     public static int malumFocusedSpiritMatrixMeDrain() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded() ? MALUM_MATRIX_ME_DRAIN.get() : MALUM_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int malumFocusedSpiritMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? MALUM_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, malumFocusedSpiritMatrixMeDrain());
+        return clampedIdle(MALUM_MATRIX_IDLE_ME_DRAIN, malumFocusedSpiritMatrixMeDrain());
     }
 
     public static int malumFocusedSpiritMatrixChannels() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded() ? MALUM_MATRIX_CHANNELS.get() : MALUM_MATRIX_CHANNELS.getDefault();
     }
 
     public static long malumFocusedSpiritMatrixSpiritStock() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_SPIRIT_STOCK.get() : 64L;
+        return SPEC.isLoaded() ? MALUM_MATRIX_SPIRIT_STOCK.get() : MALUM_MATRIX_SPIRIT_STOCK.getDefault();
     }
 
     public static boolean malumFocusedSpiritMatrixObeliskSlot() {
@@ -1847,7 +2126,7 @@ public final class NepConfig {
     }
 
     public static int malumFocusedSpiritMatrixMaxObelisks() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_MAX_OBELISKS.get() : 32;
+        return SPEC.isLoaded() ? MALUM_MATRIX_MAX_OBELISKS.get() : MALUM_MATRIX_MAX_OBELISKS.getDefault();
     }
 
     public static boolean malumFocusedSpiritMatrixRuneworking() {
@@ -1859,7 +2138,7 @@ public final class NepConfig {
     }
 
     public static int malumFocusedSpiritMatrixImpetusDurability() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_IMPETUS_DURABILITY.get() : 1_600;
+        return SPEC.isLoaded() ? MALUM_MATRIX_IMPETUS_DURABILITY.get() : MALUM_MATRIX_IMPETUS_DURABILITY.getDefault();
     }
 
     public static boolean malumFocusedSpiritMatrixConsumeImpetusDurability() {
@@ -1871,32 +2150,40 @@ public final class NepConfig {
     }
 
     public static int malumFocusedSpiritMatrixMaxCatalyzers() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_MAX_CATALYZERS.get() : 4;
+        return SPEC.isLoaded() ? MALUM_MATRIX_MAX_CATALYZERS.get() : MALUM_MATRIX_MAX_CATALYZERS.getDefault();
     }
 
     public static int malumFocusedSpiritMatrixCatalyzerCraftTimeReductionPercent() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_CATALYZER_CRAFT_TIME.get() : 75;
+        return SPEC.isLoaded()
+                ? MALUM_MATRIX_CATALYZER_CRAFT_TIME.get()
+                : MALUM_MATRIX_CATALYZER_CRAFT_TIME.getDefault();
     }
 
     public static int malumFocusedSpiritMatrixCatalyzerRestorationPercent() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_CATALYZER_RESTORATION.get() : 50;
+        return SPEC.isLoaded()
+                ? MALUM_MATRIX_CATALYZER_RESTORATION.get()
+                : MALUM_MATRIX_CATALYZER_RESTORATION.getDefault();
     }
 
     public static int malumFocusedSpiritMatrixCatalyzerChainFocusingPercent() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_CATALYZER_CHAIN_FOCUSING.get() : 25;
+        return SPEC.isLoaded()
+                ? MALUM_MATRIX_CATALYZER_CHAIN_FOCUSING.get()
+                : MALUM_MATRIX_CATALYZER_CHAIN_FOCUSING.getDefault();
     }
 
     public static int malumFocusedSpiritMatrixCatalyzerFortunePercent() {
-        return SPEC.isLoaded() ? MALUM_MATRIX_CATALYZER_FORTUNE.get() : 25;
+        return SPEC.isLoaded() ? MALUM_MATRIX_CATALYZER_FORTUNE.get() : MALUM_MATRIX_CATALYZER_FORTUNE.getDefault();
     }
 
     public static int malumFocusedSpiritMatrixObeliskMinimumCraftTicks() {
-        int floor = SPEC.isLoaded() ? MALUM_MATRIX_OBELISK_CRAFT_TICKS.get() : 5;
+        int floor = SPEC.isLoaded()
+                ? MALUM_MATRIX_OBELISK_CRAFT_TICKS.get()
+                : MALUM_MATRIX_OBELISK_CRAFT_TICKS.getDefault();
         return Math.min(floor, malumFocusedSpiritMatrixCraftTicks());
     }
 
     public static int mysticalInfusedAwakeningMatrixChannels() {
-        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded() ? MYSTICAL_MATRIX_CHANNELS.get() : MYSTICAL_MATRIX_CHANNELS.getDefault();
     }
 
     public static boolean arsOverride() {
@@ -1916,15 +2203,15 @@ public final class NepConfig {
     }
 
     public static int arsArcaneLecternMaxTypes() {
-        return SPEC.isLoaded() ? ARS_ARCANE_LECTERN_MAX_TYPES.get() : 1_024;
+        return SPEC.isLoaded() ? ARS_ARCANE_LECTERN_MAX_TYPES.get() : ARS_ARCANE_LECTERN_MAX_TYPES.getDefault();
     }
 
     public static int arsArcaneLecternIdleMeDrain() {
-        return SPEC.isLoaded() ? ARS_ARCANE_LECTERN_IDLE_ME_DRAIN.get() : 10;
+        return SPEC.isLoaded() ? ARS_ARCANE_LECTERN_IDLE_ME_DRAIN.get() : ARS_ARCANE_LECTERN_IDLE_ME_DRAIN.getDefault();
     }
 
     public static int arsArcaneLecternScribesRange() {
-        return SPEC.isLoaded() ? ARS_ARCANE_LECTERN_SCRIBES_RANGE.get() : 8;
+        return SPEC.isLoaded() ? ARS_ARCANE_LECTERN_SCRIBES_RANGE.get() : ARS_ARCANE_LECTERN_SCRIBES_RANGE.getDefault();
     }
 
     public static boolean arsRitualConductor() {
@@ -1932,19 +2219,23 @@ public final class NepConfig {
     }
 
     public static int arsRitualConductorRange() {
-        return SPEC.isLoaded() ? ARS_RITUAL_CONDUCTOR_RANGE.get() : 4;
+        return SPEC.isLoaded() ? ARS_RITUAL_CONDUCTOR_RANGE.get() : ARS_RITUAL_CONDUCTOR_RANGE.getDefault();
     }
 
     public static int arsRitualConductorInterval() {
-        return SPEC.isLoaded() ? ARS_RITUAL_CONDUCTOR_INTERVAL.get() : 20;
+        return SPEC.isLoaded() ? ARS_RITUAL_CONDUCTOR_INTERVAL.get() : ARS_RITUAL_CONDUCTOR_INTERVAL.getDefault();
     }
 
     public static int arsRitualConductorCollectionRadius() {
-        return SPEC.isLoaded() ? ARS_RITUAL_CONDUCTOR_COLLECTION_RADIUS.get() : 4;
+        return SPEC.isLoaded()
+                ? ARS_RITUAL_CONDUCTOR_COLLECTION_RADIUS.get()
+                : ARS_RITUAL_CONDUCTOR_COLLECTION_RADIUS.getDefault();
     }
 
     public static int arsRitualConductorIdleMeDrain() {
-        return SPEC.isLoaded() ? ARS_RITUAL_CONDUCTOR_IDLE_ME_DRAIN.get() : 10;
+        return SPEC.isLoaded()
+                ? ARS_RITUAL_CONDUCTOR_IDLE_ME_DRAIN.get()
+                : ARS_RITUAL_CONDUCTOR_IDLE_ME_DRAIN.getDefault();
     }
 
     public static boolean arsMatrix() {
@@ -1956,15 +2247,15 @@ public final class NepConfig {
     }
 
     public static int arsMatrixApparatusCraftTicks() {
-        return SPEC.isLoaded() ? ARS_MATRIX_APPARATUS_CRAFT_TICKS.get() : 210;
+        return SPEC.isLoaded() ? ARS_MATRIX_APPARATUS_CRAFT_TICKS.get() : ARS_MATRIX_APPARATUS_CRAFT_TICKS.getDefault();
     }
 
     public static int arsMatrixImbuementCraftTicks() {
-        return SPEC.isLoaded() ? ARS_MATRIX_IMBUEMENT_CRAFT_TICKS.get() : 100;
+        return SPEC.isLoaded() ? ARS_MATRIX_IMBUEMENT_CRAFT_TICKS.get() : ARS_MATRIX_IMBUEMENT_CRAFT_TICKS.getDefault();
     }
 
     public static int arsMatrixSourceJarRange() {
-        return SPEC.isLoaded() ? ARS_MATRIX_SOURCE_JAR_RANGE.get() : 10;
+        return SPEC.isLoaded() ? ARS_MATRIX_SOURCE_JAR_RANGE.get() : ARS_MATRIX_SOURCE_JAR_RANGE.getDefault();
     }
 
     public static boolean arsMatrixMeSource() {
@@ -1972,31 +2263,117 @@ public final class NepConfig {
     }
 
     public static int arsMatrixMaxAccelerate() {
-        return SPEC.isLoaded() ? ARS_MATRIX_MAX_ACCELERATE.get() : 16;
+        return SPEC.isLoaded() ? ARS_MATRIX_MAX_ACCELERATE.get() : ARS_MATRIX_MAX_ACCELERATE.getDefault();
     }
 
     public static int arsMatrixAccelerateMinimumCraftTicks() {
-        return SPEC.isLoaded() ? ARS_MATRIX_ACCELERATE_MINIMUM_CRAFT_TICKS.get() : 10;
+        return SPEC.isLoaded()
+                ? ARS_MATRIX_ACCELERATE_MINIMUM_CRAFT_TICKS.get()
+                : ARS_MATRIX_ACCELERATE_MINIMUM_CRAFT_TICKS.getDefault();
     }
 
     public static int arsMatrixMaxDampen() {
-        return SPEC.isLoaded() ? ARS_MATRIX_MAX_DAMPEN.get() : 16;
+        return SPEC.isLoaded() ? ARS_MATRIX_MAX_DAMPEN.get() : ARS_MATRIX_MAX_DAMPEN.getDefault();
     }
 
     public static int arsMatrixDampenSourceDiscountPercent() {
-        return SPEC.isLoaded() ? ARS_MATRIX_DAMPEN_SOURCE_DISCOUNT.get() : 50;
+        return SPEC.isLoaded()
+                ? ARS_MATRIX_DAMPEN_SOURCE_DISCOUNT.get()
+                : ARS_MATRIX_DAMPEN_SOURCE_DISCOUNT.getDefault();
     }
 
     public static int arsMatrixMeDrain() {
-        return SPEC.isLoaded() ? ARS_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded() ? ARS_MATRIX_ME_DRAIN.get() : ARS_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int arsMatrixIdleMeDrain() {
-        return SPEC.isLoaded() ? ARS_MATRIX_IDLE_ME_DRAIN.get() : 10;
+        return clampedIdle(ARS_MATRIX_IDLE_ME_DRAIN, arsMatrixMeDrain());
     }
 
     public static int arsMatrixChannels() {
-        return SPEC.isLoaded() ? ARS_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded() ? ARS_MATRIX_CHANNELS.get() : ARS_MATRIX_CHANNELS.getDefault();
+    }
+
+    public static boolean occultismOverride() {
+        return SPEC.isLoaded() && OCCULTISM_OVERRIDE.get();
+    }
+
+    public static boolean occultismMatrix() {
+        return occultismOverride() && OCCULTISM_MATRIX.get();
+    }
+
+    public static boolean occultismMatrixAutoRequest() {
+        return occultismMatrix() && OCCULTISM_MATRIX_AUTO_REQUEST.get();
+    }
+
+    public static int occultismMatrixSpiritFireTicks() {
+        return SPEC.isLoaded()
+                ? OCCULTISM_MATRIX_SPIRIT_FIRE_TICKS.get()
+                : OCCULTISM_MATRIX_SPIRIT_FIRE_TICKS.getDefault();
+    }
+
+    public static int occultismMatrixCraftTimePercent() {
+        return SPEC.isLoaded() ? OCCULTISM_MATRIX_CRAFT_TIME.get() : OCCULTISM_MATRIX_CRAFT_TIME.getDefault();
+    }
+
+    public static int occultismMatrixMeDrain() {
+        return SPEC.isLoaded() ? OCCULTISM_MATRIX_ME_DRAIN.get() : OCCULTISM_MATRIX_ME_DRAIN.getDefault();
+    }
+
+    public static int occultismMatrixIdleMeDrain() {
+        return clampedIdle(OCCULTISM_MATRIX_IDLE_ME_DRAIN, occultismMatrixMeDrain());
+    }
+
+    public static int occultismMatrixChannels() {
+        return SPEC.isLoaded() ? OCCULTISM_MATRIX_CHANNELS.get() : OCCULTISM_MATRIX_CHANNELS.getDefault();
+    }
+
+    public static boolean occultismSpiritProvider() {
+        return occultismOverride() && OCCULTISM_SPIRIT_PROVIDER.get();
+    }
+
+    public static int occultismSpiritProviderRange() {
+        return SPEC.isLoaded() ? OCCULTISM_SPIRIT_PROVIDER_RANGE.get() : OCCULTISM_SPIRIT_PROVIDER_RANGE.getDefault();
+    }
+
+    public static int occultismSpiritProviderQueue() {
+        return SPEC.isLoaded() ? OCCULTISM_SPIRIT_PROVIDER_QUEUE.get() : OCCULTISM_SPIRIT_PROVIDER_QUEUE.getDefault();
+    }
+
+    public static boolean occultismRitualController() {
+        return occultismOverride() && RITUAL_CONTROLLER.get();
+    }
+
+    public static boolean occultismRitualControllerAutoRequest() {
+        return occultismRitualController() && RITUAL_CONTROLLER_AUTO_REQUEST.get();
+    }
+
+    public static int occultismRitualControllerBowlRange() {
+        return SPEC.isLoaded() ? RITUAL_CONTROLLER_BOWL_RANGE.get() : RITUAL_CONTROLLER_BOWL_RANGE.getDefault();
+    }
+
+    public static int occultismRitualControllerTierSpeed() {
+        return SPEC.isLoaded() ? RITUAL_CONTROLLER_TIER_SPEED.get() : RITUAL_CONTROLLER_TIER_SPEED.getDefault();
+    }
+
+    public static boolean occultismRitualControllerRepair() {
+        return occultismRitualController() && RITUAL_CONTROLLER_REPAIR.get();
+    }
+
+    public static boolean occultismSacrificeStandIns() {
+        return occultismRitualController() && RITUAL_CONTROLLER_STAND_INS.get();
+    }
+
+    public static int occultismRitualControllerMeDrain() {
+        return SPEC.isLoaded() ? RITUAL_CONTROLLER_ME_DRAIN.get() : RITUAL_CONTROLLER_ME_DRAIN.getDefault();
+    }
+
+    public static int occultismRitualControllerIdleMeDrain() {
+        return clampedIdle(RITUAL_CONTROLLER_IDLE_ME_DRAIN, occultismRitualControllerMeDrain());
+    }
+
+    public static int occultismRitualControllerChannels() {
+        return SPEC.isLoaded() ? RITUAL_CONTROLLER_CHANNELS.get() : RITUAL_CONTROLLER_CHANNELS.getDefault();
     }
 
     public static boolean oritechOverride() {
@@ -2016,19 +2393,19 @@ public final class NepConfig {
     }
 
     public static long oritechMatrixEnergyCostPercent() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_ENERGY_COST.get() : 100;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_ENERGY_COST.get() : ORITECH_MATRIX_ENERGY_COST.getDefault();
     }
 
     public static int oritechMatrixChargeRate() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_CHARGE_RATE.get() : 1_000_000;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CHARGE_RATE.get() : ORITECH_MATRIX_CHARGE_RATE.getDefault();
     }
 
     public static int oritechMatrixCapacity() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_CAPACITY.get() : 10_000_000;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CAPACITY.get() : ORITECH_MATRIX_CAPACITY.getDefault();
     }
 
     public static int oritechMatrixCraftTicks() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_CRAFT_TICKS.get() : 10;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CRAFT_TICKS.get() : ORITECH_MATRIX_CRAFT_TICKS.getDefault();
     }
 
     public static boolean oritechMatrixMeCharge() {
@@ -2036,16 +2413,15 @@ public final class NepConfig {
     }
 
     public static int oritechMatrixMeDrain() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_ME_DRAIN.get() : 500;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_ME_DRAIN.get() : ORITECH_MATRIX_ME_DRAIN.getDefault();
     }
 
     public static int oritechMatrixIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? ORITECH_MATRIX_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, oritechMatrixMeDrain());
+        return clampedIdle(ORITECH_MATRIX_IDLE_ME_DRAIN, oritechMatrixMeDrain());
     }
 
     public static int oritechMatrixChannels() {
-        return SPEC.isLoaded() ? ORITECH_MATRIX_CHANNELS.get() : 15;
+        return SPEC.isLoaded() ? ORITECH_MATRIX_CHANNELS.get() : ORITECH_MATRIX_CHANNELS.getDefault();
     }
 
     public static boolean oritechParticleCollisionController() {
@@ -2057,23 +2433,24 @@ public final class NepConfig {
     }
 
     public static int oritechControllerLinkRange() {
-        return SPEC.isLoaded() ? ORITECH_CONTROLLER_LINK_RANGE.get() : 64;
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_LINK_RANGE.get() : ORITECH_CONTROLLER_LINK_RANGE.getDefault();
     }
 
     public static int oritechControllerCollisionTimeout() {
-        return SPEC.isLoaded() ? ORITECH_CONTROLLER_COLLISION_TIMEOUT.get() : 1_200;
+        return SPEC.isLoaded()
+                ? ORITECH_CONTROLLER_COLLISION_TIMEOUT.get()
+                : ORITECH_CONTROLLER_COLLISION_TIMEOUT.getDefault();
     }
 
     public static int oritechControllerMeDrain() {
-        return SPEC.isLoaded() ? ORITECH_CONTROLLER_ME_DRAIN.get() : 100;
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_ME_DRAIN.get() : ORITECH_CONTROLLER_ME_DRAIN.getDefault();
     }
 
     public static int oritechControllerIdleMeDrain() {
-        int idle = SPEC.isLoaded() ? ORITECH_CONTROLLER_IDLE_ME_DRAIN.get() : 10;
-        return Math.min(idle, oritechControllerMeDrain());
+        return clampedIdle(ORITECH_CONTROLLER_IDLE_ME_DRAIN, oritechControllerMeDrain());
     }
 
     public static int oritechControllerChannels() {
-        return SPEC.isLoaded() ? ORITECH_CONTROLLER_CHANNELS.get() : 7;
+        return SPEC.isLoaded() ? ORITECH_CONTROLLER_CHANNELS.get() : ORITECH_CONTROLLER_CHANNELS.getDefault();
     }
 }

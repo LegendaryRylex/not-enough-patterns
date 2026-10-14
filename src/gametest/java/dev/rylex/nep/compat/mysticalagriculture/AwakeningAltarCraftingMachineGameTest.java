@@ -1,19 +1,16 @@
 package dev.rylex.nep.compat.mysticalagriculture;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import com.blakebr0.mysticalagriculture.api.crafting.IAwakeningRecipe;
 import com.blakebr0.mysticalagriculture.init.ModBlocks;
 import com.blakebr0.mysticalagriculture.tileentity.AwakeningAltarTileEntity;
 import com.blakebr0.mysticalagriculture.tileentity.AwakeningPedestalTileEntity;
 import com.blakebr0.mysticalagriculture.tileentity.EssenceVesselTileEntity;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
-import dev.rylex.nep.pattern.AwakeningPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -70,49 +67,16 @@ public final class AwakeningAltarCraftingMachineGameTest {
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(ALTAR), null);
-        helper.assertTrue(machine != null, "the Awakening Altar exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(
+                helper, ALTAR, "the Awakening Altar exposed no crafting machine capability");
     }
 
     private static RecipeHolder<IAwakeningRecipe> simplestRecipe(GameTestHelper helper) {
-        RecipeHolder<IAwakeningRecipe> best = null;
-        for (RecipeHolder<IAwakeningRecipe> holder : MysticalRecipeResolver.awakeningCandidates(helper.getLevel())) {
-            if (MysticalRecipeIngredients.awakening(holder.value(), helper.getLevel()) == null) {
-                continue;
-            }
-            if (best == null || holder.id().compareTo(best.id()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no awakening recipe was loaded");
-        return best;
+        return MysticalFixtures.simplestAwakening(helper);
     }
 
     private static IPatternDetails patternFor(GameTestHelper helper, RecipeHolder<IAwakeningRecipe> holder) {
-        EncodedIngredients expected = MysticalRecipeIngredients.awakening(holder.value(), helper.getLevel());
-        helper.assertTrue(expected != null, "the recipe produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded =
-                AwakeningPattern.encode(holder.id(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the awakening pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
+        return MysticalFixtures.awakeningPattern(helper, holder);
     }
 
     private static long essenceTotal(RecipeHolder<IAwakeningRecipe> holder) {

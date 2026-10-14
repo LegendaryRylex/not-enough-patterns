@@ -12,6 +12,7 @@ import dev.rylex.nep.pattern.EncodedRecipePattern;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -24,6 +25,10 @@ class ProcessingPatternConversionTest {
 
     private static GenericStack stack(Item item, long amount) {
         return new GenericStack(AEItemKey.of(item), amount);
+    }
+
+    private static EncodedRecipePattern recipe(List<GenericStack> inputs) {
+        return recipe(inputs, List.of());
     }
 
     private static EncodedRecipePattern recipe(List<GenericStack> inputs, List<GenericStack> retained) {
@@ -73,7 +78,7 @@ class ProcessingPatternConversionTest {
     void aPatternWiderThanAProcessingPatternCanHoldIsRefused() {
         List<GenericStack> inputs = BuiltInRegistries.ITEM.stream()
                 .map(AEItemKey::of)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .limit(AEProcessingPattern.MAX_INPUT_SLOTS + 1L)
                 .map(key -> new GenericStack(key, 1))
                 .toList();
@@ -85,9 +90,5 @@ class ProcessingPatternConversionTest {
         assertNull(
                 ProcessingPatternConversion.of(recipe(inputs)),
                 "a pattern past the processing pattern ceiling would silently lose ingredients");
-    }
-
-    private static EncodedRecipePattern recipe(List<GenericStack> inputs) {
-        return recipe(inputs, List.of());
     }
 }

@@ -6,6 +6,7 @@ import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
+import dev.rylex.nep.pattern.PatternStacks;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
@@ -32,11 +33,12 @@ final class DraconicPatternEncoders {
         if (!NepConfig.draconicFusionCrafting()) {
             return null;
         }
-        List<GenericStack> inputs = FusionResults.canonical(FusionRecipeResolver.condensedInputs(encoded), level);
-        GenericStack result = FusionRecipeResolver.singleResult(encoded);
-        if (inputs == null || result == null) {
+        Encoded parsed = Encoded.of(encoded, level);
+        if (parsed == null) {
             return null;
         }
+        List<GenericStack> inputs = parsed.inputs();
+        GenericStack result = parsed.result();
         result = FusionResults.producedForm(holder.value(), level, FusionResults.canonical(result, level));
         Split split = split(holder, level, inputs, result);
         return split == null ? null : FusionCraftingPattern.encode(holder.id(), split.consumed(), split.kept(), result);
@@ -47,11 +49,12 @@ final class DraconicPatternEncoders {
         if (!NepConfig.draconicFusionCrafting()) {
             return null;
         }
-        List<GenericStack> inputs = FusionResults.canonical(FusionRecipeResolver.condensedInputs(encoded), level);
-        GenericStack result = FusionRecipeResolver.singleResult(encoded);
-        if (inputs == null || result == null) {
+        Encoded parsed = Encoded.of(encoded, level);
+        if (parsed == null) {
             return null;
         }
+        List<GenericStack> inputs = parsed.inputs();
+        GenericStack result = parsed.result();
         result = FusionResults.canonical(result, level);
         if (FusionRecipeResolver.hasUnrepeatableResult(level, result)) {
             return PatternFallback.Result.feedback(Component.translatable("nep.encoding.fusion_item_data"));
@@ -76,6 +79,15 @@ final class DraconicPatternEncoders {
                 ? null
                 : PatternFallback.Result.of(
                         FusionCraftingPattern.encode(only.id(), split.consumed(), split.kept(), produced));
+    }
+
+    private record Encoded(List<GenericStack> inputs, GenericStack result) {
+        @Nullable
+        static Encoded of(IPatternDetails encoded, Level level) {
+            List<GenericStack> inputs = FusionResults.canonical(PatternStacks.condensedInputs(encoded), level);
+            GenericStack result = PatternStacks.singleResult(encoded);
+            return inputs == null || result == null ? null : new Encoded(inputs, result);
+        }
     }
 
     private record Split(List<GenericStack> consumed, List<GenericStack> kept) {}

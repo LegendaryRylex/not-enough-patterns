@@ -43,8 +43,8 @@ final class MatrixStressTooltip {
     private static Component stressLine(int stress, float speed) {
         return Component.translatable(
                         "tooltip.nep.sequenced_assembly_matrix.stress.at",
-                        String.format("%,d", stress),
-                        String.format("%,d", Math.round(speed)))
+                        MatrixReadout.count(stress),
+                        MatrixReadout.count(Math.round(speed)))
                 .withStyle(ChatFormatting.DARK_GRAY);
     }
 

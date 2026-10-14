@@ -11,6 +11,7 @@ import dev.rylex.nep.compat.draconic.DraconicCompat;
 import dev.rylex.nep.compat.extendedae.ExtendedAeCompat;
 import dev.rylex.nep.compat.malum.MalumCompat;
 import dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat;
+import dev.rylex.nep.compat.occultism.OccultismCompat;
 import dev.rylex.nep.compat.oritech.OritechCompat;
 import dev.rylex.nep.decoder.DecoderContent;
 import dev.rylex.nep.guide.NepRecipes;
@@ -55,50 +56,28 @@ public final class Nep {
         NepRecipes.init(modBus);
         modBus.addListener(NepNetwork::registerPayloads);
         modBus.addListener(this::commonSetup);
-        if (ModList.get().isLoaded("create")) {
-            CreateCompat.init(modBus, dist);
-            LOGGER.info("Create integration enabled");
-        }
-        if (ModList.get().isLoaded("draconicevolution")) {
-            DraconicCompat.init(modBus, dist);
-            LOGGER.info("Draconic Evolution integration enabled");
-        }
-        if (ModList.get().isLoaded("compactcrafting")) {
-            CompactCraftingCompat.init(modBus, dist);
-            LOGGER.info("Compact Crafting integration enabled");
-        }
-        if (ModList.get().isLoaded("apothic_enchanting")) {
-            ApothicCompat.init(modBus);
-            LOGGER.info("Apothic Enchanting integration enabled");
-        }
-        if (ModList.get().isLoaded("actuallyadditions")) {
-            ActuallyAdditionsCompat.init(modBus, dist);
-            LOGGER.info("Actually Additions integration enabled");
-        }
-        if (ModList.get().isLoaded("mysticalagriculture")) {
-            MysticalAgricultureCompat.init(modBus, dist);
-            LOGGER.info("Mystical Agriculture integration enabled");
-        }
-        if (ModList.get().isLoaded("malum")) {
-            MalumCompat.init(modBus, dist);
-            LOGGER.info("Malum integration enabled");
-        }
-        if (ModList.get().isLoaded("ars_nouveau")) {
-            ArsCompat.init(modBus, dist);
-            LOGGER.info("Ars Nouveau integration enabled");
-        }
-        if (ModList.get().isLoaded("oritech")) {
-            OritechCompat.init(modBus, dist);
-            LOGGER.info("Oritech integration enabled");
-        }
-        if (ModList.get().isLoaded("extendedae")) {
-            ExtendedAeCompat.init(modBus, dist);
-            LOGGER.info("ExtendedAE integration enabled");
-        }
+        integrate("create", "Create", () -> CreateCompat.init(modBus, dist));
+        integrate("draconicevolution", "Draconic Evolution", () -> DraconicCompat.init(modBus, dist));
+        integrate("compactcrafting", "Compact Crafting", () -> CompactCraftingCompat.init(modBus, dist));
+        integrate("apothic_enchanting", "Apothic Enchanting", () -> ApothicCompat.init(modBus));
+        integrate("actuallyadditions", "Actually Additions", () -> ActuallyAdditionsCompat.init(modBus, dist));
+        integrate("mysticalagriculture", "Mystical Agriculture", () -> MysticalAgricultureCompat.init(modBus, dist));
+        integrate("malum", "Malum", () -> MalumCompat.init(modBus, dist));
+        integrate("ars_nouveau", "Ars Nouveau", () -> ArsCompat.init(modBus, dist));
+        integrate("occultism", "Occultism", () -> OccultismCompat.init(modBus, dist));
+        integrate("oritech", "Oritech", () -> OritechCompat.init(modBus, dist));
+        integrate("extendedae", "ExtendedAE", () -> ExtendedAeCompat.init(modBus, dist));
         if (dist.isClient()) {
             NepClient.init(container, modBus);
         }
         LOGGER.info("{} initialized", MOD_ID);
+    }
+
+    private static void integrate(String modId, String label, Runnable init) {
+        if (ModList.get().isLoaded(modId)) {
+            init.run();
+            LOGGER.info("{} integration enabled", label);
+        }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

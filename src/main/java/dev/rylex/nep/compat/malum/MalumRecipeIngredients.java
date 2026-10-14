@@ -143,10 +143,6 @@ final class MalumRecipeIngredients {
         return true;
     }
 
-    static int spiritCount(SpiritInfusionRecipe recipe) {
-        return recipe.spirits.size();
-    }
-
     private static boolean addSpirit(List<List<GenericStack>> inputs, SpiritIngredient spirit) {
         AEItemKey key = AEItemKey.of(spirit.asItemStack());
         if (key == null || spirit.count() <= 0) {

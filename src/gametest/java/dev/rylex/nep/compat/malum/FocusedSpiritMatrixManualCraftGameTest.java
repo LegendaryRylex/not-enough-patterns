@@ -1,6 +1,7 @@
 package dev.rylex.nep.compat.malum;
 
-import appeng.core.definitions.AEBlocks;
+import static dev.rylex.nep.compat.malum.MalumFixtures.outputHolds;
+
 import com.sammy.malum.common.recipe.SpiritFocusingRecipe;
 import com.sammy.malum.common.recipe.SpiritInfusionRecipe;
 import dev.rylex.nep.Nep;
@@ -8,7 +9,9 @@ import dev.rylex.nep.machine.ManualCraftFixtures;
 import dev.rylex.nep.machine.ManualCraftOutcome;
 import dev.rylex.nep.machine.ManualCraftResult;
 import dev.rylex.nep.machine.ManualRequirement;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
@@ -36,74 +39,41 @@ public final class FocusedSpiritMatrixManualCraftGameTest {
     private FocusedSpiritMatrixManualCraftGameTest() {}
 
     private static FocusedSpiritMatrixBlockEntity placeMatrix(GameTestHelper helper) {
-        SpiritInfusionResolver.clearCache();
-        SpiritFocusingResolver.clearCache();
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-        helper.setBlock(MATRIX, NepMalumContent.MATRIX.get().defaultBlockState());
-        FocusedSpiritMatrixBlockEntity matrix =
-                helper.getBlockEntity(MATRIX) instanceof FocusedSpiritMatrixBlockEntity be ? be : null;
-        helper.assertTrue(matrix != null, "the Focused Spirit Matrix has no block entity");
-        return matrix;
+        return MalumFixtures.placeMatrix(helper, ME_CONTROLLER, ENERGY_CELL, MATRIX);
     }
 
     private static RecipeHolder<SpiritInfusionRecipe> handStartableInfusion(GameTestHelper helper) {
-        RecipeHolder<SpiritInfusionRecipe> best = null;
-        for (RecipeHolder<SpiritInfusionRecipe> holder : SpiritInfusionResolver.candidates(helper.getLevel())) {
-            if (!holder.id().getNamespace().equals("malum")
-                    || !holder.value().extraInputs.isEmpty()
-                    || MalumRecipeIngredients.manualSpiritInfusion(holder.value()) == null) {
-                continue;
-            }
-            if (best == null || holder.id().compareTo(best.id()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no spirit infusion recipe could be started by hand");
-        return best;
+        return infusion(
+                helper, recipe -> recipe.extraInputs.isEmpty(), "no spirit infusion recipe could be started by hand");
     }
 
     private static RecipeHolder<SpiritInfusionRecipe> carryOverInfusion(GameTestHelper helper) {
-        RecipeHolder<SpiritInfusionRecipe> best = null;
-        for (RecipeHolder<SpiritInfusionRecipe> holder : SpiritInfusionResolver.candidates(helper.getLevel())) {
-            if (!holder.id().getNamespace().equals("malum")
-                    || !holder.value().carryOverComponentData
-                    || MalumRecipeIngredients.manualSpiritInfusion(holder.value()) == null) {
-                continue;
-            }
-            if (best == null || holder.id().compareTo(best.id()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no spirit infusion recipe carries component data over");
-        return best;
+        return infusion(
+                helper,
+                recipe -> recipe.carryOverComponentData,
+                "no spirit infusion recipe carries component data over");
+    }
+
+    private static RecipeHolder<SpiritInfusionRecipe> infusion(
+            GameTestHelper helper, Predicate<SpiritInfusionRecipe> wanted, String failure) {
+        return MalumFixtures.pickBest(
+                helper,
+                SpiritInfusionResolver.candidates(helper.getLevel()),
+                holder -> holder.id().getNamespace().equals("malum")
+                        && wanted.test(holder.value())
+                        && MalumRecipeIngredients.manualSpiritInfusion(holder.value()) != null,
+                MalumFixtures.byId(),
+                failure);
     }
 
     private static RecipeHolder<SpiritFocusingRecipe> handStartableFocusing(GameTestHelper helper) {
-        RecipeHolder<SpiritFocusingRecipe> best = null;
-        for (RecipeHolder<SpiritFocusingRecipe> holder : SpiritFocusingResolver.candidates(helper.getLevel())) {
-            if (!holder.id().getNamespace().equals("malum")
-                    || MalumRecipeIngredients.manualSpiritFocusing(holder.value()) == null) {
-                continue;
-            }
-            if (best == null || holder.value().time < best.value().time) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no spirit focusing recipe could be started by hand");
-        return best;
-    }
-
-    private static boolean outputHolds(FocusedSpiritMatrixBlockEntity matrix, ItemStack expected, int count) {
-        int found = 0;
-        IItemHandler output = matrix.getOutputBuffer();
-        for (int slot = 0; slot < output.getSlots(); slot++) {
-            ItemStack stack = output.getStackInSlot(slot);
-            if (ItemStack.isSameItem(stack, expected)) {
-                found += stack.getCount();
-            }
-        }
-        return found >= count;
+        return MalumFixtures.pickBest(
+                helper,
+                SpiritFocusingResolver.candidates(helper.getLevel()),
+                holder -> holder.id().getNamespace().equals("malum")
+                        && MalumRecipeIngredients.manualSpiritFocusing(holder.value()) != null,
+                Comparator.comparingInt(holder -> holder.value().time),
+                "no spirit focusing recipe could be started by hand");
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)

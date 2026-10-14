@@ -78,8 +78,8 @@ public final class RitualConductorGameTest {
                     RitualBrazierTile brazier = helper.getBlockEntity(BRAZIER);
                     try {
                         level.setWeatherParameters(0, 6000, true, true);
-                        conductor.cycleWeather();
-                        conductor.cycleWeather();
+                        conductor.cycleWeather(true);
+                        conductor.cycleWeather(true);
                         tickThroughInterval(level, conductor);
                         helper.assertTrue(
                                 conductor.state() == RitualConductorBlockEntity.ConductorState.HELD,
@@ -90,7 +90,7 @@ public final class RitualConductorGameTest {
                         helper.assertTrue(
                                 RitualWeather.STORM.satisfiedBy(level), "Storm did not report itself satisfied");
 
-                        conductor.cycleWeather();
+                        conductor.cycleWeather(true);
                         tickThroughInterval(level, conductor);
                         helper.assertTrue(
                                 conductor.state() != RitualConductorBlockEntity.ConductorState.HELD,

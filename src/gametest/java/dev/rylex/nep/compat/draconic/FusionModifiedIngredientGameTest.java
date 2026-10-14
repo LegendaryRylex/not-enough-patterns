@@ -3,15 +3,11 @@ package dev.rylex.nep.compat.draconic;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.GenericStack;
 import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.CraftedOutputs;
-import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.core.Holder;
@@ -155,14 +151,7 @@ public final class FusionModifiedIngredientGameTest {
 
     @Nullable
     private static IPatternDetails decode(RecipeHolder<IFusionRecipe> holder, Level level, EncodedIngredients encoded) {
-        List<GenericStack> consumed = new ArrayList<>();
-        List<GenericStack> kept = new ArrayList<>();
-        for (int slot = 0; slot < encoded.inputs().size(); slot++) {
-            (encoded.isRetained(slot) ? kept : consumed)
-                    .add(encoded.inputs().get(slot).get(0));
-        }
-        GenericStack result = encoded.outputs().get(0);
-        ItemStack pattern = FusionCraftingPattern.encode(holder.id(), consumed, kept, result);
+        ItemStack pattern = DraconicFixtures.encodeFusion(holder, encoded);
         return PatternDetailsHelper.decodePattern(AEItemKey.of(pattern), level);
     }
 }

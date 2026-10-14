@@ -120,21 +120,33 @@ public class SequencedAssemblyControllerScreen extends AssemblyReadoutScreen<Seq
 
         boolean halted = state.halted();
         boolean blocked = state.outputBlocked();
+        SequencedAssemblyState.Network network = state.network();
         Component status;
-        if (blocked) {
+        if (network == SequencedAssemblyState.Network.NO_CHANNELS) {
+            status = Component.translatable("gui.nep.sequenced_assembly.status.no_network_channels");
+        } else if (network == SequencedAssemblyState.Network.NO_POWER) {
+            status = Component.translatable("gui.nep.sequenced_assembly.status.no_network_power");
+        } else if (blocked) {
             status = Component.translatable("gui.nep.sequenced_assembly.status.output_blocked");
         } else if (halted) {
             status = Component.translatable("gui.nep.sequenced_assembly.status.halted");
         } else {
-            status = switch (state.status()) {
-                case 1 -> Component.translatable("gui.nep.sequenced_assembly.status.ready");
-                case 2 -> Component.translatable("gui.nep.sequenced_assembly.status.problem");
+            status = switch (SequencedAssemblyState.LineStatus.byCode(state.status())) {
+                case READY -> Component.translatable("gui.nep.sequenced_assembly.status.ready");
+                case PROBLEM -> Component.translatable("gui.nep.sequenced_assembly.status.problem");
                 default -> Component.translatable("gui.nep.sequenced_assembly.status.none");
             };
         }
-        graphics.drawString(font, status, 12, 22, halted || blocked ? READOUT_FAULT : READOUT_TEXT, false);
-        if (halted || blocked) {
-            addHotspot(12, 22, font.width(status), font.lineHeight, () -> statusTooltip(halted, blocked));
+        boolean networkFault = network != SequencedAssemblyState.Network.OK;
+        boolean fault = halted || blocked || networkFault;
+        graphics.drawString(font, status, 12, 22, fault ? READOUT_FAULT : READOUT_TEXT, false);
+        if (fault) {
+            addHotspot(
+                    12,
+                    22,
+                    font.width(status),
+                    font.lineHeight,
+                    () -> networkFault ? networkTooltip(network) : statusTooltip(halted, blocked));
         }
         drawMakingRow(
                 graphics,
@@ -232,6 +244,13 @@ public class SequencedAssemblyControllerScreen extends AssemblyReadoutScreen<Seq
             default -> lines.add(stationTitle(station, coords).withStyle(ChatFormatting.GREEN));
         }
         return lines;
+    }
+
+    private static List<Component> networkTooltip(SequencedAssemblyState.Network network) {
+        String key = network == SequencedAssemblyState.Network.NO_CHANNELS
+                ? "gui.nep.sequenced_assembly.status.no_network_channels.hint"
+                : "gui.nep.sequenced_assembly.status.no_network_power.hint";
+        return List.of(Component.translatable(key).withStyle(ChatFormatting.GRAY));
     }
 
     private List<Component> statusTooltip(boolean halted, boolean blocked) {

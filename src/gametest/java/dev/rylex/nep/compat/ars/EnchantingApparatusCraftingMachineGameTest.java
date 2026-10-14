@@ -1,8 +1,11 @@
 package dev.rylex.nep.compat.ars;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.ars.ArsFixtures.firstOptions;
+import static dev.rylex.nep.compat.ars.ArsFixtures.resetApparatusCaches;
+import static dev.rylex.nep.compat.ars.ArsFixtures.resolvableApparatus;
+
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
@@ -18,11 +21,10 @@ import com.hollingsworth.arsnouveau.common.crafting.recipes.EnchantmentRecipe;
 import com.hollingsworth.arsnouveau.common.items.data.ArmorPerkHolder;
 import com.hollingsworth.arsnouveau.setup.registry.BlockRegistry;
 import com.hollingsworth.arsnouveau.setup.registry.DataComponentRegistry;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.CraftedOutputs;
-import dev.rylex.nep.pattern.ApparatusPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
@@ -90,14 +92,8 @@ public final class EnchantingApparatusCraftingMachineGameTest {
             if (expected == null) {
                 continue;
             }
-            List<GenericStack> inputs = new ArrayList<>();
-            for (List<GenericStack> options : expected.inputs()) {
-                inputs.add(options.get(0));
-            }
-            ItemStack encoded = ApparatusPattern.encode(
-                    holder.id(), inputs, expected.outputs().get(0));
-            IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, level);
-            if (details != null && ArsRecipeResolver.resolve(details, level) != null) {
+            IPatternDetails details = resolvableApparatus(holder, firstOptions(expected), expected, level);
+            if (details != null) {
                 return new Fixture(holder, details, expected);
             }
         }
@@ -123,13 +119,8 @@ public final class EnchantingApparatusCraftingMachineGameTest {
             if (expected == null) {
                 continue;
             }
-            List<GenericStack> inputs =
-                    expected.inputs().stream().map(options -> options.get(0)).toList();
-            IPatternDetails details = PatternDetailsHelper.decodePattern(
-                    ApparatusPattern.encode(
-                            holder.id(), inputs, expected.outputs().get(0)),
-                    level);
-            if (details != null && ArsRecipeResolver.resolve(details, level) != null) {
+            IPatternDetails details = resolvableApparatus(holder, firstOptions(expected), expected, level);
+            if (details != null) {
                 return new Fixture(holder, details, expected);
             }
         }
@@ -161,8 +152,7 @@ public final class EnchantingApparatusCraftingMachineGameTest {
     private static void enchantsInto(GameTestHelper helper, Fixture fixture, Item expected) {
         EnchantingApparatusTile apparatus = placeApparatus(helper, fixture);
         helper.assertTrue(
-                machine(helper, APPARATUS)
-                        .pushPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                machine(helper, APPARATUS).pushPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "a built apparatus refused " + fixture.holder().id());
         helper.succeedWhen(() -> {
             assertProduces(helper, fixture, apparatus);
@@ -195,10 +185,8 @@ public final class EnchantingApparatusCraftingMachineGameTest {
     }
 
     private static ICraftingMachine machine(GameTestHelper helper, BlockPos pos) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(pos), null);
-        helper.assertTrue(machine != null, "nothing at " + pos + " exposed a crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(
+                helper, pos, "nothing at " + pos + " exposed a crafting machine capability");
     }
 
     private static void assertNothingStranded(GameTestHelper helper, EnchantingApparatusTile apparatus) {
@@ -222,15 +210,13 @@ public final class EnchantingApparatusCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 500)
     public static void aBuiltApparatusAcceptsTheRecipeAndProducesTheResult(GameTestHelper helper) {
-        EnchantingApparatusCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetApparatusCaches();
         Fixture fixture = fixture(helper);
         placeCore(helper, Direction.UP);
         EnchantingApparatusTile apparatus = placeApparatus(helper, fixture);
 
         helper.assertTrue(
-                machine(helper, APPARATUS)
-                        .pushPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                machine(helper, APPARATUS).pushPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "a correctly built apparatus refused " + fixture.holder().id());
         helper.assertTrue(apparatus.isCrafting, "the push was accepted but no craft began");
         for (int index = 0; index < fixture.holder().value().pedestalItems().size(); index++) {
@@ -242,14 +228,12 @@ public final class EnchantingApparatusCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void anApparatusWithNoArcaneCoreRefusesThePush(GameTestHelper helper) {
-        EnchantingApparatusCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetApparatusCaches();
         Fixture fixture = fixture(helper);
         EnchantingApparatusTile apparatus = placeApparatus(helper, fixture);
 
         helper.assertTrue(
-                !machine(helper, APPARATUS)
-                        .pushPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                !machine(helper, APPARATUS).pushPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "an apparatus with no Arcane Core behind it accepted a pattern");
         assertNothingStranded(helper, apparatus);
         helper.succeed();
@@ -257,15 +241,13 @@ public final class EnchantingApparatusCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void anArcaneCoreOnTheWrongAxisRefusesThePush(GameTestHelper helper) {
-        EnchantingApparatusCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetApparatusCaches();
         Fixture fixture = fixture(helper);
         placeCore(helper, Direction.NORTH);
         EnchantingApparatusTile apparatus = placeApparatus(helper, fixture);
 
         helper.assertTrue(
-                !machine(helper, APPARATUS)
-                        .pushPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                !machine(helper, APPARATUS).pushPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "an apparatus whose core faces the wrong axis accepted a pattern");
         assertNothingStranded(helper, apparatus);
         helper.succeed();
@@ -273,15 +255,13 @@ public final class EnchantingApparatusCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 500)
     public static void aPushThroughTheArcaneCoreDrivesTheApparatus(GameTestHelper helper) {
-        EnchantingApparatusCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetApparatusCaches();
         Fixture fixture = fixture(helper);
         placeCore(helper, Direction.UP);
         EnchantingApparatusTile apparatus = placeApparatus(helper, fixture);
 
         helper.assertTrue(
-                machine(helper, CORE)
-                        .pushPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                machine(helper, CORE).pushPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "the Arcane Core refused a pattern its apparatus could take");
         helper.assertTrue(apparatus.isCrafting, "the push through the core never reached the apparatus");
         helper.succeedWhen(() -> assertProduces(helper, fixture, apparatus));
@@ -318,8 +298,7 @@ public final class EnchantingApparatusCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 500)
     public static void aFirstLevelEnchantmentPatternTurnsABookIntoAnEnchantedBook(GameTestHelper helper) {
-        EnchantingApparatusCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetApparatusCaches();
         Fixture fixture = openFixture(
                 helper,
                 recipe -> recipe instanceof EnchantmentRecipe enchantment && enchantment.enchantLevel == 1,
@@ -330,8 +309,7 @@ public final class EnchantingApparatusCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 500)
     public static void aHigherLevelEnchantmentPatternTakesTheBookOneLevelBelow(GameTestHelper helper) {
-        EnchantingApparatusCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetApparatusCaches();
         Level level = helper.getLevel();
         Fixture fixture = openFixture(
                 helper,
@@ -343,8 +321,7 @@ public final class EnchantingApparatusCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 500)
     public static void anArmorUpgradeKeepsThePiecesOwnDataAndCountsAsThePromisedPiece(GameTestHelper helper) {
-        EnchantingApparatusCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetApparatusCaches();
         Level level = helper.getLevel();
         Fixture fixture = openFixture(
                 helper,
@@ -359,7 +336,7 @@ public final class EnchantingApparatusCraftingMachineGameTest {
         worn.set(DataComponents.CUSTOM_NAME, Component.literal("Worn Robes"));
         AEItemKey wornKey = AEItemKey.of(worn);
 
-        KeyCounter[] inputs = ArsFixtures.inputsOf(fixture.details());
+        KeyCounter[] inputs = inputsOf(fixture.details());
         boolean swapped = false;
         for (int slot = 0; slot < inputs.length; slot++) {
             if (inputs[slot].get(template) > 0) {

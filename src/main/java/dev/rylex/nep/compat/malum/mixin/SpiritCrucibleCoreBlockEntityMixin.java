@@ -5,12 +5,11 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.sammy.malum.common.block.curiosities.spirit_crucible.SpiritCrucibleCoreBlockEntity;
 import com.sammy.malum.core.systems.artifice.ArtificeAttributeData;
 import dev.rylex.nep.compat.malum.ImpetusWard;
+import dev.rylex.nep.compat.malum.SpiritReclaimWrap;
 import dev.rylex.nep.compat.malum.SpiritReclaimer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -42,15 +41,8 @@ public class SpiritCrucibleCoreBlockEntityMixin {
                             target =
                                     "Lnet/minecraft/server/level/ServerLevel;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean nep$returnFocusingToProvider(ServerLevel level, Entity entity, Operation<Boolean> original) {
-        if (entity instanceof ItemEntity item) {
-            ItemStack remaining =
-                    SpiritReclaimer.reclaimKeeping((SpiritCrucibleCoreBlockEntity) (Object) this, item.getItem());
-            if (remaining.isEmpty()) {
-                return true;
-            }
-            item.setItem(remaining);
-        }
-        return original.call(level, entity);
+        return SpiritReclaimWrap.addFreshEntity(
+                (SpiritCrucibleCoreBlockEntity) (Object) this, true, level, entity, original);
     }
 
     @Unique

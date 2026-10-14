@@ -31,6 +31,19 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
     private static final float PULSE_STALLED = 0.02F;
     private static final float PULSE_IDLE = 0.03F;
 
+    private static final float SPIN_RUNNING = 6.0F;
+    private static final float SPIN_GAIN = 14.0F;
+    private static final float SPIN_STALLED = 1.0F;
+    private static final float SPIN_IDLE = 3.0F;
+    private static final float BRIGHT_RUNNING = 0.72F;
+    private static final float BRIGHT_GAIN = 0.28F;
+    private static final float BRIGHT_STALLED = 0.45F;
+    private static final float BRIGHT_IDLE = 0.60F;
+    private static final float GLOW_RUNNING = 0.55F;
+    private static final float GLOW_GAIN = 0.45F;
+    private static final float GLOW_STALLED = 0.22F;
+    private static final float GLOW_IDLE = 0.40F;
+
     private static final float RING_SPIN = 0.6F;
     private static final float RING_OFFSET = 120.0F;
     private static final float RING_BRIGHTNESS = 1.0F;
@@ -91,6 +104,20 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
         this.profile = profile;
     }
 
+    private record Frame(
+            PoseStack pose,
+            MultiBufferSource buffers,
+            MatrixRenderState motion,
+            MatrixStatus status,
+            float progress,
+            float flash,
+            float phase,
+            float scale,
+            float yaw,
+            float pitch,
+            int light,
+            int overlay) {}
+
     @Override
     public void render(
             T matrix,
@@ -116,6 +143,8 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
         float pitch = motion.motion(Motion.PITCH, turn * TILT_RATIO) + phase * Mth.RAD_TO_DEG;
         float skinYaw = motion.motion(Motion.SKIN_YAW, turn * SKIN_SPIN) - phase * Mth.RAD_TO_DEG;
         float skinRoll = motion.motion(Motion.SKIN_ROLL, turn * SKIN_SPIN * SKIN_TILT) + phase * Mth.RAD_TO_DEG;
+        Frame frame = new Frame(
+                pose, buffers, motion, status, progress, flash, phase, scale, yaw, pitch, packedLight, packedOverlay);
 
         pose.pushPose();
         pose.translate(0.5F, 0.5F, 0.5F);
@@ -123,26 +152,45 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
             pose.translate(shudder(motion, phase), shudder(motion, phase + SHUDDER_OFFSET), 0.0F);
         }
 
-        float core = scale * CORE;
+        renderCore(frame);
+        renderRings(frame);
+
+        VertexConsumer plasma = buffers.getBuffer(RenderType.eyes(profile.plasma()));
+        float strength = glow(status, progress, flash);
+        renderSkin(frame, plasma, strength, skinYaw, skinRoll);
+        renderHalo(frame, plasma, strength);
+
+        pose.popPose();
+    }
+
+    private void renderCore(Frame frame) {
+        PoseStack pose = frame.pose();
+        float core = frame.scale() * CORE;
         pose.pushPose();
-        pose.mulPose(Axis.YP.rotationDegrees(yaw));
-        pose.mulPose(Axis.XP.rotationDegrees(pitch));
+        pose.mulPose(Axis.YP.rotationDegrees(frame.yaw()));
+        pose.mulPose(Axis.XP.rotationDegrees(frame.pitch()));
         pose.scale(core, core, core);
-        VertexConsumer facets = buffers.getBuffer(RenderType.entityCutoutNoCull(profile.texture()));
+        VertexConsumer facets = frame.buffers().getBuffer(RenderType.entityCutoutNoCull(profile.texture()));
         profile.mesh()
                 .emit(
                         pose.last(),
                         facets,
-                        brightness(status, progress, flash),
+                        brightness(frame.status(), frame.progress(), frame.flash()),
                         1.0F,
                         LightTexture.FULL_BRIGHT,
-                        packedOverlay);
+                        frame.overlay());
         pose.popPose();
+    }
 
+    private void renderRings(Frame frame) {
+        PoseStack pose = frame.pose();
+        MatrixRenderState motion = frame.motion();
+        MatrixStatus status = frame.status();
+        float phase = frame.phase();
         float alignment = motion.gimbal(status);
         float wander = motion.motion(Motion.WANDER, status == MatrixStatus.STALLED ? 0.0F : WANDER_RATE);
-        float ring = motion.motion(Motion.RING, ringRate(status, progress));
-        VertexConsumer bars = buffers.getBuffer(RenderType.entityCutoutNoCull(profile.ring()));
+        float ring = motion.motion(Motion.RING, ringRate(status, frame.progress()));
+        VertexConsumer bars = frame.buffers().getBuffer(RenderType.entityCutoutNoCull(profile.ring()));
         for (int index = 0; index < MatrixRingMesh.RINGS.length; index++) {
             pose.pushPose();
             if (alignment > 0.0F) {
@@ -153,17 +201,20 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
             }
             pose.mulPose(PIVOTS[index].rotationDegrees(
                     DIRECTIONS[index] * ring + index * RING_OFFSET + phase * Mth.RAD_TO_DEG));
-            MatrixRingMesh.RINGS[index].emit(pose.last(), bars, RING_BRIGHTNESS, packedLight, packedOverlay);
+            MatrixRingMesh.RINGS[index].emit(pose.last(), bars, RING_BRIGHTNESS, frame.light(), frame.overlay());
             pose.popPose();
         }
+    }
 
-        VertexConsumer plasma = buffers.getBuffer(RenderType.eyes(profile.plasma()));
-        float strength = glow(status, progress, flash);
-        float counter = -(FINE_DRIFT + FINE_GAIN * progress);
-        float cross = CROSS_DRIFT + CROSS_GAIN * progress;
+    private void renderSkin(Frame frame, VertexConsumer plasma, float strength, float skinYaw, float skinRoll) {
+        PoseStack pose = frame.pose();
+        MatrixRenderState motion = frame.motion();
+        float phase = frame.phase();
+        float counter = -(FINE_DRIFT + FINE_GAIN * frame.progress());
+        float cross = CROSS_DRIFT + CROSS_GAIN * frame.progress();
         float tiling = FINE_TILING * (1.0F + TILING_BREATH * motion.wave(BREATH_RATE * BREATH_RATIO, phase));
         float shimmer = SKIN_SHIMMER * motion.wave(SKIN_SHIMMER_RATE, phase);
-        float skin = scale * SKIN;
+        float skin = frame.scale() * SKIN;
         pose.pushPose();
         pose.mulPose(Axis.YP.rotationDegrees(skinYaw));
         pose.mulPose(Axis.ZP.rotationDegrees(skinRoll));
@@ -172,45 +223,50 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
                 pose.last(),
                 plasma,
                 MatrixCoreShell.Layer.FINE,
-                profile.coreTint(),
-                FINE_STRENGTH * strength * (1.0F + shimmer),
-                tiling,
-                motion.motion(Motion.FINE_U, counter),
-                motion.motion(Motion.FINE_V, counter * COUNTER_SKEW),
+                new MatrixCoreShell.Pass(
+                        profile.coreTint(),
+                        FINE_STRENGTH * strength * (1.0F + shimmer),
+                        tiling,
+                        motion.motion(Motion.FINE_U, counter),
+                        motion.motion(Motion.FINE_V, counter * COUNTER_SKEW)),
                 LightTexture.FULL_BRIGHT,
-                packedOverlay);
+                frame.overlay());
         MatrixCoreShell.SPHERE.emit(
                 pose.last(),
                 plasma,
                 MatrixCoreShell.Layer.BROAD,
-                profile.coreTint(),
-                CROSS_STRENGTH * strength * (1.0F - shimmer),
-                CROSS_TILING,
-                motion.motion(Motion.CROSS_U, cross),
-                motion.motion(Motion.CROSS_V, cross * CROSS_SKEW),
+                new MatrixCoreShell.Pass(
+                        profile.coreTint(),
+                        CROSS_STRENGTH * strength * (1.0F - shimmer),
+                        CROSS_TILING,
+                        motion.motion(Motion.CROSS_U, cross),
+                        motion.motion(Motion.CROSS_V, cross * CROSS_SKEW)),
                 LightTexture.FULL_BRIGHT,
-                packedOverlay);
+                frame.overlay());
         pose.popPose();
+    }
 
-        float drift = BROAD_DRIFT + DRIFT_GAIN * progress;
-        float halo = scale * (HALO + HALO_BREATH * motion.wave(BREATH_RATE, phase));
+    private void renderHalo(Frame frame, VertexConsumer plasma, float strength) {
+        PoseStack pose = frame.pose();
+        MatrixRenderState motion = frame.motion();
+        float drift = BROAD_DRIFT + DRIFT_GAIN * frame.progress();
+        float halo = frame.scale() * (HALO + HALO_BREATH * motion.wave(BREATH_RATE, frame.phase()));
         pose.pushPose();
-        pose.mulPose(Axis.YP.rotationDegrees(yaw));
-        pose.mulPose(Axis.XP.rotationDegrees(pitch));
+        pose.mulPose(Axis.YP.rotationDegrees(frame.yaw()));
+        pose.mulPose(Axis.XP.rotationDegrees(frame.pitch()));
         pose.scale(halo, halo, halo);
         MatrixCoreShell.SPHERE.emit(
                 pose.last(),
                 plasma,
                 MatrixCoreShell.Layer.BROAD,
-                profile.bodyTint(),
-                BROAD_STRENGTH * strength,
-                BROAD_TILING,
-                motion.motion(Motion.BROAD_U, drift),
-                motion.motion(Motion.BROAD_V, drift * DRIFT_SKEW),
+                new MatrixCoreShell.Pass(
+                        profile.bodyTint(),
+                        BROAD_STRENGTH * strength,
+                        BROAD_TILING,
+                        motion.motion(Motion.BROAD_U, drift),
+                        motion.motion(Motion.BROAD_V, drift * DRIFT_SKEW)),
                 LightTexture.FULL_BRIGHT,
-                packedOverlay);
-        pose.popPose();
-
+                frame.overlay());
         pose.popPose();
     }
 
@@ -221,9 +277,9 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
 
     private static float spinRate(MatrixStatus status, float progress) {
         return switch (status) {
-            case RUNNING -> 6.0F + 14.0F * progress;
-            case STALLED -> 1.0F;
-            case IDLE -> 3.0F;
+            case RUNNING -> SPIN_RUNNING + SPIN_GAIN * progress;
+            case STALLED -> SPIN_STALLED;
+            case IDLE -> SPIN_IDLE;
         };
     }
 
@@ -250,9 +306,9 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
     private static float brightness(MatrixStatus status, float progress, float flash) {
         float base =
                 switch (status) {
-                    case RUNNING -> 0.72F + 0.28F * progress;
-                    case STALLED -> 0.45F;
-                    case IDLE -> 0.60F;
+                    case RUNNING -> BRIGHT_RUNNING + BRIGHT_GAIN * progress;
+                    case STALLED -> BRIGHT_STALLED;
+                    case IDLE -> BRIGHT_IDLE;
                 };
         return Math.min(1.0F, base + flash * FLASH_GLOW);
     }
@@ -260,9 +316,9 @@ public class MatrixCoreRenderer<T extends BlockEntity & MatrixRenderHost> implem
     private static float glow(MatrixStatus status, float progress, float flash) {
         float base =
                 switch (status) {
-                    case RUNNING -> 0.55F + 0.45F * progress;
-                    case STALLED -> 0.22F;
-                    case IDLE -> 0.40F;
+                    case RUNNING -> GLOW_RUNNING + GLOW_GAIN * progress;
+                    case STALLED -> GLOW_STALLED;
+                    case IDLE -> GLOW_IDLE;
                 };
         return Math.min(1.0F, base + flash * FLASH_SURGE);
     }

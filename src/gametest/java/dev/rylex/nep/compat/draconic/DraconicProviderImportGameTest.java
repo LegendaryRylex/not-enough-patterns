@@ -1,5 +1,7 @@
 package dev.rylex.nep.compat.draconic;
 
+import static dev.rylex.nep.compat.draconic.DraconicFixtures.clearCaches;
+
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
@@ -14,17 +16,16 @@ import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
 import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import com.brandon3055.draconicevolution.api.crafting.IFusionStateMachine;
-import com.brandon3055.draconicevolution.blocks.machines.CraftingInjector;
 import com.brandon3055.draconicevolution.blocks.tileentity.TileFusionCraftingCore;
 import com.brandon3055.draconicevolution.init.DEContent;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepItems;
+import dev.rylex.nep.compat.draconic.DraconicFixtures.InjectorSite;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.provider.ImportUpgradeHost;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -47,25 +48,14 @@ public final class DraconicProviderImportGameTest {
     private static final BlockPos ENERGY = new BlockPos(5, 1, 4);
     private static final BlockPos DRIVE = new BlockPos(4, 1, 3);
 
-    private record InjectorSite(BlockPos pos, Direction facing) {}
-
-    private static final List<InjectorSite> SITES = List.of(
-            new InjectorSite(new BlockPos(1, 2, 4), Direction.EAST),
-            new InjectorSite(new BlockPos(7, 2, 4), Direction.WEST),
-            new InjectorSite(new BlockPos(4, 2, 1), Direction.SOUTH),
-            new InjectorSite(new BlockPos(4, 2, 7), Direction.NORTH),
-            new InjectorSite(new BlockPos(1, 3, 4), Direction.EAST),
-            new InjectorSite(new BlockPos(1, 1, 4), Direction.EAST),
-            new InjectorSite(new BlockPos(7, 3, 4), Direction.WEST),
-            new InjectorSite(new BlockPos(7, 1, 4), Direction.WEST));
+    private static final List<InjectorSite> SITES = DraconicFixtures.SITES;
 
     private DraconicProviderImportGameTest() {}
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
     public static void aDraconicProviderCollectsWhatItsFusionCoreMade(GameTestHelper helper) {
         var level = helper.getLevel();
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
         RecipeHolder<IFusionRecipe> consumer =
                 FusionRecipeResolver.resolveByOutputItem(level, DEContent.PICKAXE_WYVERN.get());
         EncodedIngredients expected = DraconicRecipeIngredients.fusion(consumer, level);
@@ -81,14 +71,7 @@ public final class DraconicProviderImportGameTest {
                     helper.setBlock(DRIVE, AEBlocks.DRIVE.block());
                     helper.setBlock(PROVIDER, provider);
                     helper.setBlock(CORE, DEContent.CRAFTING_CORE.get().defaultBlockState());
-                    for (InjectorSite site : SITES) {
-                        helper.setBlock(
-                                site.pos(),
-                                DEContent.WYVERN_CRAFTING_INJECTOR
-                                        .get()
-                                        .defaultBlockState()
-                                        .setValue(CraftingInjector.FACING, site.facing()));
-                    }
+                    DraconicFixtures.placeInjectors(helper, DEContent.WYVERN_CRAFTING_INJECTOR.get(), SITES.size());
                 })
                 .thenIdle(60)
                 .thenExecute(() -> {

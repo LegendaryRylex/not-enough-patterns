@@ -21,6 +21,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class ArcaneEnchantingMatrixScreen extends MatrixScreen<ArcaneEnchantingMatrixMenu> {
 
+    private static final String OUTPUT_FULL_HINT = "gui.nep.arcane_enchanting_matrix.stall.output_full.hint";
     private static final ResourceLocation TEXTURE = Nep.id("textures/gui/arcane_enchanting_matrix.png");
     private static final ResourceLocation SOURCE_GAUGE = Nep.id("textures/gui/source_gauge.png");
 
@@ -196,51 +197,63 @@ public class ArcaneEnchantingMatrixScreen extends MatrixScreen<ArcaneEnchantingM
 
     private static Component faultLine(
             ArcaneEnchantingMatrixBlockEntity.Stall stall, ArcaneEnchantingMatrixBlockEntity.Refusal refusal) {
-        String key =
-                switch (stall) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.arcane_enchanting_matrix.stall.ingredients";
-                    case CATALYSTS -> "gui.nep.arcane_enchanting_matrix.stall.catalysts";
-                    case CATALYST_SHELF_FULL -> "gui.nep.arcane_enchanting_matrix.stall.catalyst_shelf_full";
-                    case SOURCE -> "gui.nep.arcane_enchanting_matrix.stall.source";
-                    case OUTPUT_FULL -> "gui.nep.arcane_enchanting_matrix.output_blocked";
-                    case NO_RECIPE -> "gui.nep.arcane_enchanting_matrix.stall.no_recipe";
-                };
+        String key = stallKey(stall);
         if (key != null) {
             return Component.translatable(key);
         }
-        String refused =
-                switch (refusal) {
-                    case NONE -> null;
-                    case NOT_AN_ARS_PATTERN -> "gui.nep.arcane_enchanting_matrix.refused.wrong_pattern";
-                    case NO_ITEM_OUTPUT -> "gui.nep.arcane_enchanting_matrix.refused.no_item_output";
-                    case UNKNOWN_RECIPE -> "gui.nep.arcane_enchanting_matrix.refused.unknown_recipe";
-                    case MIXED_RECIPES -> "gui.nep.arcane_enchanting_matrix.refused.mixed_recipes";
-                    case ITEMS_ONLY -> "gui.nep.arcane_enchanting_matrix.refused.items_only";
-                    case CATALYSTS_IN_PATTERN -> "gui.nep.arcane_enchanting_matrix.refused.catalysts_in_pattern";
-                    case TOO_MANY_INPUTS -> "gui.nep.arcane_enchanting_matrix.refused.too_many_inputs";
-                    case BUFFER_FULL -> "gui.nep.arcane_enchanting_matrix.refused.buffer_full";
-                };
+        String refused = refusalKey(refusal);
         return refused == null
                 ? Component.translatable("gui.nep.arcane_enchanting_matrix.idle")
                 : Component.translatable(refused);
     }
 
+    @Nullable
+    private static String stallKey(ArcaneEnchantingMatrixBlockEntity.Stall stall) {
+        return switch (stall) {
+            case NONE -> null;
+            case INGREDIENTS -> "gui.nep.arcane_enchanting_matrix.stall.ingredients";
+            case CATALYSTS -> "gui.nep.arcane_enchanting_matrix.stall.catalysts";
+            case CATALYST_SHELF_FULL -> "gui.nep.arcane_enchanting_matrix.stall.catalyst_shelf_full";
+            case SOURCE -> "gui.nep.arcane_enchanting_matrix.stall.source";
+            case OUTPUT_FULL -> "gui.nep.arcane_enchanting_matrix.output_blocked";
+            case NO_RECIPE -> "gui.nep.arcane_enchanting_matrix.stall.no_recipe";
+        };
+    }
+
+    @Nullable
+    private static String stallHintKey(ArcaneEnchantingMatrixBlockEntity.Stall stall) {
+        if (stall == ArcaneEnchantingMatrixBlockEntity.Stall.OUTPUT_FULL) {
+            return OUTPUT_FULL_HINT;
+        }
+        String key = stallKey(stall);
+        return key == null ? null : key + ".hint";
+    }
+
+    @Nullable
+    private static String refusalKey(ArcaneEnchantingMatrixBlockEntity.Refusal refusal) {
+        return switch (refusal) {
+            case NONE -> null;
+            case NOT_AN_ARS_PATTERN -> "gui.nep.arcane_enchanting_matrix.refused.wrong_pattern";
+            case NO_ITEM_OUTPUT -> "gui.nep.arcane_enchanting_matrix.refused.no_item_output";
+            case UNKNOWN_RECIPE -> "gui.nep.arcane_enchanting_matrix.refused.unknown_recipe";
+            case MIXED_RECIPES -> "gui.nep.arcane_enchanting_matrix.refused.mixed_recipes";
+            case ITEMS_ONLY -> "gui.nep.arcane_enchanting_matrix.refused.items_only";
+            case CATALYSTS_IN_PATTERN -> "gui.nep.arcane_enchanting_matrix.refused.catalysts_in_pattern";
+            case TOO_MANY_INPUTS -> "gui.nep.arcane_enchanting_matrix.refused.too_many_inputs";
+            case BUFFER_FULL -> "gui.nep.arcane_enchanting_matrix.refused.buffer_full";
+        };
+    }
+
     private static List<Component> statusHint(ArcaneEnchantingMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return List.of(Component.translatable("gui.nep.arcane_enchanting_matrix.no_network_channels.hint")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         if (matrix.hasPowerFault()) {
             return List.of(Component.translatable("gui.nep.arcane_enchanting_matrix.stall.no_me_power.hint")
                     .withStyle(ChatFormatting.GRAY));
         }
-        String key =
-                switch (matrix.stall()) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.arcane_enchanting_matrix.stall.ingredients.hint";
-                    case CATALYSTS -> "gui.nep.arcane_enchanting_matrix.stall.catalysts.hint";
-                    case CATALYST_SHELF_FULL -> "gui.nep.arcane_enchanting_matrix.stall.catalyst_shelf_full.hint";
-                    case SOURCE -> "gui.nep.arcane_enchanting_matrix.stall.source.hint";
-                    case OUTPUT_FULL -> "gui.nep.arcane_enchanting_matrix.stall.output_full.hint";
-                    case NO_RECIPE -> "gui.nep.arcane_enchanting_matrix.stall.no_recipe.hint";
-                };
+        String key = stallHintKey(matrix.stall());
         if (key == null && matrix.refusal() == ArcaneEnchantingMatrixBlockEntity.Refusal.CATALYSTS_IN_PATTERN) {
             key = "gui.nep.arcane_enchanting_matrix.refused.catalysts_in_pattern.hint";
         }
@@ -248,7 +261,7 @@ public class ArcaneEnchantingMatrixScreen extends MatrixScreen<ArcaneEnchantingM
             key = "gui.nep.arcane_enchanting_matrix.refused.hint";
         }
         if (key == null && matrix.isOutputBlocked()) {
-            key = "gui.nep.arcane_enchanting_matrix.stall.output_full.hint";
+            key = OUTPUT_FULL_HINT;
         }
         return key == null ? List.of() : List.of(Component.translatable(key).withStyle(ChatFormatting.GRAY));
     }
@@ -284,6 +297,7 @@ public class ArcaneEnchantingMatrixScreen extends MatrixScreen<ArcaneEnchantingM
                 || matrix.refusal() != ArcaneEnchantingMatrixBlockEntity.Refusal.NONE
                 || matrix.isOutputBlocked()
                 || matrix.hasPowerFault()
+                || matrix.hasChannelFault()
                 || !matrix.missingInputs().isEmpty();
     }
 
@@ -360,7 +374,7 @@ public class ArcaneEnchantingMatrixScreen extends MatrixScreen<ArcaneEnchantingM
                     mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), 32)) {
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), READOUT_HEIGHT)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

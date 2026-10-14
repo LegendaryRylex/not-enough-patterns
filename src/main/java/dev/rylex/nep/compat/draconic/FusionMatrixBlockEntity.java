@@ -12,6 +12,8 @@ import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
 import dev.rylex.nep.machine.CraftedOutputs;
+import dev.rylex.nep.machine.DemandTally;
+import dev.rylex.nep.machine.HandlerSnapshots;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.ManualCraftHost;
 import dev.rylex.nep.machine.ManualCraftOutcome;
@@ -21,17 +23,15 @@ import dev.rylex.nep.machine.ManualStaging;
 import dev.rylex.nep.machine.MatrixEnergyBuffer;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.machine.MatrixStatus;
-import dev.rylex.nep.machine.OverstackedItemHandler;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
+import dev.rylex.nep.util.EnumNames;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -117,7 +117,11 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
 
     private final FusionMatrixOpStorage opStorage = new FusionMatrixOpStorage(energy);
 
-    private final Map<AEItemKey, Template> templates = new HashMap<>();
+    private final Map<AEItemKey, FusionTemplate> templates = new HashMap<>();
+
+    @Nullable
+    private Set<AEItemKey> retainedKeysCache;
+
     private final Map<AEItemKey, AEItemKey> craftedForms = new LinkedHashMap<>();
     private final IItemHandler outputView = new OutputView();
     private final IItemHandler machineView =
@@ -163,12 +167,6 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         BUFFER_FULL,
         MIXED_RECIPES
     }
-
-    private record Template(
-            List<AEKey> keys,
-            List<Long> counts,
-            List<GenericStack> retained,
-            @Nullable ResourceLocation recipe) {}
 
     public FusionMatrixBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(
@@ -336,7 +334,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
 
     @Nullable
     private RecipeHolder<IFusionRecipe> recipeFor(Level level, AEItemKey output) {
-        Template template = templates.get(output);
+        FusionTemplate template = templates.get(output);
         if (template != null && template.recipe() != null) {
             RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(level, template.recipe());
             if (holder != null) {
@@ -494,7 +492,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         ItemStack result = activeResult.copy();
         AEItemKey crafted = AEItemKey.of(result);
         AEItemKey produced = declaredForm(result);
-        Template template = templates.get(produced);
+        FusionTemplate template = templates.get(produced);
         if (!fitsInOutput(withRetained(result, template))) {
             outputBlocked = true;
             return;
@@ -512,6 +510,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
             }
             if (!owed.containsKey(produced)) {
                 templates.remove(produced);
+                retainedKeysCache = null;
             }
             if (owed.isEmpty()) {
                 pushingCpus.clear();
@@ -544,10 +543,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
     }
 
     private boolean fitsInOutput(List<ItemStack> stacks) {
-        ItemStackHandler probe = new OverstackedItemHandler(outputBuffer.getSlots());
-        for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
-            probe.setStackInSlot(slot, outputBuffer.getStackInSlot(slot).copy());
-        }
+        ItemStackHandler probe = HandlerSnapshots.of(outputBuffer);
         for (ItemStack stack : stacks) {
             if (!ItemHandlerHelper.insertItem(probe, stack.copy(), false).isEmpty()) {
                 return false;
@@ -556,7 +552,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         return true;
     }
 
-    private static List<ItemStack> withRetained(ItemStack result, @Nullable Template template) {
+    private static List<ItemStack> withRetained(ItemStack result, @Nullable FusionTemplate template) {
         if (template == null || template.retained().isEmpty()) {
             return List.of(result);
         }
@@ -570,7 +566,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         return stacks;
     }
 
-    private void returnRetained(@Nullable Template template) {
+    private void returnRetained(@Nullable FusionTemplate template) {
         if (template == null || template.retained().isEmpty()) {
             return;
         }
@@ -626,7 +622,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
             return ManualCraftOutcome.failed(ManualCraftResult.UNSUPPORTED);
         }
         AEItemKey produced = AEItemKey.of(result);
-        Template existing = templates.get(produced);
+        FusionTemplate existing = templates.get(produced);
         if (existing != null && !recipe.equals(existing.recipe())) {
             return ManualCraftOutcome.failed(ManualCraftResult.BUSY);
         }
@@ -685,15 +681,14 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
                             + maximumTier().getSerializedName());
         }
 
-        AEItemKey producedItem = outputKey;
-        if (isManualJob(producedItem)) {
-            return reject(Refusal.MIXED_RECIPES, "a manual craft of " + producedItem + " is already queued");
+        if (isManualJob(outputKey)) {
+            return reject(Refusal.MIXED_RECIPES, "a manual craft of " + outputKey + " is already queued");
         }
-        Template existing = templates.get(producedItem);
+        FusionTemplate existing = templates.get(outputKey);
         if (existing != null && !fusion.recipe().equals(existing.recipe())) {
             return reject(
                     Refusal.MIXED_RECIPES,
-                    "a craft of " + producedItem + " from " + existing.recipe() + " is already queued");
+                    "a craft of " + outputKey + " from " + existing.recipe() + " is already queued");
         }
 
         Map<AEItemKey, Long> items = new HashMap<>();
@@ -714,7 +709,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
             return reject(Refusal.BUFFER_FULL, "matrix buffer is full");
         }
 
-        returnDirections.record(producedItem, ejectionDirection);
+        returnDirections.record(outputKey, ejectionDirection);
         AEItemKey craftedForm = FusionResults.resultFor(holder.value(), level, items.keySet());
         if (craftedForm != null) {
             returnDirections.record(craftedForm, ejectionDirection);
@@ -724,9 +719,9 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
                 returnDirections.record(keptKey, ejectionDirection);
             }
         }
-        captureTemplate(producedItem, items, fusion.retained(), fusion.recipe());
+        captureTemplate(outputKey, items, fusion.retained(), fusion.recipe());
         rememberCraftedForm(craftedForm, outputKey);
-        owed.merge(producedItem, 1L, Long::sum);
+        owed.merge(outputKey, 1L, Long::sum);
         pushingCpus.record();
         clearRefusal();
         markScanNeeded();
@@ -758,13 +753,12 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
 
     private void captureTemplate(
             AEItemKey output, Map<AEItemKey, Long> items, List<GenericStack> retained, ResourceLocation recipe) {
-        List<AEKey> keys = new ArrayList<>(items.size());
-        List<Long> counts = new ArrayList<>(items.size());
+        List<GenericStack> inputs = new ArrayList<>(items.size());
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
-            keys.add(entry.getKey());
-            counts.add(entry.getValue());
+            inputs.add(new GenericStack(entry.getKey(), entry.getValue()));
         }
-        templates.put(output, new Template(List.copyOf(keys), List.copyOf(counts), List.copyOf(retained), recipe));
+        templates.put(output, new FusionTemplate(List.copyOf(inputs), List.copyOf(retained), recipe));
+        retainedKeysCache = null;
     }
 
     private void autoRequest(Level level) {
@@ -772,55 +766,21 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
             setMissingInputs(List.of());
             return;
         }
-        List<AEKey> keys = new ArrayList<>();
-        List<Long> targets = new ArrayList<>();
+        DemandTally tally = new DemandTally();
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-            Template template = templates.get(entry.getKey());
+            FusionTemplate template = templates.get(entry.getKey());
             if (template == null || isManualJob(entry.getKey())) {
                 continue;
             }
-            for (int i = 0; i < template.keys().size(); i++) {
-                long target = demandFor(template, i, entry.getValue());
-                int existing = keys.indexOf(template.keys().get(i));
-                if (existing >= 0) {
-                    targets.set(existing, targets.get(existing) + target);
-                } else {
-                    keys.add(template.keys().get(i));
-                    targets.add(target);
-                }
+            for (int i = 0; i < template.inputs().size(); i++) {
+                tally.add(template.inputs().get(i).what(), template.demandFor(i, entry.getValue()));
             }
         }
-        if (keys.isEmpty()) {
+        if (tally.isEmpty()) {
             setMissingInputs(List.of());
             return;
         }
-        List<Integer> order = new ArrayList<>();
-        for (int i = 0; i < keys.size(); i++) {
-            order.add(i);
-        }
-        order.sort(Comparator.comparing(i -> keys.get(i).toString()));
-        List<AEKey> stableKeys = new ArrayList<>(keys.size());
-        List<Long> stableTargets = new ArrayList<>(targets.size());
-        for (int i : order) {
-            stableKeys.add(keys.get(i));
-            stableTargets.add(targets.get(i));
-        }
-        setMissingInputs(power.restock(level, stableKeys, stableTargets));
-    }
-
-    private static long demandFor(Template template, int index, long queued) {
-        long perCraft = template.counts().get(index);
-        return isFullyRetained(template, template.keys().get(index), perCraft) ? perCraft : perCraft * queued;
-    }
-
-    private static boolean isFullyRetained(Template template, AEKey key, long perCraft) {
-        long kept = 0;
-        for (GenericStack stack : template.retained()) {
-            if (stack.what().equals(key)) {
-                kept += stack.amount();
-            }
-        }
-        return kept > 0 && kept == perCraft;
+        setMissingInputs(tally.restock(level, power));
     }
 
     int manualDemandFor(ItemStack stack) {
@@ -866,13 +826,13 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
     private int reportedDemandFor(AEKey key) {
         long target = 0;
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-            Template template = templates.get(entry.getKey());
+            FusionTemplate template = templates.get(entry.getKey());
             if (template == null) {
                 continue;
             }
-            int index = template.keys().indexOf(key);
+            int index = template.indexOf(key);
             if (index >= 0) {
-                target += demandFor(template, index, entry.getValue());
+                target += template.demandFor(index, entry.getValue());
             }
         }
         return (int) Math.max(0, Math.min(Integer.MAX_VALUE, target - bufferedAmount(key)));
@@ -974,14 +934,6 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         return energyFault;
     }
 
-    long pendingJobs() {
-        long total = 0;
-        for (long count : owed.values()) {
-            total += count;
-        }
-        return total;
-    }
-
     Stall stall() {
         return stall;
     }
@@ -994,18 +946,20 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         if (templates.isEmpty()) {
             return Set.of();
         }
+        if (retainedKeysCache == null) {
+            retainedKeysCache = computeRetainedInputKeys();
+        }
+        return retainedKeysCache;
+    }
+
+    private Set<AEItemKey> computeRetainedInputKeys() {
         Map<AEItemKey, Boolean> fullyRetained = new HashMap<>();
-        for (Template template : templates.values()) {
-            Map<AEKey, Long> kept = new HashMap<>();
-            for (GenericStack stack : template.retained()) {
-                kept.merge(stack.what(), stack.amount(), Long::sum);
-            }
-            for (int i = 0; i < template.keys().size(); i++) {
-                if (!(template.keys().get(i) instanceof AEItemKey key)) {
+        for (FusionTemplate template : templates.values()) {
+            for (GenericStack input : template.inputs()) {
+                if (!(input.what() instanceof AEItemKey key)) {
                     continue;
                 }
-                fullyRetained.merge(
-                        key, Objects.equals(kept.get(key), template.counts().get(i)), Boolean::logicalAnd);
+                fullyRetained.merge(key, template.retainedAmount(key) == input.amount(), Boolean::logicalAnd);
             }
         }
         Set<AEItemKey> keys = new HashSet<>();
@@ -1033,6 +987,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         owed.clear();
         manualOwed.clear();
         templates.clear();
+        retainedKeysCache = null;
         forgetCraftedForms();
         pushingCpus.clear();
         power.cancelRequests();
@@ -1117,11 +1072,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         tag.putString(STALL_KEY, stall.name());
         tag.putString(REFUSAL_KEY, refusal.name());
         tag.putInt(REFUSAL_TICKS_KEY, refusalTicks);
-        ListTag missing = new ListTag();
-        for (GenericStack stack : missingInputs) {
-            missing.add(GenericStack.writeTag(registries, stack));
-        }
-        tag.put(MISSING_KEY, missing);
+        tag.put(MISSING_KEY, FusionTemplate.saveStacks(missingInputs, registries));
         ListTag forms = new ListTag();
         for (Map.Entry<AEItemKey, AEItemKey> entry : craftedForms.entrySet()) {
             CompoundTag form = new CompoundTag();
@@ -1164,13 +1115,7 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         powerFault = tag.getBoolean(POWER_FAULT_KEY);
         energyFault = tag.getBoolean(ENERGY_FAULT_KEY);
         missingInputs.clear();
-        ListTag missing = tag.getList(MISSING_KEY, Tag.TAG_COMPOUND);
-        for (int i = 0; i < missing.size(); i++) {
-            GenericStack stack = GenericStack.readTag(registries, missing.getCompound(i));
-            if (stack != null) {
-                missingInputs.add(stack);
-            }
-        }
+        missingInputs.addAll(FusionTemplate.loadStacks(tag.getList(MISSING_KEY, Tag.TAG_COMPOUND), registries));
         craftedForms.clear();
         ListTag forms = tag.getList(CRAFTED_FORMS_KEY, Tag.TAG_COMPOUND);
         for (int i = 0; i < forms.size(); i++) {
@@ -1182,8 +1127,8 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         pushingCpus.load(tag);
         power.load(tag.getCompound(NODE_KEY));
         coreSwapGrace = tag.getInt(SWAP_GRACE_KEY);
-        stall = byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
-        refusal = byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
+        stall = EnumNames.byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
+        refusal = EnumNames.byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
         refusalTicks = refusal == Refusal.NONE
                 ? 0
                 : Math.max(1, Math.min(REFUSAL_MEMORY_TICKS, tag.getInt(REFUSAL_TICKS_KEY)));
@@ -1192,37 +1137,12 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
         markScanNeeded();
     }
 
-    private static <E extends Enum<E>> E byName(E[] values, String name, E fallback) {
-        for (E value : values) {
-            if (value.name().equals(name)) {
-                return value;
-            }
-        }
-        return fallback;
-    }
-
     private ListTag saveTemplates(HolderLookup.Provider registries) {
         ListTag list = new ListTag();
-        for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
+        for (Map.Entry<AEItemKey, FusionTemplate> entry : templates.entrySet()) {
             CompoundTag tag = new CompoundTag();
             ItemCounts.putKey(tag, entry.getKey(), registries);
-            ListTag stacks = new ListTag();
-            for (int i = 0; i < entry.getValue().keys().size(); i++) {
-                stacks.add(GenericStack.writeTag(
-                        registries,
-                        new GenericStack(
-                                entry.getValue().keys().get(i),
-                                entry.getValue().counts().get(i))));
-            }
-            tag.put("Stacks", stacks);
-            ListTag kept = new ListTag();
-            for (GenericStack stack : entry.getValue().retained()) {
-                kept.add(GenericStack.writeTag(registries, stack));
-            }
-            tag.put("Retained", kept);
-            if (entry.getValue().recipe() != null) {
-                tag.putString("Recipe", entry.getValue().recipe().toString());
-            }
+            entry.getValue().save(tag, registries);
             list.add(tag);
         }
         return list;
@@ -1230,38 +1150,16 @@ public class FusionMatrixBlockEntity extends BufferedMatrixBlockEntity implement
 
     private void loadTemplates(ListTag list, HolderLookup.Provider registries) {
         templates.clear();
+        retainedKeysCache = null;
         for (int i = 0; i < list.size(); i++) {
             CompoundTag tag = list.getCompound(i);
-            AEItemKey item = ItemCounts.key(tag, registries);
+            AEItemKey item = ItemCounts.key(tag, ItemCounts.LEGACY_ID_TAG, registries);
             if (item == null) {
                 continue;
             }
-            ListTag stacks = tag.getList("Stacks", Tag.TAG_COMPOUND);
-            List<AEKey> keys = new ArrayList<>();
-            List<Long> counts = new ArrayList<>();
-            for (int s = 0; s < stacks.size(); s++) {
-                GenericStack stack = GenericStack.readTag(registries, stacks.getCompound(s));
-                if (stack != null) {
-                    keys.add(stack.what());
-                    counts.add(stack.amount());
-                }
-            }
-            List<GenericStack> retained = new ArrayList<>();
-            ListTag kept = tag.getList("Retained", Tag.TAG_COMPOUND);
-            for (int s = 0; s < kept.size(); s++) {
-                GenericStack stack = GenericStack.readTag(registries, kept.getCompound(s));
-                if (stack != null) {
-                    retained.add(stack);
-                }
-            }
-            if (!keys.isEmpty()) {
-                templates.put(
-                        item,
-                        new Template(
-                                List.copyOf(keys),
-                                List.copyOf(counts),
-                                List.copyOf(retained),
-                                ResourceLocation.tryParse(tag.getString("Recipe"))));
+            FusionTemplate template = FusionTemplate.load(tag, registries);
+            if (template != null) {
+                templates.put(item, template);
             }
         }
     }

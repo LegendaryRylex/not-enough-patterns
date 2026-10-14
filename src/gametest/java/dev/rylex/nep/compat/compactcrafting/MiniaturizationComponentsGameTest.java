@@ -48,7 +48,7 @@ public final class MiniaturizationComponentsGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aRecipeSpellingItsEmptyPositionsAsAirStillEncodes(GameTestHelper helper) {
         RecipeHolder<MiniaturizationRecipe> holder = airComponentRecipe(helper);
-        EncodedIngredients encoded = MiniaturizationRecipeIngredients.miniaturization(holder, helper.getLevel());
+        EncodedIngredients encoded = MiniaturizationRecipeIngredients.miniaturization(holder.value());
         helper.assertTrue(
                 encoded != null,
                 "a recipe writing its empty positions as a block component holding air produced no ingredient list,"

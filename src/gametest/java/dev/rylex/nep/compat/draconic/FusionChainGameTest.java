@@ -1,23 +1,25 @@
 package dev.rylex.nep.compat.draconic;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.compat.draconic.DraconicFixtures.clearCaches;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import com.brandon3055.draconicevolution.api.crafting.IFusionStateMachine;
-import com.brandon3055.draconicevolution.blocks.machines.CraftingInjector;
 import com.brandon3055.draconicevolution.blocks.tileentity.TileFusionCraftingCore;
 import com.brandon3055.draconicevolution.init.DEContent;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.compat.draconic.DraconicFixtures.InjectorSite;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -41,19 +43,25 @@ public final class FusionChainGameTest {
 
     private static final BlockPos CORE = new BlockPos(4, 2, 4);
 
-    private record InjectorSite(BlockPos pos, Direction facing) {}
-
-    private static final List<InjectorSite> SITES = List.of(
-            new InjectorSite(new BlockPos(1, 2, 4), Direction.EAST),
-            new InjectorSite(new BlockPos(7, 2, 4), Direction.WEST),
-            new InjectorSite(new BlockPos(4, 2, 1), Direction.SOUTH),
-            new InjectorSite(new BlockPos(4, 2, 7), Direction.NORTH),
-            new InjectorSite(new BlockPos(1, 3, 4), Direction.EAST),
-            new InjectorSite(new BlockPos(1, 1, 4), Direction.EAST),
-            new InjectorSite(new BlockPos(7, 3, 4), Direction.WEST),
-            new InjectorSite(new BlockPos(7, 1, 4), Direction.WEST));
+    private static final List<InjectorSite> SITES = DraconicFixtures.SITES;
 
     private FusionChainGameTest() {}
+
+    private interface FusionInputVisitor {
+        void visit(RecipeHolder<IFusionRecipe> holder, int slot, List<GenericStack> options);
+    }
+
+    private static void forEachFusionInput(Level level, FusionInputVisitor visitor) {
+        for (RecipeHolder<IFusionRecipe> holder : FusionRecipeResolver.candidates(level)) {
+            EncodedIngredients encoded = DraconicRecipeIngredients.fusion(holder, level);
+            if (encoded == null) {
+                continue;
+            }
+            for (int slot = 0; slot < encoded.inputs().size(); slot++) {
+                visitor.visit(holder, slot, encoded.inputs().get(slot));
+            }
+        }
+    }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void chainedFusionInputsAcceptWhatTheirOwnPatternMakes(GameTestHelper helper) {
@@ -61,29 +69,22 @@ public final class FusionChainGameTest {
         FusionRecipeResolver.clearCache();
 
         List<String> broken = new ArrayList<>();
-        for (RecipeHolder<IFusionRecipe> holder : FusionRecipeResolver.candidates(level)) {
-            EncodedIngredients encoded = DraconicRecipeIngredients.fusion(holder, level);
-            if (encoded == null) {
-                continue;
+        forEachFusionInput(level, (holder, slot, options) -> {
+            Item item = options.get(0).what() instanceof AEItemKey key ? key.getItem() : null;
+            RecipeHolder<IFusionRecipe> maker =
+                    item == null ? null : FusionRecipeResolver.resolveByOutputItem(level, item);
+            if (maker == null || maker == holder) {
+                return;
             }
-            for (int slot = 0; slot < encoded.inputs().size(); slot++) {
-                List<GenericStack> options = encoded.inputs().get(slot);
-                Item item = options.get(0).what() instanceof AEItemKey key ? key.getItem() : null;
-                RecipeHolder<IFusionRecipe> maker =
-                        item == null ? null : FusionRecipeResolver.resolveByOutputItem(level, item);
-                if (maker == null || maker == holder) {
-                    continue;
-                }
-                AEItemKey produced = AEItemKey.of(FusionResults.expectedResult(maker.value(), level));
-                if (produced == null) {
-                    continue;
-                }
-                boolean accepted = options.stream().anyMatch(option -> produced.equals(option.what()));
-                if (!accepted) {
-                    broken.add(holder.id().getPath() + "#" + slot);
-                }
+            AEItemKey produced = AEItemKey.of(FusionResults.expectedResult(maker.value(), level));
+            if (produced == null) {
+                return;
             }
-        }
+            boolean accepted = options.stream().anyMatch(option -> produced.equals(option.what()));
+            if (!accepted) {
+                broken.add(holder.id().getPath() + "#" + slot);
+            }
+        });
 
         helper.assertTrue(
                 broken.isEmpty(), broken.size() + " chained fusion inputs reject their own pattern: " + broken);
@@ -92,8 +93,7 @@ public final class FusionChainGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aChainedTierCraftsFromTheKeyItsOwnPatternProduces(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
         Level level = helper.getLevel();
 
         RecipeHolder<IFusionRecipe> maker =
@@ -113,14 +113,7 @@ public final class FusionChainGameTest {
 
         helper.setBlock(CORE, DEContent.CRAFTING_CORE.get().defaultBlockState());
         TileFusionCraftingCore core = (TileFusionCraftingCore) helper.getBlockEntity(CORE);
-        for (InjectorSite site : SITES) {
-            helper.setBlock(
-                    site.pos(),
-                    DEContent.CHAOTIC_CRAFTING_INJECTOR
-                            .get()
-                            .defaultBlockState()
-                            .setValue(CraftingInjector.FACING, site.facing()));
-        }
+        DraconicFixtures.placeInjectors(helper, DEContent.CHAOTIC_CRAFTING_INJECTOR.get(), SITES.size());
 
         List<GenericStack> inputs = new ArrayList<>();
         for (List<GenericStack> options : expected.inputs()) {
@@ -135,17 +128,10 @@ public final class FusionChainGameTest {
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, level);
         helper.assertTrue(details != null, "the chaotic pickaxe pattern did not decode");
 
-        KeyCounter[] pushed = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < pushed.length; slot++) {
-            pushed[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            pushed[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-
-        ICraftingMachine machine = level.getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(CORE), null);
-        helper.assertTrue(machine != null, "the fusion crafting core exposed no crafting machine capability");
+        ICraftingMachine machine = GameTestFixtures.craftingMachine(
+                helper, CORE, "the fusion crafting core exposed no crafting machine capability");
         helper.assertTrue(
-                machine.pushPattern(details, pushed, Direction.UP),
+                machine.pushPattern(details, GameTestFixtures.inputsOf(details), Direction.UP),
                 "the fusion core refused a chained craft driven by the previous tier's own output");
         helper.assertTrue(core.isCrafting(), "the core took the pattern but never started the craft");
 
@@ -172,7 +158,7 @@ public final class FusionChainGameTest {
         for (DataComponentType<?> type : types) {
             Object a = made.get(type);
             Object b = promised.get(type);
-            if (!java.util.Objects.equals(a, b)) {
+            if (!Objects.equals(a, b)) {
                 differing.add(BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type)
                         + (a == null ? " (pattern only)" : b == null ? " (craft only)" : " (different value)"));
             }
@@ -186,21 +172,11 @@ public final class FusionChainGameTest {
         FusionRecipeResolver.clearCache();
 
         List<String> broken = new ArrayList<>();
-        for (RecipeHolder<IFusionRecipe> holder : FusionRecipeResolver.candidates(level)) {
-            EncodedIngredients encoded = DraconicRecipeIngredients.fusion(holder, level);
-            if (encoded == null) {
-                continue;
+        forEachFusionInput(level, (holder, slot, options) -> {
+            if (options.get(0).what() instanceof AEItemKey key && !key.equals(FusionResults.canonical(key, level))) {
+                broken.add(holder.id().getPath() + "#" + slot);
             }
-            for (int slot = 0; slot < encoded.inputs().size(); slot++) {
-                GenericStack preferred = encoded.inputs().get(slot).get(0);
-                if (!(preferred.what() instanceof AEItemKey key)) {
-                    continue;
-                }
-                if (!key.equals(FusionResults.canonical(key, level))) {
-                    broken.add(holder.id().getPath() + "#" + slot);
-                }
-            }
-        }
+        });
 
         helper.assertTrue(broken.isEmpty(), broken.size() + " fusion inputs prefer a non canonical key: " + broken);
         helper.succeed();

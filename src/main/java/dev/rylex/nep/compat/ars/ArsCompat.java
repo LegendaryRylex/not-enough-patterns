@@ -5,6 +5,7 @@ import com.hollingsworth.arsnouveau.setup.registry.BlockRegistry;
 import com.hollingsworth.arsnouveau.setup.registry.CapabilityRegistry;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
+import dev.rylex.nep.machine.MatrixCraftingMachine;
 import dev.rylex.nep.pattern.ApparatusPattern;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -31,6 +32,7 @@ public final class ArsCompat {
         modBus.addListener(ArsCompat::registerCapabilities);
         modBus.addListener(ArsCompat::registerPayloads);
         NeoForge.EVENT_BUS.addListener(ArsCompat::onReload);
+        NeoForge.EVENT_BUS.addListener(ArcaneLecterns::onLevelUnload);
         if (dist.isClient()) {
             ArsClientCompat.init(modBus);
         }
@@ -80,7 +82,8 @@ public final class ArsCompat {
         event.registerBlockEntity(
                 AECapabilities.CRAFTING_MACHINE,
                 NepArsContent.MATRIX_BLOCK_ENTITY.get(),
-                (be, side) -> new ArcaneEnchantingMatrixCraftingMachine(be));
+                (be, side) -> new MatrixCraftingMachine(
+                        be::readyForPatterns, be::pushMatrixPattern, NepArsContent.MATRIX_ITEM, NepArsContent.MATRIX));
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 NepArsContent.MATRIX_BLOCK_ENTITY.get(),

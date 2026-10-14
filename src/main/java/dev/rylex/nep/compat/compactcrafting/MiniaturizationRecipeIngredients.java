@@ -16,8 +16,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,12 +25,7 @@ final class MiniaturizationRecipeIngredients {
     record Demand(Ingredient ingredient, int count) {}
 
     @Nullable
-    static EncodedIngredients miniaturization(RecipeHolder<MiniaturizationRecipe> holder, Level level) {
-        return miniaturization(holder.value(), level);
-    }
-
-    @Nullable
-    static EncodedIngredients miniaturization(MiniaturizationRecipe recipe, Level level) {
+    static EncodedIngredients miniaturization(MiniaturizationRecipe recipe) {
         GenericStack result = singleOutput(recipe);
         Map<Item, Integer> costs = itemCosts(recipe);
         if (result == null || costs == null) {

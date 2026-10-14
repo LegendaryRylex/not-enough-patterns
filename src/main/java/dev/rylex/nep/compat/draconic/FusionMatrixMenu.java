@@ -88,10 +88,6 @@ public class FusionMatrixMenu extends MachineMenu implements ManualCraftMenu {
         return matrix;
     }
 
-    BlockPos matrixPos() {
-        return pos;
-    }
-
     @Override
     public BlockPos machinePos() {
         return pos;

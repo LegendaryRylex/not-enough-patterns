@@ -1,7 +1,7 @@
 package dev.rylex.nep.pattern.encoding;
 
 import appeng.api.stacks.GenericStack;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -38,7 +38,7 @@ public record EncodedIngredients(
      * Every slot the network gets back, whether unchanged or one use worse.
      */
     public Set<Integer> returnedSlots() {
-        Set<Integer> returned = new LinkedHashSet<>(retainedSlots);
+        Set<Integer> returned = new HashSet<>(retainedSlots);
         returned.addAll(wornSlots);
         return Set.copyOf(returned);
     }

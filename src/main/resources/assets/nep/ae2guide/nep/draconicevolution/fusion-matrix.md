@@ -6,6 +6,8 @@ navigation:
   position: 20
 item_ids:
   - nep:fusion_matrix
+categories:
+  - Matrices
 ---
 # <Color id="gold">Injector Fusion Matrix</Color>
 

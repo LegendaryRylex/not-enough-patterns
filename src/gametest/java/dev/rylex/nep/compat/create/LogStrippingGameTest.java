@@ -1,27 +1,33 @@
 package dev.rylex.nep.compat.create;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.create.CreateFixtures.DEPLOYER;
+import static dev.rylex.nep.compat.create.CreateFixtures.DEPOT;
+import static dev.rylex.nep.compat.create.CreateFixtures.PROVIDER_SIDE;
+import static dev.rylex.nep.compat.create.CreateFixtures.deployerHandler;
+import static dev.rylex.nep.compat.create.CreateFixtures.heldByDeployer;
+import static dev.rylex.nep.compat.create.CreateFixtures.placeDeployer;
+import static dev.rylex.nep.compat.create.CreateFixtures.placeDepot;
+import static dev.rylex.nep.compat.create.CreateFixtures.placeProvider;
+import static dev.rylex.nep.compat.create.CreateFixtures.stagedOnDepot;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
-import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllRecipeTypes;
-import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
 import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.DeployerBlockEntity;
 import com.simibubi.create.content.kinetics.deployer.ItemApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.ManualApplicationRecipe;
-import com.simibubi.create.content.logistics.depot.DepotBlockEntity;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -37,8 +43,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeInput;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -54,53 +58,14 @@ public final class LogStrippingGameTest {
     private static final String TEMPLATE = "empty_5x5x5";
     private static final String BATCH = "nep_log_stripping";
 
-    private static final BlockPos DEPOT = new BlockPos(2, 1, 2);
-    private static final BlockPos DEPLOYER = DEPOT.above(2);
-    private static final Direction PROVIDER_SIDE = Direction.NORTH;
-    private static final BlockPos PROVIDER = DEPOT.relative(PROVIDER_SIDE);
-
     private static final int SETUP_TICKS = 5;
 
     private LogStrippingGameTest() {}
-
-    private static ICraftingMachine placeDepot(GameTestHelper helper) {
-        helper.setBlock(DEPOT, AllBlocks.DEPOT.getDefaultState());
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(DEPOT), null);
-        helper.assertTrue(machine != null, "the depot exposed no crafting machine capability");
-        return machine;
-    }
-
-    private static DeployerBlockEntity placeDeployer(GameTestHelper helper) {
-        helper.setBlock(
-                DEPLOYER,
-                AllBlocks.DEPLOYER.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.DOWN));
-        BlockEntity be = helper.getBlockEntity(DEPLOYER);
-        helper.assertTrue(be instanceof DeployerBlockEntity, "the deployer did not create its block entity");
-        return (DeployerBlockEntity) be;
-    }
-
-    private static IItemHandler deployerHandler(GameTestHelper helper, DeployerBlockEntity deployer) {
-        IItemHandler handler = DepotMachines.itemHandler(deployer);
-        helper.assertTrue(handler != null, "the deployer exposed no item handler");
-        return handler;
-    }
 
     private static void holdAxe(GameTestHelper helper, DeployerBlockEntity deployer) {
         IItemHandler handler = deployerHandler(helper, deployer);
         ItemStack rejected = handler.insertItem(handler.getSlots() - 1, new ItemStack(Items.IRON_AXE), false);
         helper.assertTrue(rejected.isEmpty(), "the deployer would not take the axe it is meant to strip with");
-    }
-
-    private static ItemStack heldByDeployer(GameTestHelper helper, DeployerBlockEntity deployer) {
-        IItemHandler handler = deployerHandler(helper, deployer);
-        return handler.getStackInSlot(handler.getSlots() - 1);
-    }
-
-    private static ItemStack stagedOnDepot(GameTestHelper helper) {
-        BlockEntity be = helper.getBlockEntity(DEPOT);
-        helper.assertTrue(be instanceof DepotBlockEntity, "the depot did not create its block entity");
-        return ((DepotBlockEntity) be).getHeldItem();
     }
 
     private static IPatternDetails strippingPattern(GameTestHelper helper) {
@@ -128,36 +93,6 @@ public final class LogStrippingGameTest {
                 "an andesite pattern naming a log stripping recipe did not decode; nep supplies that recipe itself, "
                         + "so it is absent from the recipe manager and has to be vouched for");
         return details;
-    }
-
-    private static IItemHandler placeProvider(GameTestHelper helper) {
-        helper.setBlock(PROVIDER, Blocks.CHEST);
-        IItemHandler handler = helper.getLevel()
-                .getCapability(
-                        Capabilities.ItemHandler.BLOCK, helper.absolutePos(PROVIDER), PROVIDER_SIDE.getOpposite());
-        helper.assertTrue(handler != null, "the stand-in pattern provider exposed no item handler");
-        return handler;
-    }
-
-    private static int countIn(IItemHandler handler, net.minecraft.world.item.Item item) {
-        int found = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stack = handler.getStackInSlot(slot);
-            if (stack.is(item)) {
-                found += stack.getCount();
-            }
-        }
-        return found;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
@@ -363,7 +298,8 @@ public final class LogStrippingGameTest {
         StringBuilder unstrippable = new StringBuilder();
         for (Holder<Item> log : BuiltInRegistries.ITEM.getTagOrEmpty(ItemTags.LOGS)) {
             Item item = log.value();
-            if (strippedForm(item) == null || coveredByALoadedRecipe(helper, item)) {
+            Item stripped = strippedForm(item);
+            if (stripped == null || coveredByALoadedRecipe(helper, item)) {
                 for (RecipeHolder<? extends ItemApplicationRecipe> recipe : recipes) {
                     if (recipe.value().getProcessedItem().test(new ItemStack(item))) {
                         unstrippable.append("\n  ").append(BuiltInRegistries.ITEM.getKey(item));
@@ -381,7 +317,7 @@ public final class LogStrippingGameTest {
                                     .getRollableResults()
                                     .get(0)
                                     .getStack()
-                                    .is(strippedForm(item)),
+                                    .is(stripped),
                             BuiltInRegistries.ITEM.getKey(item) + " strips to the wrong item");
                 }
             }

@@ -37,8 +37,8 @@ public final class DecoderGridNode implements IInWorldGridNodeHost, ChannelDeman
         this.mainNode = node;
     }
 
-    int modules() {
-        return owner.modules();
+    int heldMask() {
+        return owner.heldMask();
     }
 
     @Override

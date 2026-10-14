@@ -15,7 +15,7 @@ public final class ItemCounts {
     private ItemCounts() {}
 
     private static final String KEY_TAG = "Key";
-    private static final String LEGACY_ID_TAG = "Id";
+    public static final String LEGACY_ID_TAG = "Id";
     private static final String COUNT_TAG = "Count";
 
     public static ListTag save(Map<AEItemKey, Long> map, HolderLookup.Provider registries) {
@@ -38,7 +38,7 @@ public final class ItemCounts {
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entryTag = list.getCompound(i);
             long count = entryTag.getLong(COUNT_TAG);
-            AEItemKey itemKey = key(entryTag, registries);
+            AEItemKey itemKey = key(entryTag, LEGACY_ID_TAG, registries);
             if (count > 0 && itemKey != null) {
                 map.merge(itemKey, count, Long::sum);
             }
@@ -49,11 +49,6 @@ public final class ItemCounts {
      * Reads the item key an entry was written with, falling back to the bare item id written before matrix
      * bookkeeping carried data components.
      */
-    @Nullable
-    public static AEItemKey key(CompoundTag entryTag, HolderLookup.Provider registries) {
-        return key(entryTag, LEGACY_ID_TAG, registries);
-    }
-
     @Nullable
     public static AEItemKey key(CompoundTag entryTag, String legacyIdTag, HolderLookup.Provider registries) {
         if (entryTag.contains(KEY_TAG, Tag.TAG_COMPOUND)) {

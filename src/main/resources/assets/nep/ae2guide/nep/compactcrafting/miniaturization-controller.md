@@ -56,7 +56,7 @@ item_ids:
 
 2) Once the field reports a match on the recipe the pattern named, the catalyst is dropped in as a loose item, exactly as if you had thrown it. The field consumes one and the blocks vanish.
 
-3) The field then runs the recipe's own crafting time. The bar in the controller's screen tracks the field's progress. 
+3) The field then runs the recipe's own crafting time. The bar in the controller's screen tracks the field's progress.
 
 4) Once the recipe is finished the Controller pulls the crafted item back in. Anything left of the catalyst stack goes back to the input buffer.
 

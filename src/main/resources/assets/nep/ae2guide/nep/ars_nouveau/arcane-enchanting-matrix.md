@@ -6,6 +6,8 @@ navigation:
   position: 50
 item_ids:
   - nep:arcane_enchanting_matrix
+categories:
+  - Matrices
 ---
 # <Color id="light_purple">Arcane Enchanting Matrix</Color>
 

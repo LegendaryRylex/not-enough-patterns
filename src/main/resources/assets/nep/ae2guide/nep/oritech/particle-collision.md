@@ -35,4 +35,3 @@ item_ids:
 * A collision needs one particle sped up before the other is released, which a Pattern Provider cannot time. Run these patterns through a [Particle Collision Controller](/nep/oritech/particle-collision-controller.md), or skip the ring with a [Particle Collision Matrix](/nep/oritech/particle-collision-matrix.md), which makes the recipe's full count.
 
 <ItemImage id="minecraft:air" scale="0.5"/>
-

@@ -40,10 +40,12 @@ public class NepBlockStates extends BlockStateProvider {
             new Matrix("miniaturization_matrix", "miniaturization", false),
             new Matrix("particle_collision_matrix", "particle_collision", false),
             new Matrix("focused_spirit_matrix", "focused_spirit", false),
-            new Matrix("arcane_enchanting_matrix", "arcane_enchanting", false));
+            new Matrix("arcane_enchanting_matrix", "arcane_enchanting", false),
+            new Matrix("bound_spirit_matrix", "bound_spirit", false));
 
     private static final String ARCANE_LECTERN = "arcane_lectern";
     private static final String RITUAL_CONDUCTOR = "ritual_conductor";
+    private static final String SPIRIT_PROVIDER = "spirit_provider";
     private static final String FACING = "facing";
     private static final String ONLINE = "online";
     private static final String CONDUCTING = "conducting";
@@ -53,14 +55,20 @@ public class NepBlockStates extends BlockStateProvider {
     private static final String MINIATURIZATION_CONTROLLER = "miniaturization_controller";
     private static final String ASSEMBLY_CONTROLLER = "sequenced_assembly_controller";
     private static final String COLLISION_CONTROLLER = "particle_collision_controller";
+    private static final String SHAPE = "_shape";
+    private static final String RITUAL_CONTROLLER = "ritual_controller";
     private static final String WORKING = "working";
     private static final String ASSEMBLY_WORKING = "on";
     private static final String HALTED = "halted";
     private static final String ASSEMBLY_COG = "block/machine/assembly_cog";
     private static final String TRANSLUCENT = "minecraft:translucent";
     private static final String SOLID = "minecraft:solid";
+    private static final String CUTOUT = "minecraft:cutout";
+    private static final float IDLE_FIRE_INSET = 0.75F;
+    private static final float IDLE_FIRE = 3.4F;
+    private static final float RUNNING_FIRE = 6.5F;
     private static final String FIELD = "field";
-    private static final List<String> MINIATURIZATION_STATES = List.of("idle", "running", "stalled");
+    private static final List<String> CONTROLLER_STATES = List.of("idle", "running", "stalled");
     private static final List<String> ASSEMBLY_STATES = List.of("off", "on", "halted");
 
     public NepBlockStates(PackOutput output, ExistingFileHelper existing) {
@@ -78,9 +86,20 @@ public class NepBlockStates extends BlockStateProvider {
         patternDecoder();
         miniaturizationController();
         collisionController();
+        ritualController();
         assemblyController();
         arcaneLectern();
         ritualConductor();
+        spiritProvider();
+    }
+
+    private void spiritProvider() {
+        ResourceLocation bowl = Nep.id("block/spirit_provider");
+        ModelFile model = models().withExistingParent(
+                        SPIRIT_PROVIDER, ResourceLocation.fromNamespaceAndPath("occultism", "block/sacrificial_bowl"))
+                .texture("1", bowl)
+                .texture("particle", bowl);
+        simpleBlockWithItem(block(SPIRIT_PROVIDER), model);
     }
 
     private void arcaneLectern() {
@@ -194,7 +213,7 @@ public class NepBlockStates extends BlockStateProvider {
     private void miniaturizationController() {
         Block block = block(MINIATURIZATION_CONTROLLER);
         List<NepMachineModels.Box> boxes = NepMachineModels.miniatureField();
-        for (String status : MINIATURIZATION_STATES) {
+        for (String status : CONTROLLER_STATES) {
             models().getBuilder(MINIATURIZATION_CONTROLLER + "_" + status)
                     .parent(models().getExistingFile(mcLoc("block/block")))
                     .texture("particle", machine("compact/metal"))
@@ -203,16 +222,8 @@ public class NepBlockStates extends BlockStateProvider {
                     .child(FIELD, miniaturizationPart(status, boxes, true))
                     .end();
         }
-        getVariantBuilder(block)
-                .forAllStatesExcept(
-                        state -> ConfiguredModel.builder()
-                                .modelFile(models().getExistingFile(
-                                                Nep.id("block/" + MINIATURIZATION_CONTROLLER + "_" + statusOf(state))))
-                                .build(),
-                        besidesStatus(block));
-        itemModels()
-                .withExistingParent(
-                        MINIATURIZATION_CONTROLLER, Nep.id("block/" + MINIATURIZATION_CONTROLLER + "_running"));
+        statusVariants(block, MINIATURIZATION_CONTROLLER);
+        itemFrom(MINIATURIZATION_CONTROLLER, "running");
     }
 
     private BlockModelBuilder miniaturizationPart(String status, List<NepMachineModels.Box> boxes, boolean field) {
@@ -235,35 +246,63 @@ public class NepBlockStates extends BlockStateProvider {
 
     private void collisionController() {
         Block block = block(COLLISION_CONTROLLER);
-        for (String status : MINIATURIZATION_STATES) {
-            BlockModelBuilder model = models().getBuilder(COLLISION_CONTROLLER + "_" + status)
-                    .parent(models().getExistingFile(mcLoc("block/block")))
+        BlockModelBuilder shape = models().getBuilder(COLLISION_CONTROLLER + SHAPE)
+                .parent(models().getExistingFile(mcLoc("block/block")))
+                .renderType(SOLID)
+                .texture("particle", machine("oritech/plate"))
+                .texture("plate", machine("oritech/plate"))
+                .texture("frame", machine("oritech/frame"))
+                .texture("dark", machine("oritech/dark"))
+                .texture("ring", machine("oritech/ring"))
+                .texture("glow", machine("oritech/glow_idle"));
+        NepMachineModels.emit(shape, NepMachineModels.collisionRing(), Set.of("glow"));
+        for (String status : CONTROLLER_STATES) {
+            models().withExistingParent(COLLISION_CONTROLLER + "_" + status, shape.getLocation())
                     .renderType(SOLID)
-                    .texture("particle", machine("oritech/plate"))
-                    .texture("plate", machine("oritech/plate"))
-                    .texture("frame", machine("oritech/frame"))
-                    .texture("dark", machine("oritech/dark"))
-                    .texture("ring", machine("oritech/ring"))
                     .texture("glow", machine("oritech/glow_" + status));
-            NepMachineModels.emit(model, NepMachineModels.collisionRing(), Set.of("glow"));
         }
-        getVariantBuilder(block)
-                .forAllStatesExcept(
-                        state -> ConfiguredModel.builder()
-                                .modelFile(models().getExistingFile(
-                                                Nep.id("block/" + COLLISION_CONTROLLER + "_" + statusOf(state))))
-                                .build(),
-                        besidesStatus(block));
-        itemModels().withExistingParent(COLLISION_CONTROLLER, Nep.id("block/" + COLLISION_CONTROLLER + "_running"));
+        statusVariants(block, COLLISION_CONTROLLER);
+        itemFrom(COLLISION_CONTROLLER, "running");
+    }
+
+    private void ritualController() {
+        Block block = block(RITUAL_CONTROLLER);
+        for (String status : CONTROLLER_STATES) {
+            BlockModelBuilder model = models().getBuilder(RITUAL_CONTROLLER + "_" + status)
+                    .parent(models().getExistingFile(mcLoc("block/block")))
+                    .renderType(CUTOUT)
+                    .texture("particle", machine("occultism/plate"))
+                    .texture("plate", machine("occultism/plate"))
+                    .texture("frame", machine("occultism/frame"))
+                    .texture("dark", machine("occultism/dark"))
+                    .texture("pentacle", machine("occultism/pentacle"))
+                    .texture("glow", machine("occultism/glow_" + status))
+                    .texture("candle", ResourceLocation.fromNamespaceAndPath("occultism", "block/large_candle_white"))
+                    .texture("fire", ResourceLocation.fromNamespaceAndPath("occultism", "block/spirit_fire_0"));
+            NepMachineModels.emit(model, NepMachineModels.brazier(), Set.of("glow"));
+            NepMachineModels.emitBrazierDetail(model);
+            switch (status) {
+                case "running" -> NepMachineModels.emitSpiritFire(model, RUNNING_FIRE, 0);
+                case "idle" -> NepMachineModels.emitSpiritFire(model, IDLE_FIRE, IDLE_FIRE_INSET);
+                default -> {}
+            }
+        }
+        statusVariants(block, RITUAL_CONTROLLER);
+        itemFrom(RITUAL_CONTROLLER, "running");
     }
 
     private void assemblyController() {
         Block block = block(ASSEMBLY_CONTROLLER);
+        BlockModelBuilder shape = casingTextures(models().getBuilder(ASSEMBLY_CONTROLLER + SHAPE), "off");
+        List<NepMachineModels.Box> boxes = new ArrayList<>(NepMachineModels.brassCasing());
+        boxes.addAll(NepMachineModels.cogs());
+        NepMachineModels.emit(shape, boxes, Set.of());
         for (String status : ASSEMBLY_STATES) {
-            BlockModelBuilder model = casingTextures(models().getBuilder(ASSEMBLY_CONTROLLER + "_" + status), status);
-            List<NepMachineModels.Box> boxes = new ArrayList<>(NepMachineModels.brassCasing());
-            boxes.addAll(NepMachineModels.cogs());
-            NepMachineModels.emit(model, boxes, Set.of());
+            BlockModelBuilder model =
+                    models().withExistingParent(ASSEMBLY_CONTROLLER + "_" + status, shape.getLocation());
+            if (HALTED.equals(status)) {
+                model.texture("panel", machine("create/panel_halted"));
+            }
         }
         BlockModelBuilder working =
                 casingTextures(models().getBuilder(ASSEMBLY_CONTROLLER + "_" + WORKING), ASSEMBLY_WORKING);
@@ -281,9 +320,7 @@ public class NepBlockStates extends BlockStateProvider {
                                         + ("true".equals(value(state, WORKING)) ? WORKING : statusOf(state)))))
                                 .build(),
                         property(block, FACING));
-        itemModels()
-                .withExistingParent(
-                        ASSEMBLY_CONTROLLER, Nep.id("block/" + ASSEMBLY_CONTROLLER + "_" + ASSEMBLY_WORKING));
+        itemFrom(ASSEMBLY_CONTROLLER, ASSEMBLY_WORKING);
     }
 
     private BlockModelBuilder casingTextures(BlockModelBuilder model, String status) {
@@ -305,6 +342,19 @@ public class NepBlockStates extends BlockStateProvider {
 
     private static ResourceLocation machine(String texture) {
         return Nep.id("block/machine/" + texture);
+    }
+
+    private void statusVariants(Block block, String name) {
+        getVariantBuilder(block)
+                .forAllStatesExcept(
+                        state -> ConfiguredModel.builder()
+                                .modelFile(models().getExistingFile(Nep.id("block/" + name + "_" + statusOf(state))))
+                                .build(),
+                        besidesStatus(block));
+    }
+
+    private void itemFrom(String name, String status) {
+        itemModels().withExistingParent(name, Nep.id("block/" + name + "_" + status));
     }
 
     private static Property<?>[] besidesStatus(Block block) {

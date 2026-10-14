@@ -6,32 +6,30 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public class ParticleCollisionMatrixBlock extends BaseEntityBlock {
+public class ParticleCollisionMatrixBlock extends ParticleCollisionBlock<ParticleCollisionMatrixBlockEntity> {
 
     public static final MapCodec<ParticleCollisionMatrixBlock> CODEC = simpleCodec(ParticleCollisionMatrixBlock::new);
 
     public static final EnumProperty<MatrixStatus> STATUS = MatrixStatus.PROPERTY;
 
     public ParticleCollisionMatrixBlock(Properties properties) {
-        super(properties);
+        super(
+                properties,
+                ParticleCollisionMatrixBlockEntity.class,
+                NepOritechContent.MATRIX_BLOCK_ENTITY::get,
+                ParticleCollisionMatrixBlockEntity::serverTick);
         registerDefaultState(defaultBlockState().setValue(STATUS, MatrixStatus.IDLE));
     }
 
@@ -45,56 +43,20 @@ public class ParticleCollisionMatrixBlock extends BaseEntityBlock {
         builder.add(STATUS);
     }
 
-    @Override
-    protected RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
-
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new ParticleCollisionMatrixBlockEntity(NepOritechContent.MATRIX_BLOCK_ENTITY.get(), pos, state);
     }
 
-    @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
-            Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide) {
-            return null;
-        }
-        return createTickerHelper(
-                type, NepOritechContent.MATRIX_BLOCK_ENTITY.get(), ParticleCollisionMatrixBlockEntity::serverTick);
+    int comparatorOutput(ParticleCollisionMatrixBlockEntity entity) {
+        return entity.comparatorOutput();
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState state) {
-        return true;
-    }
-
-    @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
-        return level.getBlockEntity(pos) instanceof ParticleCollisionMatrixBlockEntity matrix
-                ? matrix.comparatorOutput()
-                : 0;
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock())
-                && level.getBlockEntity(pos) instanceof ParticleCollisionMatrixBlockEntity matrix) {
-            matrix.dropBuffers(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }
-
-    @Override
-    protected InteractionResult useWithoutItem(
-            BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof ParticleCollisionMatrixBlockEntity matrix) {
-            player.openMenu(matrix, buffer -> buffer.writeBlockPos(pos));
-        }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+    void releaseContents(ParticleCollisionMatrixBlockEntity entity, Level level, BlockPos pos) {
+        entity.dropBuffers(level, pos);
     }
 
     @Override

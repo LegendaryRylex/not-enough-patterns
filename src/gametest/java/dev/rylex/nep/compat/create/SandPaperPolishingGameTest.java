@@ -1,6 +1,15 @@
 package dev.rylex.nep.compat.create;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.create.CreateFixtures.PROVIDER_SIDE;
+import static dev.rylex.nep.compat.create.CreateFixtures.deployerHandler;
+import static dev.rylex.nep.compat.create.CreateFixtures.heldByDeployer;
+import static dev.rylex.nep.compat.create.CreateFixtures.placeDeployer;
+import static dev.rylex.nep.compat.create.CreateFixtures.placeDepot;
+import static dev.rylex.nep.compat.create.CreateFixtures.placeProvider;
+import static dev.rylex.nep.compat.create.CreateFixtures.stagedOnDepot;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
@@ -8,26 +17,19 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
-import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
-import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
 import com.simibubi.create.content.kinetics.deployer.DeployerApplicationRecipe;
 import com.simibubi.create.content.kinetics.deployer.DeployerBlockEntity;
-import com.simibubi.create.content.logistics.depot.DepotBlockEntity;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
 import java.util.List;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -39,11 +41,6 @@ public final class SandPaperPolishingGameTest {
     private static final String TEMPLATE = "empty_5x5x5";
     private static final String BATCH = "nep_sandpaper_polishing";
 
-    private static final BlockPos DEPOT = new BlockPos(2, 1, 2);
-    private static final BlockPos DEPLOYER = DEPOT.above(2);
-    private static final Direction PROVIDER_SIDE = Direction.NORTH;
-    private static final BlockPos PROVIDER = DEPOT.relative(PROVIDER_SIDE);
-
     private static final ResourceLocation POLISHING =
             ResourceLocation.fromNamespaceAndPath("create", "sandpaper_polishing/rose_quartz");
 
@@ -52,43 +49,6 @@ public final class SandPaperPolishingGameTest {
     private static final int SETUP_TICKS = 5;
 
     private SandPaperPolishingGameTest() {}
-
-    private static ICraftingMachine placeDepot(GameTestHelper helper) {
-        helper.setBlock(DEPOT, AllBlocks.DEPOT.getDefaultState());
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(DEPOT), null);
-        helper.assertTrue(machine != null, "the depot exposed no crafting machine capability");
-        return machine;
-    }
-
-    private static DeployerBlockEntity placeDeployer(GameTestHelper helper) {
-        helper.setBlock(
-                DEPLOYER,
-                AllBlocks.DEPLOYER.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.DOWN));
-        BlockEntity be = helper.getBlockEntity(DEPLOYER);
-        helper.assertTrue(be instanceof DeployerBlockEntity, "the deployer did not create its block entity");
-        return (DeployerBlockEntity) be;
-    }
-
-    private static IItemHandler placeProvider(GameTestHelper helper) {
-        helper.setBlock(PROVIDER, Blocks.CHEST);
-        IItemHandler handler = helper.getLevel()
-                .getCapability(
-                        Capabilities.ItemHandler.BLOCK, helper.absolutePos(PROVIDER), PROVIDER_SIDE.getOpposite());
-        helper.assertTrue(handler != null, "the stand-in pattern provider exposed no item handler");
-        return handler;
-    }
-
-    private static IItemHandler deployerHandler(GameTestHelper helper, DeployerBlockEntity deployer) {
-        IItemHandler handler = DepotMachines.itemHandler(deployer);
-        helper.assertTrue(handler != null, "the deployer exposed no item handler");
-        return handler;
-    }
-
-    private static ItemStack heldByDeployer(GameTestHelper helper, DeployerBlockEntity deployer) {
-        IItemHandler handler = deployerHandler(helper, deployer);
-        return handler.getStackInSlot(handler.getSlots() - 1);
-    }
 
     private static void hold(GameTestHelper helper, DeployerBlockEntity deployer, ItemStack tool) {
         IItemHandler handler = deployerHandler(helper, deployer);
@@ -105,24 +65,7 @@ public final class SandPaperPolishingGameTest {
         handler.insertItem(heldSlot, lent, false);
     }
 
-    private static ItemStack stagedOnDepot(GameTestHelper helper) {
-        BlockEntity be = helper.getBlockEntity(DEPOT);
-        helper.assertTrue(be instanceof DepotBlockEntity, "the depot did not create its block entity");
-        return ((DepotBlockEntity) be).getHeldItem();
-    }
-
-    private static int countIn(IItemHandler handler, net.minecraft.world.item.Item item) {
-        int found = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stack = handler.getStackInSlot(slot);
-            if (stack.is(item)) {
-                found += stack.getCount();
-            }
-        }
-        return found;
-    }
-
-    private static ItemStack firstIn(IItemHandler handler, net.minecraft.world.item.Item item) {
+    private static ItemStack firstIn(IItemHandler handler, Item item) {
         for (int slot = 0; slot < handler.getSlots(); slot++) {
             ItemStack stack = handler.getStackInSlot(slot);
             if (stack.is(item)) {
@@ -148,10 +91,6 @@ public final class SandPaperPolishingGameTest {
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
         helper.assertTrue(details != null, "the polishing test pattern did not decode");
         return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        return inputsWith(details, null);
     }
 
     private static KeyCounter[] inputsWith(IPatternDetails details, AEKey tool) {

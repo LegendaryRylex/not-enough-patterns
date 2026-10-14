@@ -187,44 +187,63 @@ public class RitualConductorScreen extends MatrixScreen<RitualConductorMenu> {
                 + (index / RitualConductorMenu.AUGMENT_COLUMNS) * RitualConductorMenu.AUGMENT_SIZE;
     }
 
+    private record Rect(int x, int y, int width, int height) {}
+
+    private static final Rect SCROLLBAR = new Rect(
+            RitualConductorMenu.SCROLL_X,
+            RitualConductorMenu.ROW_Y,
+            RitualConductorMenu.SCROLL_WIDTH,
+            RitualConductorMenu.SCROLL_HEIGHT);
+    private static final Rect SCROLL_AREA = new Rect(
+            RitualConductorMenu.ROW_X,
+            RitualConductorMenu.ROW_Y,
+            RitualConductorMenu.SCROLL_X + RitualConductorMenu.SCROLL_WIDTH - RitualConductorMenu.ROW_X,
+            RitualConductorMenu.SCROLL_HEIGHT);
+    private static final Rect CARD = new Rect(
+            RitualConductorMenu.PANE_X,
+            RitualConductorMenu.CARD_Y - 1,
+            RitualConductorMenu.PANE_RIGHT - RitualConductorMenu.PANE_X,
+            20);
+
+    private boolean within(int mouseX, int mouseY, Rect rect) {
+        return within(mouseX, mouseY, rect.x(), rect.y(), rect.width(), rect.height());
+    }
+
     private boolean overAugment(int mouseX, int mouseY, int index) {
         return within(
                 mouseX,
                 mouseY,
-                augmentX(index),
-                augmentY(index),
-                RitualConductorMenu.AUGMENT_SIZE,
-                RitualConductorMenu.AUGMENT_SIZE);
+                new Rect(
+                        augmentX(index),
+                        augmentY(index),
+                        RitualConductorMenu.AUGMENT_SIZE,
+                        RitualConductorMenu.AUGMENT_SIZE));
     }
 
     private boolean overRow(int mouseX, int mouseY, int row) {
         return within(
                 mouseX,
                 mouseY,
-                RitualConductorMenu.ROW_X,
-                RitualConductorMenu.ROW_Y + row * RitualConductorMenu.ROW_HEIGHT,
-                RitualConductorMenu.ROW_WIDTH,
-                RitualConductorMenu.ROW_HEIGHT);
+                new Rect(
+                        RitualConductorMenu.ROW_X,
+                        RitualConductorMenu.ROW_Y + row * RitualConductorMenu.ROW_HEIGHT,
+                        RitualConductorMenu.ROW_WIDTH,
+                        RitualConductorMenu.ROW_HEIGHT));
     }
 
     private boolean overSetting(int mouseX, int mouseY, Setting setting) {
         return within(
                 mouseX,
                 mouseY,
-                RitualConductorMenu.PANE_X - ARROW_REACH,
-                setting.y() - 2,
-                RitualConductorMenu.PANE_RIGHT - RitualConductorMenu.PANE_X + ARROW_REACH,
-                RitualConductorMenu.SETTING_HEIGHT);
+                new Rect(
+                        RitualConductorMenu.PANE_X - ARROW_REACH,
+                        setting.y() - 2,
+                        RitualConductorMenu.PANE_RIGHT - RitualConductorMenu.PANE_X + ARROW_REACH,
+                        RitualConductorMenu.SETTING_HEIGHT));
     }
 
     private boolean overCard(int mouseX, int mouseY) {
-        return within(
-                mouseX,
-                mouseY,
-                RitualConductorMenu.PANE_X,
-                RitualConductorMenu.CARD_Y - 1,
-                RitualConductorMenu.PANE_RIGHT - RitualConductorMenu.PANE_X,
-                20);
+        return within(mouseX, mouseY, CARD);
     }
 
     private Optional<Zone> zoneAt(int mouseX, int mouseY, Setting setting) {
@@ -257,15 +276,7 @@ public class RitualConductorScreen extends MatrixScreen<RitualConductorMenu> {
         int x = (int) mouseX;
         int y = (int) mouseY;
 
-        if (button == 0
-                && maxScroll() > 0
-                && within(
-                        x,
-                        y,
-                        RitualConductorMenu.SCROLL_X,
-                        RitualConductorMenu.ROW_Y,
-                        RitualConductorMenu.SCROLL_WIDTH,
-                        RitualConductorMenu.SCROLL_HEIGHT)) {
+        if (button == 0 && maxScroll() > 0 && within(x, y, SCROLLBAR)) {
             draggingThumb = true;
             scrollTo(mouseY);
             return true;
@@ -341,15 +352,7 @@ public class RitualConductorScreen extends MatrixScreen<RitualConductorMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int max = maxScroll();
-        if (max > 0
-                && scrollY != 0
-                && within(
-                        (int) mouseX,
-                        (int) mouseY,
-                        RitualConductorMenu.ROW_X,
-                        RitualConductorMenu.ROW_Y,
-                        RitualConductorMenu.SCROLL_X + RitualConductorMenu.SCROLL_WIDTH - RitualConductorMenu.ROW_X,
-                        RitualConductorMenu.SCROLL_HEIGHT)) {
+        if (max > 0 && scrollY != 0 && within((int) mouseX, (int) mouseY, SCROLL_AREA)) {
             scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(scrollY)));
             return true;
         }

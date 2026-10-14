@@ -14,7 +14,9 @@ import appeng.api.storage.MEStorage;
 import com.hollingsworth.arsnouveau.common.block.tile.RitualBrazierTile;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.util.SubLevels;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -35,6 +37,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
@@ -197,23 +200,13 @@ public class RitualConductorBlockEntity extends BlockEntity implements IInWorldG
         setChanged();
     }
 
-    public void cycleWeather() {
-        weather = weather.next();
+    public void cycleWeather(boolean forward) {
+        weather = forward ? weather.next() : weather.previous();
         setChanged();
     }
 
-    public void cycleDaylight() {
-        daylight = daylight.next();
-        setChanged();
-    }
-
-    public void cycleWeatherBack() {
-        weather = weather.previous();
-        setChanged();
-    }
-
-    public void cycleDaylightBack() {
-        daylight = daylight.previous();
+    public void cycleDaylight(boolean forward) {
+        daylight = forward ? daylight.next() : daylight.previous();
         setChanged();
     }
 
@@ -232,7 +225,7 @@ public class RitualConductorBlockEntity extends BlockEntity implements IInWorldG
 
     public void clearConfiguration() {
         ritual = null;
-        java.util.Collections.fill(augments, ItemStack.EMPTY);
+        Collections.fill(augments, ItemStack.EMPTY);
         armedFor = null;
         nextAugment = 0;
         runInterval = 0;
@@ -433,24 +426,50 @@ public class RitualConductorBlockEntity extends BlockEntity implements IInWorldG
         brazierPos = null;
 
         int range = NepConfig.arsRitualConductorRange();
+        BlockPos low = worldPosition.offset(-range, -range, -range);
+        BlockPos high = worldPosition.offset(range, range, range);
         RitualBrazierTile best = null;
+        BlockPos bestPos = null;
         double bestDistance = Double.MAX_VALUE;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                worldPosition.offset(-range, -range, -range), worldPosition.offset(range, range, range))) {
-            if (!level.isLoaded(pos) || !(level.getBlockEntity(pos) instanceof RitualBrazierTile candidate)) {
-                continue;
-            }
-            if (!SubLevels.sameSubLevel(level, worldPosition, pos)) {
-                continue;
-            }
-            double distance = pos.distSqr(worldPosition);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = candidate;
-                brazierPos = pos.immutable();
+        for (int chunkZ = low.getZ() >> 4; chunkZ <= high.getZ() >> 4; chunkZ++) {
+            for (int chunkX = low.getX() >> 4; chunkX <= high.getX() >> 4; chunkX++) {
+                LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                if (chunk == null) {
+                    continue;
+                }
+                for (BlockEntity entity : chunk.getBlockEntities().values()) {
+                    BlockPos pos = entity.getBlockPos();
+                    if (!(entity instanceof RitualBrazierTile candidate)
+                            || pos.getX() < low.getX()
+                            || pos.getX() > high.getX()
+                            || pos.getY() < low.getY()
+                            || pos.getY() > high.getY()
+                            || pos.getZ() < low.getZ()
+                            || pos.getZ() > high.getZ()
+                            || !SubLevels.sameSubLevel(level, worldPosition, pos)) {
+                        continue;
+                    }
+                    double distance = pos.distSqr(worldPosition);
+                    if (distance < bestDistance || distance == bestDistance && scansBefore(pos, bestPos)) {
+                        bestDistance = distance;
+                        best = candidate;
+                        bestPos = pos;
+                    }
+                }
             }
         }
+        brazierPos = bestPos == null ? null : bestPos.immutable();
         return best;
+    }
+
+    private static boolean scansBefore(BlockPos pos, BlockPos other) {
+        if (pos.getZ() != other.getZ()) {
+            return pos.getZ() < other.getZ();
+        }
+        if (pos.getY() != other.getY()) {
+            return pos.getY() < other.getY();
+        }
+        return pos.getX() < other.getX();
     }
 
     @Nullable
@@ -501,7 +520,7 @@ public class RitualConductorBlockEntity extends BlockEntity implements IInWorldG
         daylight = RitualDaylight.byName(tag.getString(DAYLIGHT_KEY));
         collectOutput = !tag.contains(COLLECT_KEY) || tag.getBoolean(COLLECT_KEY);
         nextRunGameTime = tag.getLong(NEXT_RUN_KEY);
-        java.util.Collections.fill(augments, ItemStack.EMPTY);
+        Collections.fill(augments, ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, augments, registries);
     }
 
@@ -529,8 +548,12 @@ public class RitualConductorBlockEntity extends BlockEntity implements IInWorldG
             return this == RUNNING || this == STARVED;
         }
 
+        public static ConductorState byOrdinal(int ordinal) {
+            return CyclingSetting.byOrdinal(values(), ordinal, UNCONFIGURED);
+        }
+
         public String key() {
-            return "gui.nep.ritual_conductor.state." + name().toLowerCase(java.util.Locale.ROOT);
+            return "gui.nep.ritual_conductor.state." + name().toLowerCase(Locale.ROOT);
         }
     }
 

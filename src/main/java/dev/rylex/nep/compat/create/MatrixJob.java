@@ -2,6 +2,7 @@ package dev.rylex.nep.compat.create;
 
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
+import dev.rylex.nep.util.EnumNames;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.HolderLookup;
@@ -62,7 +63,7 @@ record MatrixJob(
 
     @Nullable
     static MatrixJob load(HolderLookup.Provider registries, CompoundTag tag) {
-        Kind kind = kindNamed(tag.getString(KIND_KEY));
+        Kind kind = EnumNames.byName(Kind.values(), tag.getString(KIND_KEY), null);
         GenericStack result = GenericStack.readTag(registries, tag.getCompound(RESULT_KEY));
         if (kind == null || result == null || result.amount() <= 0 || !(result.what() instanceof AEItemKey key)) {
             return null;
@@ -100,15 +101,5 @@ record MatrixJob(
             }
         }
         return List.copyOf(stacks);
-    }
-
-    @Nullable
-    private static Kind kindNamed(String name) {
-        for (Kind kind : Kind.values()) {
-            if (kind.name().equals(name)) {
-                return kind;
-            }
-        }
-        return null;
     }
 }

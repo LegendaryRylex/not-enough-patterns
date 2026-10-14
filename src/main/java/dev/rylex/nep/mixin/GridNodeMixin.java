@@ -3,7 +3,7 @@ package dev.rylex.nep.mixin;
 import appeng.api.networking.GridFlags;
 import appeng.api.networking.IGridNode;
 import appeng.me.GridNode;
-import dev.rylex.nep.machine.ChannelDemand;
+import dev.rylex.nep.machine.WholeChannelDemand;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,7 +24,7 @@ public abstract class GridNodeMixin {
         if (!cir.getReturnValueZ() || !hasFlag(GridFlags.REQUIRE_CHANNEL)) {
             return;
         }
-        if (getUsedChannels() < ChannelDemand.of((IGridNode) (Object) this)) {
+        if (getUsedChannels() < WholeChannelDemand.of((IGridNode) (Object) this)) {
             cir.setReturnValue(false);
         }
     }

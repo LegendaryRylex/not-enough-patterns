@@ -13,18 +13,13 @@ import com.hollingsworth.arsnouveau.common.block.tile.ArcaneCoreTile;
 import com.hollingsworth.arsnouveau.common.block.tile.ArcanePedestalTile;
 import com.hollingsworth.arsnouveau.common.block.tile.EnchantingApparatusTile;
 import com.hollingsworth.arsnouveau.setup.registry.BlockRegistry;
-import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.machine.CraftedOutputs;
 import dev.rylex.nep.machine.PushOutcome;
-import dev.rylex.nep.machine.RejectLog;
 import dev.rylex.nep.pattern.ApparatusPattern;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
@@ -35,11 +30,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class EnchantingApparatusCraftingMachine implements ICraftingMachine {
 
-    private static final int MAX_MEMOIZED_REJECTS = 512;
     private static final int SOURCE_RANGE = 10;
 
-    private static final Set<AEItemKey> UNSATISFIABLE = new HashSet<>();
-    private static final RejectLog REJECT_LOG = new RejectLog();
+    private static final PatternPushMemo MEMO = new PatternPushMemo("Enchanting Apparatus");
 
     private final EnchantingApparatusTile apparatus;
 
@@ -48,8 +41,7 @@ public class EnchantingApparatusCraftingMachine implements ICraftingMachine {
     }
 
     static void clearCache() {
-        UNSATISFIABLE.clear();
-        REJECT_LOG.clear();
+        MEMO.clear();
     }
 
     @Nullable
@@ -99,15 +91,13 @@ public class EnchantingApparatusCraftingMachine implements ICraftingMachine {
         }
 
         AEItemKey key = patternDetails.getDefinition();
-        if (UNSATISFIABLE.contains(key)) {
+        if (MEMO.isUnsatisfiable(key)) {
             return false;
         }
 
         PushOutcome outcome = attempt(level, patternDetails, inputs);
-        if (outcome.unsatisfiable() && UNSATISFIABLE.size() < MAX_MEMOIZED_REJECTS) {
-            UNSATISFIABLE.add(key);
-        }
-        log(level, patternDetails, outcome);
+        MEMO.record(key, outcome);
+        MEMO.log(level, apparatus.getBlockPos(), patternDetails, outcome);
         return outcome.accepted();
     }
 
@@ -126,14 +116,9 @@ public class EnchantingApparatusCraftingMachine implements ICraftingMachine {
                     : PushOutcome.unsatisfiable("no enchanting apparatus recipe matched the pattern");
         }
 
-        Map<AEItemKey, Long> provided = new HashMap<>();
-        for (KeyCounter counter : inputs) {
-            for (var entry : counter) {
-                if (!(entry.getKey() instanceof AEItemKey itemKey) || entry.getLongValue() <= 0) {
-                    return PushOutcome.unsatisfiable("the enchanting apparatus takes items only");
-                }
-                provided.merge(itemKey, entry.getLongValue(), Long::sum);
-            }
+        Map<AEItemKey, Long> provided = PatternPushMemo.collectItems(inputs);
+        if (provided == null) {
+            return PushOutcome.unsatisfiable("the enchanting apparatus takes items only");
         }
         GenericStack declared = plan.result();
         if (!provided.equals(plan.expectedItems())) {
@@ -223,24 +208,5 @@ public class EnchantingApparatusCraftingMachine implements ICraftingMachine {
         for (int slot = 0; slot < plan.pedestals().size(); slot++) {
             pedestals.get(slot).setStack(ItemStack.EMPTY);
         }
-    }
-
-    private void log(Level level, IPatternDetails patternDetails, PushOutcome outcome) {
-        if (!NepConfig.debugLogging()) {
-            return;
-        }
-        if (!outcome.accepted()
-                && !outcome.unsatisfiable()
-                && !REJECT_LOG.shouldLog(level, apparatus.getBlockPos(), outcome.detail())) {
-            return;
-        }
-        Nep.LOGGER.info(
-                "Enchanting Apparatus {} {} push: {} (output={})",
-                apparatus.getBlockPos(),
-                outcome.accepted() ? "accepted" : "rejected",
-                outcome.detail(),
-                patternDetails.getOutputs().isEmpty()
-                        ? "?"
-                        : patternDetails.getOutputs().get(0).toString());
     }
 }

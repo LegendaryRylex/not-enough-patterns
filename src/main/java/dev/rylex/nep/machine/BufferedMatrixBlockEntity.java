@@ -71,21 +71,19 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity
             int channels,
             String nodeLabel) {
         super(type, pos, state);
-        this.inputBuffer = new OverstackedItemHandler(inputSlots) {
-            @Override
-            protected void onContentsChanged(int slot) {
-                markScanNeeded();
-                setChanged();
-            }
-        };
-        this.outputBuffer = new OverstackedItemHandler(outputSlots) {
-            @Override
-            protected void onContentsChanged(int slot) {
-                markScanNeeded();
-                setChanged();
-            }
-        };
+        this.inputBuffer = changeTracking(inputSlots);
+        this.outputBuffer = changeTracking(outputSlots);
         this.power = new MatrixGridNode(this, nodeVisual, idleMeDrain, channels, nodeLabel);
+    }
+
+    private OverstackedItemHandler changeTracking(int slots) {
+        return new OverstackedItemHandler(slots) {
+            @Override
+            protected void onContentsChanged(int slot) {
+                markScanNeeded();
+                setChanged();
+            }
+        };
     }
 
     public int comparatorOutput() {
@@ -136,6 +134,14 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity
 
     public boolean hasPending() {
         return !owed.isEmpty();
+    }
+
+    public long pendingJobs() {
+        long total = 0;
+        for (long count : owed.values()) {
+            total += count;
+        }
+        return total;
     }
 
     public boolean hasPowerFault() {
@@ -208,10 +214,7 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity
     }
 
     protected boolean fitsInOutput(ItemStack result) {
-        ItemStackHandler probe = new OverstackedItemHandler(outputBuffer.getSlots());
-        for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
-            probe.setStackInSlot(slot, outputBuffer.getStackInSlot(slot).copy());
-        }
+        ItemStackHandler probe = HandlerSnapshots.of(outputBuffer);
         return ItemHandlerHelper.insertItem(probe, result.copy(), false).isEmpty();
     }
 
@@ -225,10 +228,7 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity
                 count -= chunk;
             }
         }
-        ItemStackHandler probe = new OverstackedItemHandler(inputBuffer.getSlots());
-        for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
-            probe.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
-        }
+        ItemStackHandler probe = HandlerSnapshots.of(inputBuffer);
         for (ItemStack stack : stacks) {
             if (!ItemHandlerHelper.insertItem(probe, stack.copy(), false).isEmpty()) {
                 return false;
@@ -271,10 +271,7 @@ public abstract class BufferedMatrixBlockEntity extends BlockEntity
         boolean simulate = mode == Actionable.SIMULATE;
         ItemStackHandler target = inputBuffer;
         if (simulate) {
-            target = new OverstackedItemHandler(inputBuffer.getSlots());
-            for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
-                target.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
-            }
+            target = HandlerSnapshots.of(inputBuffer);
         }
         int maxStack = OverstackedItemHandler.SLOT_LIMIT;
         long remaining = amount;

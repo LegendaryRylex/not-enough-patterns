@@ -10,6 +10,7 @@ import dev.rylex.nep.client.EnergyGauge;
 import dev.rylex.nep.client.MatrixScreen;
 import dev.rylex.nep.client.ReadoutButton;
 import dev.rylex.nep.client.RetainedHighlight;
+import dev.rylex.nep.client.ScreenFormat;
 import dev.rylex.nep.pattern.RetainedInputs;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
 
+    private static final String OUTPUT_FULL_HINT = "gui.nep.fusion_matrix.stall.output_full.hint";
     private static final ResourceLocation TEXTURE = Nep.id("textures/gui/fusion_matrix.png");
 
     private static final int TITLE_ON_PANEL = 0x3A2E1C;
@@ -161,12 +163,12 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
         Component energyLine = making.isEmpty()
                 ? Component.translatable(
                         "gui.nep.fusion_matrix.buffer_line",
-                        format(matrix.storedEnergy()),
-                        format(matrix.energyCapacity()))
+                        ScreenFormat.format(matrix.storedEnergy()),
+                        ScreenFormat.format(matrix.energyCapacity()))
                 : Component.translatable(
                         "gui.nep.fusion_matrix.charge_line",
-                        format(matrix.chargedEnergy()),
-                        format(matrix.chargeCost()));
+                        ScreenFormat.format(matrix.chargedEnergy()),
+                        ScreenFormat.format(matrix.chargeCost()));
         graphics.drawString(font, energyLine, READOUT_X, LINE_THREE_Y, READOUT_DIM, false);
         drawTrailing(
                 graphics,
@@ -206,33 +208,54 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
     }
 
     private static Component faultLine(FusionMatrixBlockEntity.Stall stall, FusionMatrixBlockEntity.Refusal refusal) {
-        String key =
-                switch (stall) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.fusion_matrix.stall.ingredients";
-                    case OUTPUT_FULL -> "gui.nep.fusion_matrix.output_blocked";
-                    case TIER -> "gui.nep.fusion_matrix.stall.tier";
-                    case NO_RECIPE -> "gui.nep.fusion_matrix.stall.no_recipe";
-                };
+        String key = stallKey(stall);
         if (key != null) {
             return Component.translatable(key);
         }
-        String refused =
-                switch (refusal) {
-                    case NONE -> null;
-                    case NOT_A_FUSION_PATTERN -> "gui.nep.fusion_matrix.refused.not_a_fusion_pattern";
-                    case NO_ITEM_OUTPUT -> "gui.nep.fusion_matrix.refused.no_item_output";
-                    case UNKNOWN_RECIPE -> "gui.nep.fusion_matrix.refused.unknown_recipe";
-                    case TIER_TOO_HIGH -> "gui.nep.fusion_matrix.refused.tier_too_high";
-                    case ITEMS_ONLY -> "gui.nep.fusion_matrix.refused.items_only";
-                    case TOO_MANY_INPUTS -> "gui.nep.fusion_matrix.refused.too_many_inputs";
-                    case BUFFER_FULL -> "gui.nep.fusion_matrix.refused.buffer_full";
-                    case MIXED_RECIPES -> "gui.nep.fusion_matrix.refused.mixed_recipes";
-                };
+        String refused = refusalKey(refusal);
         return refused == null ? Component.translatable("gui.nep.fusion_matrix.idle") : Component.translatable(refused);
     }
 
+    @Nullable
+    private static String stallKey(FusionMatrixBlockEntity.Stall stall) {
+        return switch (stall) {
+            case NONE -> null;
+            case INGREDIENTS -> "gui.nep.fusion_matrix.stall.ingredients";
+            case OUTPUT_FULL -> "gui.nep.fusion_matrix.output_blocked";
+            case TIER -> "gui.nep.fusion_matrix.stall.tier";
+            case NO_RECIPE -> "gui.nep.fusion_matrix.stall.no_recipe";
+        };
+    }
+
+    @Nullable
+    private static String stallHintKey(FusionMatrixBlockEntity.Stall stall) {
+        if (stall == FusionMatrixBlockEntity.Stall.OUTPUT_FULL) {
+            return OUTPUT_FULL_HINT;
+        }
+        String key = stallKey(stall);
+        return key == null ? null : key + ".hint";
+    }
+
+    @Nullable
+    private static String refusalKey(FusionMatrixBlockEntity.Refusal refusal) {
+        return switch (refusal) {
+            case NONE -> null;
+            case NOT_A_FUSION_PATTERN -> "gui.nep.fusion_matrix.refused.not_a_fusion_pattern";
+            case NO_ITEM_OUTPUT -> "gui.nep.fusion_matrix.refused.no_item_output";
+            case UNKNOWN_RECIPE -> "gui.nep.fusion_matrix.refused.unknown_recipe";
+            case TIER_TOO_HIGH -> "gui.nep.fusion_matrix.refused.tier_too_high";
+            case ITEMS_ONLY -> "gui.nep.fusion_matrix.refused.items_only";
+            case TOO_MANY_INPUTS -> "gui.nep.fusion_matrix.refused.too_many_inputs";
+            case BUFFER_FULL -> "gui.nep.fusion_matrix.refused.buffer_full";
+            case MIXED_RECIPES -> "gui.nep.fusion_matrix.refused.mixed_recipes";
+        };
+    }
+
     private static List<Component> statusHint(FusionMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return List.of(Component.translatable("gui.nep.fusion_matrix.no_network_channels.hint")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         if (matrix.hasPowerFault()) {
             return List.of(Component.translatable("gui.nep.fusion_matrix.stall.no_me_power.hint")
                     .withStyle(ChatFormatting.GRAY));
@@ -241,19 +264,12 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
             return List.of(Component.translatable("gui.nep.fusion_matrix.stall.no_energy.hint")
                     .withStyle(ChatFormatting.GRAY));
         }
-        String key =
-                switch (matrix.stall()) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.fusion_matrix.stall.ingredients.hint";
-                    case OUTPUT_FULL -> "gui.nep.fusion_matrix.stall.output_full.hint";
-                    case TIER -> "gui.nep.fusion_matrix.stall.tier.hint";
-                    case NO_RECIPE -> "gui.nep.fusion_matrix.stall.no_recipe.hint";
-                };
+        String key = stallHintKey(matrix.stall());
         if (key == null && matrix.refusal() != FusionMatrixBlockEntity.Refusal.NONE) {
             key = refusalHint(matrix.refusal());
         }
         if (key == null && matrix.isOutputBlocked()) {
-            key = "gui.nep.fusion_matrix.stall.output_full.hint";
+            key = OUTPUT_FULL_HINT;
         }
         return key == null ? List.of() : List.of(Component.translatable(key).withStyle(ChatFormatting.GRAY));
     }
@@ -300,6 +316,7 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
                 || matrix.refusal() != FusionMatrixBlockEntity.Refusal.NONE
                 || matrix.isOutputBlocked()
                 || matrix.hasPowerFault()
+                || matrix.hasChannelFault()
                 || matrix.hasEnergyFault()
                 || !matrix.missingInputs().isEmpty();
     }
@@ -309,19 +326,6 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
             return READOUT_WARN;
         }
         return matrix.activeResult().isEmpty() ? READOUT_DIM : READOUT_TEXT;
-    }
-
-    private static String format(long value) {
-        if (value >= 1_000_000_000L) {
-            return String.format("%.1fG", value / 1_000_000_000.0);
-        }
-        if (value >= 1_000_000L) {
-            return String.format("%.1fM", value / 1_000_000.0);
-        }
-        if (value >= 1_000L) {
-            return String.format("%.1fK", value / 1_000.0);
-        }
-        return Long.toString(value);
     }
 
     @Override
@@ -340,8 +344,8 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
             gauge.add(Component.translatable("gui.nep.fusion_matrix.energy"));
             gauge.add(Component.translatable(
                             "gui.nep.fusion_matrix.charge",
-                            format(matrix.storedEnergy()),
-                            format(matrix.energyCapacity()))
+                            ScreenFormat.format(matrix.storedEnergy()),
+                            ScreenFormat.format(matrix.energyCapacity()))
                     .withStyle(ChatFormatting.GRAY));
             if (matrix.isHoldingSwappedEnergy()) {
                 gauge.add(Component.translatable("gui.nep.fusion_matrix.energy_held")
@@ -350,7 +354,7 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
             graphics.renderComponentTooltip(font, gauge, mouseX, mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), 32)) {
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), READOUT_HEIGHT)) {
             return;
         }
         List<Component> lines = new ArrayList<>();
@@ -389,16 +393,16 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
                 .withStyle(ChatFormatting.GRAY));
         lines.add(Component.translatable(
                         "gui.nep.fusion_matrix.upgrade_core.wyvern",
-                        format(FusionMatrixUpgrades.capacityTarget(TechLevel.WYVERN)))
+                        ScreenFormat.format(FusionMatrixUpgrades.capacityTarget(TechLevel.WYVERN)))
                 .withStyle(TechLevel.WYVERN.getTextColour()));
         lines.add(Component.translatable(
                         "gui.nep.fusion_matrix.upgrade_core.draconic",
-                        format(FusionMatrixUpgrades.capacityTarget(TechLevel.DRACONIC)),
+                        ScreenFormat.format(FusionMatrixUpgrades.capacityTarget(TechLevel.DRACONIC)),
                         NepConfig.draconicFusionMatrixDraconicCraftTimeReductionPercent())
                 .withStyle(TechLevel.DRACONIC.getTextColour()));
         lines.add(Component.translatable(
                         "gui.nep.fusion_matrix.upgrade_core.chaotic",
-                        format(FusionMatrixUpgrades.capacityTarget(TechLevel.CHAOTIC)),
+                        ScreenFormat.format(FusionMatrixUpgrades.capacityTarget(TechLevel.CHAOTIC)),
                         NepConfig.draconicFusionMatrixChaoticEnergyCostReductionPercent(),
                         NepConfig.draconicFusionMatrixChaoticMinimumCraftTicks())
                 .withStyle(TechLevel.CHAOTIC.getTextColour()));
@@ -424,7 +428,8 @@ public class FusionMatrixScreen extends MatrixScreen<FusionMatrixMenu> {
         lines.add(Component.translatable("gui.nep.fusion_matrix.upgrade_installed", cores, max)
                 .withStyle(tier.getTextColour()));
         lines.add(Component.translatable(
-                        "gui.nep.fusion_matrix.upgrade_buffer", format(FusionMatrixUpgrades.capacity(tier, cores)))
+                        "gui.nep.fusion_matrix.upgrade_buffer",
+                        ScreenFormat.format(FusionMatrixUpgrades.capacity(tier, cores)))
                 .withStyle(ChatFormatting.GRAY));
         int craftTicks = FusionMatrixUpgrades.craftTicks(tier, cores);
         if (craftTicks != NepConfig.draconicFusionMatrixCraftTicks()) {

@@ -19,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -29,6 +30,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
@@ -133,59 +135,46 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
 
     @Nullable
     private IItemHandler itemHandler(Side side) {
-        if (!(level instanceof ServerLevel serverLevel)) {
-            return null;
-        }
-        return itemCaches
-                .computeIfAbsent(
-                        side,
-                        at -> BlockCapabilityCache.create(
-                                Capabilities.ItemHandler.BLOCK,
-                                serverLevel,
-                                at.pos(),
-                                at.face(),
-                                this::stillLinked,
-                                () -> {}))
-                .getCapability();
+        return cached(itemCaches, Capabilities.ItemHandler.BLOCK, side);
     }
 
     @Nullable
     private IFluidHandler fluidHandler(Side side) {
+        return cached(fluidCaches, Capabilities.FluidHandler.BLOCK, side);
+    }
+
+    @Nullable
+    private <T> T cached(
+            Map<Side, BlockCapabilityCache<T, Direction>> caches, BlockCapability<T, Direction> capability, Side side) {
         if (!(level instanceof ServerLevel serverLevel)) {
             return null;
         }
-        return fluidCaches
-                .computeIfAbsent(
+        return caches.computeIfAbsent(
                         side,
                         at -> BlockCapabilityCache.create(
-                                Capabilities.FluidHandler.BLOCK,
-                                serverLevel,
-                                at.pos(),
-                                at.face(),
-                                this::stillLinked,
-                                () -> {}))
+                                capability, serverLevel, at.pos(), at.face(), this::stillLinked, () -> {}))
                 .getCapability();
     }
 
     public boolean canLink(BlockPos pos) {
+        return canLink(pos, HubRules.load());
+    }
+
+    private boolean canLink(BlockPos pos, HubRules rules) {
         if (level == null || pos.equals(worldPosition)) {
             return false;
         }
         if (level.getBlockEntity(pos) instanceof MachineHubBlockEntity || HubScan.networkBlock(level, pos)) {
             return false;
         }
-        if (HubRules.load().unlinkable(level.getBlockState(pos))) {
+        if (rules.unlinkable(level.getBlockState(pos))) {
             return false;
         }
         return SubLevels.sameSubLevel(level, worldPosition, pos) && withinRange(pos);
     }
 
     public boolean withinRange(BlockPos pos) {
-        int range = NepConfig.machineHubLinkRange();
-        int dx = Math.abs(pos.getX() - worldPosition.getX());
-        int dy = Math.abs(pos.getY() - worldPosition.getY());
-        int dz = Math.abs(pos.getZ() - worldPosition.getZ());
-        return Math.max(dx, Math.max(dy, dz)) <= range;
+        return !HubScan.beyond(worldPosition, pos, NepConfig.machineHubLinkRange());
     }
 
     public int applyPlan(List<HubLink> plan) {
@@ -196,8 +185,9 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
         List<HubLink> accepted = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();
         int limit = NepConfig.machineHubMaximumLinks();
+        HubRules rules = HubRules.load();
         for (HubLink link : plan) {
-            if (accepted.size() >= limit || !seen.add(link.pos()) || !canLink(link.pos())) {
+            if (accepted.size() >= limit || !seen.add(link.pos()) || !canLink(link.pos(), rules)) {
                 continue;
             }
             accepted.add(carryOver(existing.get(link.pos()), link));
@@ -233,8 +223,8 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
         setLinks(List.of());
     }
 
-    public void cycleRole(int index) {
-        editLink(index, link -> link.withRole(link.role().next()));
+    public void setRole(int index, HubRole role) {
+        editLink(index, link -> link.withRole(role));
     }
 
     public void setFace(int index, @Nullable Direction face) {
@@ -339,8 +329,7 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
         super.saveAdditional(tag, registries);
         node.save(tag);
         LINKS_CODEC
-                .encodeStart(
-                        registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), List.copyOf(links))
+                .encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), List.copyOf(links))
                 .resultOrPartial(error -> Nep.LOGGER.warn("Machine Hub links could not be saved: {}", error))
                 .ifPresent(encoded -> tag.put(LINKS_KEY, encoded));
     }
@@ -356,7 +345,7 @@ public class MachineHubBlockEntity extends BlockEntity implements MenuProvider {
             return;
         }
         LINKS_CODEC
-                .parse(registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), tag.get(LINKS_KEY))
+                .parse(registries.createSerializationContext(NbtOps.INSTANCE), tag.get(LINKS_KEY))
                 .resultOrPartial(error -> Nep.LOGGER.warn("Machine Hub links could not be read: {}", error))
                 .ifPresent(links::addAll);
     }

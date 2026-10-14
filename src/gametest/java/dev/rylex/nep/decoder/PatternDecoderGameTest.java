@@ -60,7 +60,7 @@ public final class PatternDecoderGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
     public static void aPoweredDecoderUnlocksOnlyTheModulesItCarries(GameTestHelper helper) {
         PatternDecoderBlockEntity decoder = decoder(helper, true);
-        decoder.moduleSlots().setStackInSlot(DecoderModule.CREATE.ordinal(), module(DecoderModule.CREATE));
+        decoder.moduleSlots().setStackInSlot(DecoderModule.CREATE.slot(), module(DecoderModule.CREATE));
 
         helper.startSequence()
                 .thenIdle(60)
@@ -82,7 +82,7 @@ public final class PatternDecoderGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
     public static void anUnpoweredDecoderUnlocksNothing(GameTestHelper helper) {
         PatternDecoderBlockEntity decoder = decoder(helper, false);
-        decoder.moduleSlots().setStackInSlot(DecoderModule.CREATE.ordinal(), module(DecoderModule.CREATE));
+        decoder.moduleSlots().setStackInSlot(DecoderModule.CREATE.slot(), module(DecoderModule.CREATE));
 
         helper.startSequence()
                 .thenIdle(20)
@@ -98,11 +98,11 @@ public final class PatternDecoderGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
     public static void takingTheModuleOutLocksItsPatternsAgain(GameTestHelper helper) {
         PatternDecoderBlockEntity decoder = decoder(helper, true);
-        decoder.moduleSlots().setStackInSlot(DecoderModule.MALUM.ordinal(), module(DecoderModule.MALUM));
+        decoder.moduleSlots().setStackInSlot(DecoderModule.MALUM.slot(), module(DecoderModule.MALUM));
 
         helper.startSequence()
                 .thenIdle(60)
-                .thenExecute(() -> decoder.moduleSlots().setStackInSlot(DecoderModule.MALUM.ordinal(), ItemStack.EMPTY))
+                .thenExecute(() -> decoder.moduleSlots().setStackInSlot(DecoderModule.MALUM.slot(), ItemStack.EMPTY))
                 .thenExecute(() -> {
                     int unlocked = PatternDecoding.unlocked(node(decoder));
                     helper.assertFalse(
@@ -126,10 +126,10 @@ public final class PatternDecoderGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
     public static void aDecoderRefusesAnythingButAnEncodingModule(GameTestHelper helper) {
         PatternDecoderBlockEntity decoder = decoder(helper, false);
-        int arsSlot = DecoderModule.ARS_NOUVEAU.ordinal();
+        int arsSlot = DecoderModule.ARS_NOUVEAU.slot();
         ItemStack refused = decoder.moduleSlots().insertItem(arsSlot, new ItemStack(Blocks.DIRT), false);
         ItemStack misplaced =
-                decoder.moduleSlots().insertItem(DecoderModule.CREATE.ordinal(), module(DecoderModule.MALUM), false);
+                decoder.moduleSlots().insertItem(DecoderModule.CREATE.slot(), module(DecoderModule.MALUM), false);
         ItemStack accepted = decoder.moduleSlots()
                 .insertItem(arsSlot, module(DecoderModule.ARS_NOUVEAU).copyWithCount(3), false);
         helper.assertTrue(refused.getCount() == 1, "a decoder slot took a block of dirt");

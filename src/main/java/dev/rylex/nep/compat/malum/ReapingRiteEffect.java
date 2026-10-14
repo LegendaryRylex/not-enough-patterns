@@ -19,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
@@ -40,7 +41,7 @@ public class ReapingRiteEffect extends SpiritRiteEntityEffect<Monster> {
 
     @Override
     public int getEffectRange() {
-        return NepConfig.malumReapingreapingRiteKillRange();
+        return NepConfig.malumReapingRiteKillRange();
     }
 
     @Override
@@ -130,7 +131,7 @@ public class ReapingRiteEffect extends SpiritRiteEntityEffect<Monster> {
             return false;
         }
         List<SpiritItemEntity> loose = level.getEntitiesOfClass(
-                SpiritItemEntity.class, new AABB(pos).inflate(getEffectRange()), entity -> entity.isAlive());
+                SpiritItemEntity.class, new AABB(pos).inflate(getEffectRange()), Entity::isAlive);
         boolean gathered = false;
         for (SpiritItemEntity spirit : loose) {
             ItemStack stack = spirit.getItem();

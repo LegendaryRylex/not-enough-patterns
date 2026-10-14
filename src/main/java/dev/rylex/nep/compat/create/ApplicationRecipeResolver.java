@@ -13,6 +13,7 @@ import dev.rylex.nep.pattern.AndesiteCraftingPattern;
 import dev.rylex.nep.util.RecipeCache;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,11 +35,42 @@ final class ApplicationRecipeResolver {
             @Nullable AEItemKey suppliedTool,
             @Nullable Ingredient keptTool,
             boolean wornTool,
-            Map<AEItemKey, Long> expectedItems) {}
+            Map<AEItemKey, Long> expectedItems) {
+        static Plan returningTool(AEItemKey base, @Nullable AEItemKey supplied, Ingredient tool, boolean worn) {
+            Map<AEItemKey, Long> expected = new LinkedHashMap<>();
+            expected.merge(base, 1L, Long::sum);
+            if (supplied != null) {
+                expected.merge(supplied, 1L, Long::sum);
+            }
+            return new Plan(base, null, supplied, tool, worn, Map.copyOf(expected));
+        }
 
-    private record Split(Map<AEItemKey, Long> consumed, Map<AEItemKey, Long> retained) {}
+        static Plan sameItem(AEItemKey key) {
+            return Plan.sameItem(key);
+        }
 
-    private static final RecipeCache<Map<AEItemKey, Optional<Plan>>> CACHE = RecipeCache.of(level -> new HashMap<>());
+        static Plan twoItem(AEItemKey depot, AEItemKey consumedTool) {
+            return new Plan(depot, consumedTool, null, null, false, Map.of(depot, 1L, consumedTool, 1L));
+        }
+    }
+
+    private record Split(Map<AEItemKey, Long> consumed, Map<AEItemKey, Long> retained) {
+        static Split empty() {
+            return new Split(new LinkedHashMap<>(), new LinkedHashMap<>());
+        }
+
+        void add(boolean handedBack, AEItemKey key, long amount) {
+            (handedBack ? retained : consumed).merge(key, amount, Long::sum);
+        }
+
+        @Nullable
+        Split orNull() {
+            return consumed.isEmpty() ? null : this;
+        }
+    }
+
+    private static final RecipeCache<Map<AEItemKey, Optional<Plan>>> CACHE =
+            RecipeCache.of(level -> Collections.synchronizedMap(new HashMap<>()));
 
     static void clearCache() {
         CACHE.clear();
@@ -100,17 +132,16 @@ final class ApplicationRecipeResolver {
 
     @Nullable
     private static Split splitInputs(IPatternDetails pattern) {
-        Map<AEItemKey, Long> consumed = new LinkedHashMap<>();
-        Map<AEItemKey, Long> retained = new LinkedHashMap<>();
+        Split split = Split.empty();
         for (IPatternDetails.IInput input : pattern.getInputs()) {
             GenericStack primary = input.getPossibleInputs()[0];
             if (!(primary.what() instanceof AEItemKey key)) {
                 return null;
             }
             long amount = primary.amount() * input.getMultiplier();
-            (handedBack(input) ? retained : consumed).merge(key, amount, Long::sum);
+            split.add(handedBack(input), key, amount);
         }
-        return consumed.isEmpty() ? null : new Split(consumed, retained);
+        return split.orNull();
     }
 
     @Nullable
@@ -119,8 +150,7 @@ final class ApplicationRecipeResolver {
         if (provided.length != inputs.length) {
             return null;
         }
-        Map<AEItemKey, Long> consumed = new LinkedHashMap<>();
-        Map<AEItemKey, Long> retained = new LinkedHashMap<>();
+        Split split = Split.empty();
         for (int slot = 0; slot < inputs.length; slot++) {
             boolean back = handedBack(inputs[slot]);
             for (Object2LongMap.Entry<AEKey> entry : provided[slot]) {
@@ -131,10 +161,10 @@ final class ApplicationRecipeResolver {
                 if (amount < 0 || !(entry.getKey() instanceof AEItemKey key)) {
                     return null;
                 }
-                (back ? retained : consumed).merge(key, amount, Long::sum);
+                split.add(back, key, amount);
             }
         }
-        return consumed.isEmpty() ? null : new Split(consumed, retained);
+        return split.orNull();
     }
 
     /**
@@ -191,30 +221,46 @@ final class ApplicationRecipeResolver {
         }
 
         if (fate.returnsTool()) {
-            boolean worn = fate == DeployerToolFate.WORN;
-            if (total != 1) {
-                return null;
-            }
-            AEItemKey base = available.keySet().iterator().next();
-            if (!depot.test(base.toStack())) {
-                return null;
-            }
-            if (retained.isEmpty()) {
-                return new Plan(base, null, null, tool, worn, Map.of(base, 1L));
-            }
-            if (retained.size() != 1) {
-                return null;
-            }
-            Map.Entry<AEItemKey, Long> kept = retained.entrySet().iterator().next();
-            if (kept.getValue() != 1L || !tool.test(kept.getKey().toStack())) {
-                return null;
-            }
-            Map<AEItemKey, Long> expected = new LinkedHashMap<>();
-            expected.merge(base, 1L, Long::sum);
-            expected.merge(kept.getKey(), 1L, Long::sum);
-            return new Plan(base, null, kept.getKey(), tool, worn, Map.copyOf(expected));
+            return matchReturningTool(available, retained, total, depot, tool, fate == DeployerToolFate.WORN);
         }
+        return matchConsumedPair(available, retained, total, depot, tool);
+    }
 
+    @Nullable
+    private static Plan matchReturningTool(
+            Map<AEItemKey, Long> available,
+            Map<AEItemKey, Long> retained,
+            long total,
+            Ingredient depot,
+            Ingredient tool,
+            boolean worn) {
+        if (total != 1) {
+            return null;
+        }
+        AEItemKey base = available.keySet().iterator().next();
+        if (!depot.test(base.toStack())) {
+            return null;
+        }
+        if (retained.isEmpty()) {
+            return Plan.returningTool(base, null, tool, worn);
+        }
+        if (retained.size() != 1) {
+            return null;
+        }
+        Map.Entry<AEItemKey, Long> kept = retained.entrySet().iterator().next();
+        if (kept.getValue() != 1L || !tool.test(kept.getKey().toStack())) {
+            return null;
+        }
+        return Plan.returningTool(base, kept.getKey(), tool, worn);
+    }
+
+    @Nullable
+    private static Plan matchConsumedPair(
+            Map<AEItemKey, Long> available,
+            Map<AEItemKey, Long> retained,
+            long total,
+            Ingredient depot,
+            Ingredient tool) {
         if (total != 2 || !retained.isEmpty()) {
             return null;
         }
@@ -233,10 +279,10 @@ final class ApplicationRecipeResolver {
             return null;
         }
         if (depot.test(a.toStack()) && tool.test(b.toStack())) {
-            return new Plan(a, b, null, null, false, Map.of(a, 1L, b, 1L));
+            return Plan.twoItem(a, b);
         }
         if (depot.test(b.toStack()) && tool.test(a.toStack())) {
-            return new Plan(b, a, null, null, false, Map.of(a, 1L, b, 1L));
+            return Plan.twoItem(b, a);
         }
         return null;
     }

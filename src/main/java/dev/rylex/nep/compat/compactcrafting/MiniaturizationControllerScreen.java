@@ -1,35 +1,18 @@
 package dev.rylex.nep.compat.compactcrafting;
 
-import appeng.api.stacks.GenericStack;
 import dev.compactmods.crafting.api.field.MiniaturizationFieldSize;
 import dev.rylex.nep.Nep;
-import dev.rylex.nep.NepIcons;
-import dev.rylex.nep.client.MatrixScreen;
-import dev.rylex.nep.client.ReadoutButton;
-import dev.rylex.nep.util.MissingStacks;
-import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
-public class MiniaturizationControllerScreen extends MatrixScreen<MiniaturizationControllerMenu> {
+public class MiniaturizationControllerScreen extends MiniaturizationScreen<MiniaturizationControllerMenu> {
 
     private static final ResourceLocation TEXTURE = Nep.id("textures/gui/miniaturization_matrix.png");
-
-    private static final int TITLE_ON_PANEL = 0x3A2E1C;
-    private static final int READOUT_TEXT = 0xF2E8D0;
-    private static final int READOUT_DIM = 0xC8A882;
-
-    private static final int BAR_TRACK = 0x0D333D;
-    private static final int CRAFT_FILL = 0x208BFF;
-
-    @Nullable
-    private ReadoutButton clearPending;
 
     public MiniaturizationControllerScreen(MiniaturizationControllerMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
@@ -45,99 +28,48 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
     @Override
     protected void init() {
         super.init();
-        resetButtons();
-        addHelpButton("nep/compactcrafting/miniaturization-controller.md");
-        clearPending = addRightButton(
-                2,
-                NepIcons.REMOVE,
-                "gui.nep.clear_pending",
-                "gui.nep.clear_pending.hint",
-                () -> sendButton(MiniaturizationControllerMenu.BUTTON_CLEAR_PENDING));
-        addRightButton(
-                3,
-                NepIcons.DOWN,
-                "gui.nep.clear_buffer",
-                "gui.nep.clear_buffer.hint",
-                () -> sendButton(MiniaturizationControllerMenu.BUTTON_CLEAR_BUFFER));
+        addClearButtons(
+                "nep/compactcrafting/miniaturization-controller.md",
+                MiniaturizationControllerMenu.BUTTON_CLEAR_PENDING,
+                MiniaturizationControllerMenu.BUTTON_CLEAR_BUFFER);
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
         MiniaturizationControllerBlockEntity controller = menu.controller();
-        if (clearPending != null) {
-            clearPending.active = controller != null
-                    && (controller.hasPending()
-                            || controller.refusal() != MiniaturizationControllerBlockEntity.Refusal.NONE);
-        }
-        tickButtons();
+        tickClearButtons(controller != null
+                && (controller.hasPending()
+                        || controller.refusal() != MiniaturizationControllerBlockEntity.Refusal.NONE));
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(
-                font, Component.translatable("gui.nep.miniaturization_controller.title"), 8, 7, TITLE_ON_PANEL, false);
-        graphics.drawString(
-                font,
-                Component.translatable("gui.nep.miniaturization_controller.input"),
+        drawTitles(
+                graphics,
+                "gui.nep.miniaturization_controller",
                 MiniaturizationControllerMenu.INPUT_X,
-                MiniaturizationControllerMenu.INPUT_Y - 10,
-                TITLE_ON_PANEL,
-                false);
-        graphics.drawString(
-                font,
-                Component.translatable("gui.nep.miniaturization_controller.output"),
+                MiniaturizationControllerMenu.INPUT_Y,
                 MiniaturizationControllerMenu.OUTPUT_X,
-                MiniaturizationControllerMenu.OUTPUT_Y - 10,
-                TITLE_ON_PANEL,
-                false);
-        graphics.drawString(
-                font,
-                Component.translatable("container.inventory"),
+                MiniaturizationControllerMenu.OUTPUT_Y,
                 MiniaturizationControllerMenu.INV_X,
-                MiniaturizationControllerMenu.INV_Y - 10,
-                TITLE_ON_PANEL,
-                false);
+                MiniaturizationControllerMenu.INV_Y);
 
         MiniaturizationControllerBlockEntity controller = menu.controller();
         if (controller == null) {
             return;
         }
 
-        Component status = statusLine(controller);
-        graphics.drawString(font, status, READOUT_X, LINE_ONE_Y, statusColour(controller), false);
-        drawTrailing(graphics, fieldLine(controller), LINE_ONE_Y, READOUT_X + font.width(status), READOUT_DIM);
-
-        ItemStack making = controller.activeResult();
-        Component craftingLabel = Component.translatable("gui.nep.miniaturization_controller.crafting");
-        graphics.drawString(font, craftingLabel, READOUT_X, LINE_TWO_Y, READOUT_DIM, false);
-        int craftingX = READOUT_X + font.width(craftingLabel) + 4;
-        long queued = controller.pendingJobs();
-        Component queuedText = queued > 0
-                ? Component.translatable("gui.nep.miniaturization_controller.queued", queued)
-                : Component.empty();
-        int nameLimit = readoutRight() - craftingX - (queued > 0 ? font.width(queuedText) + 6 : 0);
-        Component craftingName = making.isEmpty()
-                ? Component.translatable("gui.nep.miniaturization_controller.crafting.idle")
-                : making.getHoverName();
-        String craftingText = trim(craftingName, nameLimit);
-        graphics.drawString(
-                font, craftingText, craftingX, LINE_TWO_Y, making.isEmpty() ? READOUT_DIM : READOUT_TEXT, false);
-        if (queued > 0) {
-            drawTrailing(graphics, queuedText, LINE_TWO_Y, craftingX + font.width(craftingText), READOUT_DIM);
-        }
-
-        if (controller.craftTicks() > 0) {
-            graphics.drawString(
-                    font,
-                    Component.translatable("gui.nep.miniaturization_controller.craft_time", controller.craftTicks()),
-                    READOUT_X,
-                    LINE_THREE_Y,
-                    READOUT_DIM,
-                    false);
-        }
-
-        drawProgressBar(graphics, controller.craftProgress(), BAR_TRACK, CRAFT_FILL);
+        drawReadout(
+                graphics,
+                "gui.nep.miniaturization_controller",
+                statusLine(controller),
+                statusColour(controller),
+                fieldLine(controller),
+                controller.activeResult(),
+                controller.pendingJobs(),
+                controller.craftTicks(),
+                controller.craftProgress());
     }
 
     private static Component fieldLine(MiniaturizationControllerBlockEntity controller) {
@@ -224,6 +156,10 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
     }
 
     private static List<Component> statusHint(MiniaturizationControllerBlockEntity controller) {
+        if (controller.hasChannelFault()) {
+            return List.of(Component.translatable("gui.nep.miniaturization_controller.no_network_channels.hint")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         if (controller.hasPowerFault()) {
             return List.of(Component.translatable("gui.nep.miniaturization_controller.stall.no_me_power.hint")
                     .withStyle(ChatFormatting.GRAY));
@@ -245,6 +181,7 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
                 || controller.refusal() != MiniaturizationControllerBlockEntity.Refusal.NONE
                 || controller.isOutputBlocked()
                 || controller.hasPowerFault()
+                || controller.hasChannelFault()
                 || !controller.missingInputs().isEmpty();
     }
 
@@ -258,30 +195,18 @@ public class MiniaturizationControllerScreen extends MatrixScreen<Miniaturizatio
     @Override
     protected void renderReadoutTooltips(GuiGraphics graphics, int mouseX, int mouseY) {
         MiniaturizationControllerBlockEntity controller = menu.controller();
-        if (controller == null || !within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), 32)) {
+        if (controller == null || !overReadout(mouseX, mouseY)) {
             return;
         }
-        List<Component> lines = new ArrayList<>();
-        lines.add(statusLine(controller));
-        lines.addAll(statusHint(controller));
-        ItemStack making = controller.activeResult();
-        if (!making.isEmpty()) {
-            lines.add(
-                    Component.translatable("gui.nep.miniaturization_controller.crafting_tooltip", making.getHoverName())
-                            .withStyle(ChatFormatting.GRAY));
-        }
-        long queued = controller.pendingJobs();
-        if (queued > 0) {
-            lines.add(Component.translatable("gui.nep.miniaturization_controller.queued_tooltip", queued)
-                    .withStyle(ChatFormatting.GRAY));
-        }
-        List<GenericStack> missing = controller.missingInputs();
-        if (!missing.isEmpty()) {
-            lines.add(Component.translatable("gui.nep.miniaturization_controller.missing"));
-            for (GenericStack stack : missing) {
-                lines.add(MissingStacks.describe(stack).withStyle(ChatFormatting.GRAY));
-            }
-        }
-        graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
+        drawReadoutTooltip(
+                graphics,
+                mouseX,
+                mouseY,
+                "gui.nep.miniaturization_controller",
+                statusLine(controller),
+                statusHint(controller),
+                controller.activeResult(),
+                controller.pendingJobs(),
+                controller.missingInputs());
     }
 }

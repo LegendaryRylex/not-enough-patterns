@@ -37,30 +37,26 @@ final class DraconicRecipeIngredients {
             return null;
         }
 
+        List<Demand> demands = demandOf(recipe);
+        if (demands == null) {
+            return null;
+        }
         List<List<GenericStack>> inputs = new ArrayList<>();
         Set<Integer> retainedSlots = new LinkedHashSet<>();
 
-        List<AEItemKey> catalyst = itemOptions(recipe.getCatalyst(), level);
-        if (catalyst.isEmpty()) {
-            return null;
-        }
-        inputs.add(IngredientMatching.options(catalyst, requiredCount(recipe.getCatalyst())));
-
-        for (IFusionRecipe.IFusionIngredient ingredient : recipe.fusionIngredients()) {
-            if (!ingredient.consume() && !includeRetained) {
+        for (int index = 0; index < demands.size(); index++) {
+            Demand demand = demands.get(index);
+            if (!demand.consume() && !includeRetained) {
                 continue;
             }
-            if (requiredCount(ingredient.get()) != 1) {
-                return null;
-            }
-            List<AEItemKey> options = itemOptions(ingredient.get(), level);
+            List<AEItemKey> options = itemOptions(demand.ingredient(), level);
             if (options.isEmpty()) {
                 return null;
             }
-            if (!ingredient.consume()) {
+            if (!demand.consume()) {
                 retainedSlots.add(inputs.size());
             }
-            inputs.add(IngredientMatching.options(options, 1));
+            inputs.add(IngredientMatching.options(options, demand.count()));
         }
 
         return new EncodedIngredients(List.copyOf(inputs), List.of(result), retainedSlots);

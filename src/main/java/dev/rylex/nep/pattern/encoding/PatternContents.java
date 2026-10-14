@@ -52,14 +52,10 @@ public final class PatternContents {
     }
 
     public static List<GenericStack> condense(List<GenericStack> stacks) {
-        Map<AEKey, Long> amounts = new LinkedHashMap<>();
+        Map<Bucket, Long> amounts = new LinkedHashMap<>();
         for (GenericStack stack : stacks) {
-            amounts.merge(stack.what(), stack.amount(), Long::sum);
+            amounts.merge(new Bucket(stack.what(), false), stack.amount(), Long::sum);
         }
-        List<GenericStack> condensed = new ArrayList<>(amounts.size());
-        for (Map.Entry<AEKey, Long> entry : amounts.entrySet()) {
-            condensed.add(new GenericStack(entry.getKey(), entry.getValue()));
-        }
-        return List.copyOf(condensed);
+        return stacksOf(amounts);
     }
 }

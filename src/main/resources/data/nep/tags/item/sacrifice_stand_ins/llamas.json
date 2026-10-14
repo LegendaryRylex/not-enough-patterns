@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "occultism:soul_gem",
+      "required": false
+    },
+    {
+      "id": "occultism:fragile_soul_gem",
+      "required": false
+    },
+    "minecraft:llama_spawn_egg",
+    "minecraft:trader_llama_spawn_egg"
+  ]
+}

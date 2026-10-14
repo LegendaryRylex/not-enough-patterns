@@ -72,19 +72,22 @@ final class CatalystShelf {
         return held;
     }
 
-    void shelve(ResourceLocation recipe, List<ItemStack> set) {
+    List<ItemStack> shelve(ResourceLocation recipe, List<ItemStack> set) {
         int next = 0;
+        List<ItemStack> unshelved = new ArrayList<>();
         for (ItemStack stack : set) {
             while (next < SLOTS
                     && (owners[next] != null || !items.getStackInSlot(next).isEmpty())) {
                 next++;
             }
             if (next >= SLOTS) {
-                return;
+                unshelved.add(stack);
+                continue;
             }
             owners[next] = recipe;
             items.setStackInSlot(next, stack.copy());
         }
+        return unshelved;
     }
 
     List<ItemStack> release(ResourceLocation recipe) {
@@ -102,12 +105,10 @@ final class CatalystShelf {
         return released;
     }
 
-    void restore(ResourceLocation recipe, List<ItemStack> leftovers) {
+    List<ItemStack> restore(ResourceLocation recipe, List<ItemStack> leftovers) {
         List<ItemStack> kept =
                 leftovers.stream().filter(stack -> !stack.isEmpty()).toList();
-        if (!kept.isEmpty()) {
-            shelve(recipe, kept);
-        }
+        return kept.isEmpty() ? List.of() : shelve(recipe, kept);
     }
 
     List<ItemStack> clear() {

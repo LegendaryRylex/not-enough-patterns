@@ -27,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -62,10 +63,6 @@ public final class ImportCardChainedCraftGameTest {
     private static final int SPARES = 1;
 
     private ImportCardChainedCraftGameTest() {}
-
-    private static IActionSource source() {
-        return IActionSource.empty();
-    }
 
     private static PatternProviderBlockEntity provider(GameTestHelper helper) {
         PatternProviderBlockEntity be = helper.getBlockEntity(PROVIDER);
@@ -107,7 +104,7 @@ public final class ImportCardChainedCraftGameTest {
         return grid(helper)
                 .getStorageService()
                 .getInventory()
-                .extract(AEItemKey.of(item), Long.MAX_VALUE, Actionable.SIMULATE, source());
+                .extract(AEItemKey.of(item), Long.MAX_VALUE, Actionable.SIMULATE, IActionSource.empty());
     }
 
     private static void build(GameTestHelper helper) {
@@ -188,11 +185,11 @@ public final class ImportCardChainedCraftGameTest {
     private static void stock(GameTestHelper helper) {
         var inventory = grid(helper).getStorageService().getInventory();
         helper.assertValueEqual(
-                inventory.insert(AEItemKey.of(BASE), 1, Actionable.MODULATE, source()),
+                inventory.insert(AEItemKey.of(BASE), 1, Actionable.MODULATE, IActionSource.empty()),
                 1L,
                 "the base ingredient the network accepted");
         helper.assertValueEqual(
-                inventory.insert(AEItemKey.of(SECONDARY), 1, Actionable.MODULATE, source()),
+                inventory.insert(AEItemKey.of(SECONDARY), 1, Actionable.MODULATE, IActionSource.empty()),
                 1L,
                 "the secondary ingredient the network accepted");
     }
@@ -204,7 +201,7 @@ public final class ImportCardChainedCraftGameTest {
         ICraftingSimulationRequester simulation = new ICraftingSimulationRequester() {
             @Override
             public IActionSource getActionSource() {
-                return source();
+                return IActionSource.empty();
             }
 
             @Override
@@ -237,7 +234,7 @@ public final class ImportCardChainedCraftGameTest {
                 !computed.simulation(),
                 "the plan came back as a simulation, so the network was missing ingredients it should have had");
         ICraftingSubmitResult result =
-                grid(helper).getCraftingService().submitJob(computed, null, null, false, source());
+                grid(helper).getCraftingService().submitJob(computed, null, null, false, IActionSource.empty());
         helper.assertTrue(result.successful(), "the crafting job was refused: " + result.errorCode());
     }
 
@@ -253,10 +250,9 @@ public final class ImportCardChainedCraftGameTest {
                 "the machine could not hold the intermediate it just crafted");
     }
 
-    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 600)
-    public static void anIntermediateCraftedAtAProviderStaysPutWhenItIsPushedBackAsAnInput(GameTestHelper helper) {
+    private static GameTestSequence startCraftedChain(GameTestHelper helper) {
         AtomicReference<Future<ICraftingPlan>> pending = new AtomicReference<>();
-        helper.startSequence()
+        return helper.startSequence()
                 .thenExecute(() -> build(helper))
                 .thenIdle(60)
                 .thenExecute(() -> {
@@ -269,7 +265,12 @@ public final class ImportCardChainedCraftGameTest {
                 .thenExecute(() -> pending.set(plan(helper)))
                 .thenIdle(60)
                 .thenExecute(() -> submit(helper, pending.get()))
-                .thenIdle(40)
+                .thenIdle(40);
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 600)
+    public static void anIntermediateCraftedAtAProviderStaysPutWhenItIsPushedBackAsAnInput(GameTestHelper helper) {
+        startCraftedChain(helper)
                 .thenExecute(() -> completeFirstStep(helper))
                 .thenIdle(80)
                 .thenExecute(() -> {
@@ -292,21 +293,7 @@ public final class ImportCardChainedCraftGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 600)
     public static void aResultTheCpuIsStillHoldingIsCollectedOnlyOnce(GameTestHelper helper) {
-        AtomicReference<Future<ICraftingPlan>> pending = new AtomicReference<>();
-        helper.startSequence()
-                .thenExecute(() -> build(helper))
-                .thenIdle(60)
-                .thenExecute(() -> {
-                    outfit(helper);
-                    encodePatterns(helper);
-                })
-                .thenIdle(60)
-                .thenExecute(() -> stock(helper))
-                .thenIdle(40)
-                .thenExecute(() -> pending.set(plan(helper)))
-                .thenIdle(60)
-                .thenExecute(() -> submit(helper, pending.get()))
-                .thenIdle(40)
+        startCraftedChain(helper)
                 .thenExecute(() -> {
                     helper.assertValueEqual(
                             countIn(machine(helper), BASE),

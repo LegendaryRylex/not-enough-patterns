@@ -1,12 +1,13 @@
 package dev.rylex.nep.compat.malum;
 
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.malum.MalumFixtures.outputHolds;
+import static dev.rylex.nep.compat.malum.MalumFixtures.recipeWithExtras;
+import static dev.rylex.nep.compat.malum.MalumFixtures.spiritFocusingPattern;
+
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
-import appeng.core.definitions.AEBlocks;
 import com.sammy.malum.common.recipe.SpiritFocusingRecipe;
 import com.sammy.malum.common.recipe.SpiritInfusionRecipe;
 import com.sammy.malum.core.systems.recipe.SpiritIngredient;
@@ -16,12 +17,8 @@ import com.sammy.malum.registry.common.item.MalumItems;
 import com.sammy.malum.registry.common.magic.MalumSpiritTypes;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
-import dev.rylex.nep.pattern.SpiritFocusingPattern;
-import dev.rylex.nep.pattern.SpiritInfusionPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -49,68 +46,11 @@ public final class FocusedSpiritMatrixGameTest {
     private FocusedSpiritMatrixGameTest() {}
 
     private static FocusedSpiritMatrixBlockEntity placeMatrix(GameTestHelper helper) {
-        SpiritInfusionResolver.clearCache();
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-        helper.setBlock(MATRIX, NepMalumContent.MATRIX.get().defaultBlockState());
-        FocusedSpiritMatrixBlockEntity matrix =
-                helper.getBlockEntity(MATRIX) instanceof FocusedSpiritMatrixBlockEntity be ? be : null;
-        helper.assertTrue(matrix != null, "the Focused Spirit Matrix has no block entity");
-        return matrix;
-    }
-
-    private static RecipeHolder<SpiritInfusionRecipe> recipeWithExtras(GameTestHelper helper, int extras) {
-        RecipeHolder<SpiritInfusionRecipe> best = null;
-        for (RecipeHolder<SpiritInfusionRecipe> holder : SpiritInfusionResolver.candidates(helper.getLevel())) {
-            SpiritInfusionRecipe recipe = holder.value();
-            if (!holder.id().getNamespace().equals("malum")
-                    || recipe.carryOverComponentData
-                    || recipe.extraInputs.size() != extras
-                    || MalumRecipeIngredients.spiritInfusion(recipe) == null) {
-                continue;
-            }
-            if (best == null || holder.id().compareTo(best.id()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no spirit infusion recipe with " + extras + " extra ingredient(s) was loaded");
-        return best;
+        return MalumFixtures.placeMatrix(helper, ME_CONTROLLER, ENERGY_CELL, MATRIX);
     }
 
     private static IPatternDetails patternFor(GameTestHelper helper, RecipeHolder<SpiritInfusionRecipe> holder) {
-        EncodedIngredients expected = MalumRecipeIngredients.spiritInfusion(holder.value());
-        helper.assertTrue(expected != null, "the recipe produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded = SpiritInfusionPattern.encode(
-                holder.id(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the spirit infusion pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
-    }
-
-    private static boolean outputHolds(FocusedSpiritMatrixBlockEntity matrix, ItemStack expected, int count) {
-        int found = 0;
-        for (int slot = 0; slot < matrix.getOutputBuffer().getSlots(); slot++) {
-            ItemStack stack = matrix.getOutputBuffer().getStackInSlot(slot);
-            if (ItemStack.isSameItem(stack, expected)) {
-                found += stack.getCount();
-            }
-        }
-        return found >= count;
+        return MalumFixtures.spiritInfusionPattern(helper, holder);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
@@ -328,34 +268,13 @@ public final class FocusedSpiritMatrixGameTest {
     }
 
     private static RecipeHolder<SpiritFocusingRecipe> quickestFocusingRecipe(GameTestHelper helper) {
-        RecipeHolder<SpiritFocusingRecipe> best = null;
-        for (RecipeHolder<SpiritFocusingRecipe> holder : SpiritFocusingResolver.candidates(helper.getLevel())) {
-            if (!holder.id().getNamespace().equals("malum")
-                    || MalumRecipeIngredients.spiritFocusing(holder.value()) == null) {
-                continue;
-            }
-            if (best == null || holder.value().time < best.value().time) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no spirit focusing recipe was loaded");
-        return best;
-    }
-
-    private static IPatternDetails focusingPatternFor(
-            GameTestHelper helper, RecipeHolder<SpiritFocusingRecipe> holder) {
-        EncodedIngredients expected = MalumRecipeIngredients.spiritFocusing(holder.value());
-        helper.assertTrue(expected != null, "the focusing recipe produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded = SpiritFocusingPattern.encode(
-                holder.id(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the spirit focusing pattern did not decode");
-        return details;
+        return MalumFixtures.pickBest(
+                helper,
+                SpiritFocusingResolver.candidates(helper.getLevel()),
+                holder -> holder.id().getNamespace().equals("malum")
+                        && MalumRecipeIngredients.spiritFocusing(holder.value()) != null,
+                Comparator.comparingInt(holder -> holder.value().time),
+                "no spirit focusing recipe was loaded");
     }
 
     private static void slotImpetus(GameTestHelper helper, FocusedSpiritMatrixBlockEntity matrix) {
@@ -383,7 +302,7 @@ public final class FocusedSpiritMatrixGameTest {
                 "the catalyzer slot would not take a full stack of Matrix Catalyzers");
 
         RecipeHolder<SpiritFocusingRecipe> holder = quickestFocusingRecipe(helper);
-        IPatternDetails details = focusingPatternFor(helper, holder);
+        IPatternDetails details = spiritFocusingPattern(helper, holder);
         helper.assertTrue(
                 matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP),
                 "the Matrix refused a spirit focusing pattern");
@@ -402,7 +321,7 @@ public final class FocusedSpiritMatrixGameTest {
         FocusedSpiritMatrixBlockEntity matrix = placeMatrix(helper);
 
         RecipeHolder<SpiritFocusingRecipe> holder = quickestFocusingRecipe(helper);
-        IPatternDetails details = focusingPatternFor(helper, holder);
+        IPatternDetails details = spiritFocusingPattern(helper, holder);
         helper.assertTrue(
                 !matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP),
                 "a Matrix with an empty impetus slot accepted a focusing pattern");
@@ -463,7 +382,7 @@ public final class FocusedSpiritMatrixGameTest {
         RecipeHolder<SpiritFocusingRecipe> holder = quickestFocusingRecipe(helper);
         int cost = holder.value().durabilityCost;
         helper.assertTrue(cost > 0, "the focusing recipe under test charges no durability, so it proves nothing");
-        IPatternDetails details = focusingPatternFor(helper, holder);
+        IPatternDetails details = spiritFocusingPattern(helper, holder);
         helper.assertTrue(
                 matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP),
                 "the Matrix refused a spirit focusing pattern");
@@ -490,7 +409,7 @@ public final class FocusedSpiritMatrixGameTest {
                 "the impetus slot would not take an almost spent Matrix Impetus");
 
         RecipeHolder<SpiritFocusingRecipe> holder = quickestFocusingRecipe(helper);
-        IPatternDetails details = focusingPatternFor(helper, holder);
+        IPatternDetails details = spiritFocusingPattern(helper, holder);
         helper.assertTrue(
                 matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP),
                 "the Matrix refused a craft its impetus still had the durability to start");
@@ -522,7 +441,7 @@ public final class FocusedSpiritMatrixGameTest {
                 "the impetus slot would not take a spent Matrix Impetus");
 
         RecipeHolder<SpiritFocusingRecipe> holder = quickestFocusingRecipe(helper);
-        IPatternDetails details = focusingPatternFor(helper, holder);
+        IPatternDetails details = spiritFocusingPattern(helper, holder);
         helper.assertTrue(
                 !matrix.pushMatrixPattern(details, inputsOf(details), Direction.UP),
                 "the Matrix took focusing work on an impetus with no durability left");
@@ -531,11 +450,7 @@ public final class FocusedSpiritMatrixGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
     public static void anUnpoweredMatrixKeepsTheIngredientsItWasHanded(GameTestHelper helper) {
-        SpiritInfusionResolver.clearCache();
-        helper.setBlock(MATRIX, NepMalumContent.MATRIX.get().defaultBlockState());
-        FocusedSpiritMatrixBlockEntity matrix =
-                helper.getBlockEntity(MATRIX) instanceof FocusedSpiritMatrixBlockEntity be ? be : null;
-        helper.assertTrue(matrix != null, "the Focused Spirit Matrix has no block entity");
+        FocusedSpiritMatrixBlockEntity matrix = MalumFixtures.placeUnpoweredMatrix(helper, MATRIX);
 
         RecipeHolder<SpiritInfusionRecipe> holder = recipeWithExtras(helper, 0);
         IPatternDetails details = patternFor(helper, holder);

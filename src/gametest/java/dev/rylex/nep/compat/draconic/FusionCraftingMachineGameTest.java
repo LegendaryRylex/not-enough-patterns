@@ -1,21 +1,24 @@
 package dev.rylex.nep.compat.draconic;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.draconic.DraconicFixtures.clearCaches;
+import static dev.rylex.nep.compat.draconic.DraconicFixtures.keptIngredientRecipe;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import com.brandon3055.draconicevolution.api.DraconicAPI;
 import com.brandon3055.draconicevolution.api.crafting.IFusionInjector;
 import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import com.brandon3055.draconicevolution.api.crafting.IFusionStateMachine;
-import com.brandon3055.draconicevolution.blocks.machines.CraftingInjector;
 import com.brandon3055.draconicevolution.blocks.tileentity.TileFusionCraftingCore;
 import com.brandon3055.draconicevolution.init.DEContent;
 import com.brandon3055.draconicevolution.init.ItemData;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
+import dev.rylex.nep.compat.draconic.DraconicFixtures.InjectorSite;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import java.util.ArrayList;
@@ -50,15 +53,8 @@ public final class FusionCraftingMachineGameTest {
 
     private static final BlockPos CORE = new BlockPos(4, 2, 4);
 
-    private record InjectorSite(BlockPos pos, Direction facing) {}
-
-    private static final List<InjectorSite> SITES = List.of(
-            new InjectorSite(new BlockPos(1, 2, 4), Direction.EAST),
-            new InjectorSite(new BlockPos(7, 2, 4), Direction.WEST),
-            new InjectorSite(new BlockPos(4, 2, 1), Direction.SOUTH),
-            new InjectorSite(new BlockPos(4, 2, 7), Direction.NORTH),
-            new InjectorSite(new BlockPos(1, 3, 4), Direction.EAST),
-            new InjectorSite(new BlockPos(1, 1, 4), Direction.EAST));
+    private static final Item KEPT_INGREDIENT = Items.DIAMOND;
+    private static final List<InjectorSite> SITES = DraconicFixtures.SITES.subList(0, 6);
 
     private FusionCraftingMachineGameTest() {}
 
@@ -68,17 +64,12 @@ public final class FusionCraftingMachineGameTest {
     }
 
     private static void placeInjectors(GameTestHelper helper, Block injector, int count) {
-        for (int i = 0; i < count; i++) {
-            InjectorSite site = SITES.get(i);
-            helper.setBlock(site.pos(), injector.defaultBlockState().setValue(CraftingInjector.FACING, site.facing()));
-        }
+        DraconicFixtures.placeInjectors(helper, injector, count);
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(CORE), null);
-        helper.assertTrue(machine != null, "the fusion crafting core exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(
+                helper, CORE, "the fusion crafting core exposed no crafting machine capability");
     }
 
     @SuppressWarnings("unchecked")
@@ -118,20 +109,60 @@ public final class FusionCraftingMachineGameTest {
         return details;
     }
 
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
+    private static TileFusionCraftingCore placeKeptIngredientRig(GameTestHelper helper, int injectors) {
+        TileFusionCraftingCore core = placeCore(helper);
+        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), injectors);
+        helper.setBlock(CORE.above(), Blocks.BARREL.defaultBlockState());
+        return core;
+    }
+
+    private static TileFusionCraftingCore startKeptIngredientCraft(GameTestHelper helper) {
+        clearCaches();
+
+        TileFusionCraftingCore core = placeKeptIngredientRig(helper, 2);
+        ICraftingMachine machine = machine(helper);
+
+        RecipeHolder<IFusionRecipe> holder = keptIngredientRecipe(helper);
+
+        IPatternDetails details = patternFor(helper, holder);
+        helper.assertTrue(
+                machine.pushPattern(details, inputsOf(details), Direction.UP),
+                "a pattern supplying its own kept ingredient was rejected by empty injectors");
+        helper.assertTrue(core.isCrafting(), "the core did not start the kept-ingredient craft");
+        return core;
+    }
+
+    private static int countReturned(GameTestHelper helper) {
+        return countReturned(helper, KEPT_INGREDIENT);
+    }
+
+    private static int countReturned(GameTestHelper helper, Item item) {
+        IItemHandler provider = helper.getLevel()
+                .getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(CORE.above()), Direction.DOWN);
+        helper.assertTrue(provider != null, "the return inventory exposed no item handler");
+        int returned = 0;
+        for (int slot = 0; slot < provider.getSlots(); slot++) {
+            ItemStack held = provider.getStackInSlot(slot);
+            if (held.is(item)) {
+                returned += held.getCount();
+            }
         }
-        return inputs;
+        return returned;
+    }
+
+    private static int countInInjectors(TileFusionCraftingCore core, Item item) {
+        int held = 0;
+        for (IFusionInjector injector : core.getInjectors()) {
+            if (injector.getInjectorStack().is(item)) {
+                held += injector.getInjectorStack().getCount();
+            }
+        }
+        return held;
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aFusionPatternLoadsEveryInjectorAndStartsTheCraft(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
         TileFusionCraftingCore core = placeCore(helper);
         placeInjectors(helper, DEContent.WYVERN_CRAFTING_INJECTOR.get(), SITES.size());
@@ -159,8 +190,7 @@ public final class FusionCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void injectorsBelowTheRecipeTierAreRefused(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
         TileFusionCraftingCore core = placeCore(helper);
         placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), SITES.size());
@@ -179,8 +209,7 @@ public final class FusionCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void anIncompleteInjectorArrayIsRefusedWithoutStrandingItems(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
         TileFusionCraftingCore core = placeCore(helper);
         placeInjectors(helper, DEContent.WYVERN_CRAFTING_INJECTOR.get(), SITES.size() - 1);
@@ -203,7 +232,7 @@ public final class FusionCraftingMachineGameTest {
     public static void aSuppliedKeptIngredientIsLoadedIntoAnInjector(GameTestHelper helper) {
         TileFusionCraftingCore core = startKeptIngredientCraft(helper);
         helper.assertTrue(
-                countInInjectors(core) == 1,
+                countInInjectors(core, KEPT_INGREDIENT) == 1,
                 "the network supplied the kept ingredient but it never reached an injector, so the craft cannot run");
         helper.assertTrue(countReturned(helper) == 0, "the kept ingredient was handed back before the craft finished");
         helper.succeed();
@@ -217,7 +246,8 @@ public final class FusionCraftingMachineGameTest {
         helper.assertTrue(
                 countReturned(helper) == 1,
                 "the core kept the supplied ingredient after the craft; the crafting CPU would stall waiting for it");
-        helper.assertTrue(countInInjectors(core) == 0, "the kept ingredient was left behind in its injector");
+        helper.assertTrue(
+                countInInjectors(core, KEPT_INGREDIENT) == 0, "the kept ingredient was left behind in its injector");
         helper.succeed();
     }
 
@@ -246,8 +276,7 @@ public final class FusionCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aHandCraftKeepsTheIdentityDeStampedOnTheResult(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
         TileFusionCraftingCore core = placeCore(helper);
 
         ItemStack result = new ItemStack(DEContent.PICKAXE_WYVERN.get());
@@ -298,21 +327,16 @@ public final class FusionCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aStrandedIngredientIsHandedBackOnTheNextPush(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
-        TileFusionCraftingCore core = placeCore(helper);
-        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 2);
-        helper.setBlock(CORE.above(), Blocks.BARREL.defaultBlockState());
+        TileFusionCraftingCore core = placeKeptIngredientRig(helper, 2);
         ICraftingMachine machine = machine(helper);
 
         IFusionInjector stranded =
                 (IFusionInjector) helper.getBlockEntity(SITES.get(0).pos());
         stranded.setInjectorStack(new ItemStack(Items.COPPER_INGOT));
 
-        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
-                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
-        helper.assertTrue(holder != null, "the kept-ingredient test recipe did not load");
+        RecipeHolder<IFusionRecipe> holder = keptIngredientRecipe(helper);
 
         IPatternDetails details = patternFor(helper, holder);
         helper.assertTrue(
@@ -328,12 +352,9 @@ public final class FusionCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aCoreLeftReadyToCraftByAnEarlierJobIsClearedAndRestarted(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
-        TileFusionCraftingCore core = placeCore(helper);
-        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 2);
-        helper.setBlock(CORE.above(), Blocks.BARREL.defaultBlockState());
+        TileFusionCraftingCore core = placeKeptIngredientRig(helper, 2);
         ICraftingMachine machine = machine(helper);
 
         core.setCatalystStack(new ItemStack(Items.IRON_INGOT));
@@ -341,9 +362,7 @@ public final class FusionCraftingMachineGameTest {
                 .setInjectorStack(new ItemStack(Items.COPPER_INGOT));
         ((IFusionInjector) helper.getBlockEntity(SITES.get(1).pos())).setInjectorStack(new ItemStack(Items.DIAMOND));
 
-        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
-                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
-        helper.assertTrue(holder != null, "the kept-ingredient test recipe did not load");
+        RecipeHolder<IFusionRecipe> holder = keptIngredientRecipe(helper);
 
         IPatternDetails details = patternFor(helper, holder);
         helper.assertTrue(
@@ -362,8 +381,7 @@ public final class FusionCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aStrandedIngredientWithNowhereToGoLeavesTheCoreUntouched(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
         TileFusionCraftingCore core = placeCore(helper);
         placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 2);
@@ -373,9 +391,7 @@ public final class FusionCraftingMachineGameTest {
                 (IFusionInjector) helper.getBlockEntity(SITES.get(0).pos());
         stranded.setInjectorStack(new ItemStack(Items.COPPER_INGOT));
 
-        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
-                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
-        helper.assertTrue(holder != null, "the kept-ingredient test recipe did not load");
+        RecipeHolder<IFusionRecipe> holder = keptIngredientRecipe(helper);
 
         IPatternDetails details = patternFor(helper, holder);
         helper.assertTrue(
@@ -401,7 +417,8 @@ public final class FusionCraftingMachineGameTest {
                 countReturned(helper) == 1,
                 "a craft that ran through the core's own tick swallowed the kept ingredient (returned "
                         + countReturned(helper) + ")");
-        helper.assertTrue(countInInjectors(core) == 0, "the kept ingredient was left behind in its injector");
+        helper.assertTrue(
+                countInInjectors(core, KEPT_INGREDIENT) == 0, "the kept ingredient was left behind in its injector");
         helper.succeed();
     }
 
@@ -421,17 +438,12 @@ public final class FusionCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aHandLoadedKeptIngredientIsLeftAlone(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
-        TileFusionCraftingCore core = placeCore(helper);
-        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 2);
-        helper.setBlock(CORE.above(), Blocks.BARREL.defaultBlockState());
+        TileFusionCraftingCore core = placeKeptIngredientRig(helper, 2);
         ICraftingMachine machine = machine(helper);
 
-        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
-                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
-        helper.assertTrue(holder != null, "the kept-ingredient test recipe did not load");
+        RecipeHolder<IFusionRecipe> holder = keptIngredientRecipe(helper);
 
         IFusionInjector preloaded =
                 (IFusionInjector) helper.getBlockEntity(SITES.get(1).pos());
@@ -444,60 +456,18 @@ public final class FusionCraftingMachineGameTest {
         core.completeCraft();
 
         helper.assertTrue(
-                countInInjectors(core) == 1,
+                countInInjectors(core, KEPT_INGREDIENT) == 1,
                 "a hand-loaded kept ingredient was taken; the pattern never asked the network for it");
         helper.assertTrue(
                 countReturned(helper) == 0, "a kept ingredient the network never supplied was handed back to it");
         helper.succeed();
     }
 
-    private static TileFusionCraftingCore startKeptIngredientCraft(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
-
-        TileFusionCraftingCore core = placeCore(helper);
-        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 2);
-        helper.setBlock(CORE.above(), Blocks.BARREL.defaultBlockState());
-        ICraftingMachine machine = machine(helper);
-
-        RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
-                helper.getLevel(), ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient"));
-        helper.assertTrue(holder != null, "the kept-ingredient test recipe did not load");
-
-        IPatternDetails details = patternFor(helper, holder);
-        helper.assertTrue(
-                machine.pushPattern(details, inputsOf(details), Direction.UP),
-                "a pattern supplying its own kept ingredient was rejected by empty injectors");
-        helper.assertTrue(core.isCrafting(), "the core did not start the kept-ingredient craft");
-        return core;
-    }
-
-    private static int countReturned(GameTestHelper helper) {
-        return countReturned(helper, Items.DIAMOND);
-    }
-
-    private static int countReturned(GameTestHelper helper, Item item) {
-        IItemHandler provider = helper.getLevel()
-                .getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(CORE.above()), Direction.DOWN);
-        helper.assertTrue(provider != null, "the return inventory exposed no item handler");
-        int returned = 0;
-        for (int slot = 0; slot < provider.getSlots(); slot++) {
-            ItemStack held = provider.getStackInSlot(slot);
-            if (held.is(item)) {
-                returned += held.getCount();
-            }
-        }
-        return returned;
-    }
-
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aRecipeThatConsumesAndKeepsTheSameItemHandsBackOnlyTheKeptCopy(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
-        TileFusionCraftingCore core = placeCore(helper);
-        placeInjectors(helper, DEContent.BASIC_CRAFTING_INJECTOR.get(), 1);
-        helper.setBlock(CORE.above(), Blocks.BARREL.defaultBlockState());
+        TileFusionCraftingCore core = placeKeptIngredientRig(helper, 1);
         ICraftingMachine machine = machine(helper);
 
         RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(
@@ -524,7 +494,8 @@ public final class FusionCraftingMachineGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void breakingTheCoreMidCraftHandsTheKeptIngredientBack(GameTestHelper helper) {
         TileFusionCraftingCore core = startKeptIngredientCraft(helper);
-        helper.assertTrue(countInInjectors(core) == 1, "the kept ingredient never reached an injector");
+        helper.assertTrue(
+                countInInjectors(core, KEPT_INGREDIENT) == 1, "the kept ingredient never reached an injector");
 
         BlockPos broken = helper.absolutePos(CORE);
         NeoForge.EVENT_BUS.post(new BlockEvent.BreakEvent(
@@ -538,25 +509,14 @@ public final class FusionCraftingMachineGameTest {
                 countReturned(helper) == 1,
                 "breaking the core mid-craft stranded the kept ingredient, so the job that lent it waits forever");
         helper.assertTrue(
-                countInInjectors(core) == 0,
+                countInInjectors(core, KEPT_INGREDIENT) == 0,
                 "the kept ingredient was handed back to the network and left in its injector as well");
         helper.succeed();
     }
 
-    private static int countInInjectors(TileFusionCraftingCore core) {
-        int held = 0;
-        for (IFusionInjector injector : core.getInjectors()) {
-            if (injector.getInjectorStack().is(Items.DIAMOND)) {
-                held += injector.getInjectorStack().getCount();
-            }
-        }
-        return held;
-    }
-
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aPatternNoFusionRecipeCanSatisfyIsRefused(GameTestHelper helper) {
-        FusionCraftingMachine.clearCache();
-        FusionRecipeResolver.clearCache();
+        clearCaches();
 
         placeCore(helper);
         placeInjectors(helper, DEContent.WYVERN_CRAFTING_INJECTOR.get(), SITES.size());

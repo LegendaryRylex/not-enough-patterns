@@ -12,7 +12,6 @@ import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.util.RecipeCache;
 import dev.rylex.nep.util.Uniqueness;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.resources.ResourceLocation;
@@ -60,12 +59,7 @@ final class SpiritInfusionResolver {
 
     @Nullable
     static RecipeHolder<SpiritInfusionRecipe> byId(Level level, ResourceLocation recipe) {
-        for (RecipeHolder<SpiritInfusionRecipe> candidate : candidates(level)) {
-            if (candidate.id().equals(recipe)) {
-                return candidate;
-            }
-        }
-        return null;
+        return ResolverSupport.byId(candidates(level), recipe);
     }
 
     @Nullable
@@ -80,11 +74,11 @@ final class SpiritInfusionResolver {
         if (chosen == null) {
             return null;
         }
-        Map<AEItemKey, Long> expectedItems = expectedItems(inputs);
+        Map<AEItemKey, Long> expectedItems = PatternStacks.expectedItems(inputs);
         if (expectedItems == null) {
             return null;
         }
-        int firstExtra = 1 + MalumRecipeIngredients.spiritCount(recipe);
+        int firstExtra = 1 + recipe.spirits.size();
         List<GenericStack> spirits = List.copyOf(List.of(chosen).subList(1, firstExtra));
         List<GenericStack> extras = List.copyOf(List.of(chosen).subList(firstExtra, chosen.length));
         return new Plan(holder, chosen[0], spirits, extras, expectedItems, result);
@@ -127,17 +121,5 @@ final class SpiritInfusionResolver {
             }
         }
         return null;
-    }
-
-    @Nullable
-    private static Map<AEItemKey, Long> expectedItems(List<GenericStack> inputs) {
-        Map<AEItemKey, Long> expected = new LinkedHashMap<>();
-        for (GenericStack stack : inputs) {
-            if (!(stack.what() instanceof AEItemKey key)) {
-                return null;
-            }
-            expected.merge(key, stack.amount(), Long::sum);
-        }
-        return Map.copyOf(expected);
     }
 }

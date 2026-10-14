@@ -1,0 +1,13 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "type": "nep:sacrifice_stand_in",
+  "sacrifice": "c:wardens",
+  "stand_in": {
+    "tag": "nep:sacrifice_stand_ins/wardens"
+  }
+}

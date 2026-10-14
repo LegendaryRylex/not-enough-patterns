@@ -49,7 +49,7 @@ final class AssemblyFluidBuffer implements IFluidHandler {
         if (resource.isEmpty()) {
             return 0;
         }
-        int target = tankFor(resource);
+        int target = tankIn(contents, resource);
         if (target < 0) {
             return 0;
         }
@@ -67,10 +67,6 @@ final class AssemblyFluidBuffer implements IFluidHandler {
             onChanged.run();
         }
         return room;
-    }
-
-    private int tankFor(FluidStack resource) {
-        return tankIn(contents, resource);
     }
 
     private static int tankIn(FluidStack[] store, FluidStack resource) {

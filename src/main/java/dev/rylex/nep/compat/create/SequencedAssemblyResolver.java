@@ -138,10 +138,7 @@ final class SequencedAssemblyResolver {
         for (BlockPos pos : machines) {
             BlockState state = level.getBlockState(pos);
             StationKind kind = Stations.detect(state);
-            if (kind == StationKind.DEPLOYER && !Stations.deployerFacesDown(state)) {
-                continue;
-            }
-            if (kind.recognized()) {
+            if (SequencedAssemblyControllerReadout.structuralIssueOf(kind, state) == SequencedAssemblyState.Issue.OK) {
                 counts.merge(kind, 1, Integer::sum);
             }
         }
@@ -209,13 +206,8 @@ final class SequencedAssemblyResolver {
         for (BlockPos pos : machines) {
             BlockState state = level.getBlockState(pos);
             StationKind kind = Stations.detect(state);
-            if (!kind.recognized()) {
-                return false;
-            }
-            if (kind == StationKind.DEPLOYER && !Stations.deployerFacesDown(state)) {
-                return false;
-            }
-            if (Stations.isUnpowered(level, pos, kind)) {
+            if (SequencedAssemblyControllerReadout.issueOf(level, pos, kind, state)
+                    != SequencedAssemblyState.Issue.OK) {
                 return false;
             }
         }

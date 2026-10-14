@@ -7,6 +7,7 @@ import dev.rylex.nep.pattern.encoding.PatternContents;
 import dev.rylex.nep.pattern.encoding.SyntheticRecipes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.resources.ResourceLocation;
@@ -57,21 +58,9 @@ public abstract class RecipePattern implements NepPattern {
             throw new IllegalArgumentException("Pattern references unknown recipe " + encoded.recipe());
         }
 
-        for (GenericStack input : encoded.inputs()) {
-            if (input.amount() <= 0) {
-                throw new IllegalArgumentException("Pattern has an empty ingredient");
-            }
-        }
-        for (GenericStack stack : encoded.retained()) {
-            if (stack.amount() <= 0) {
-                throw new IllegalArgumentException("Pattern has an empty kept ingredient");
-            }
-        }
-        for (GenericStack tool : encoded.worn()) {
-            if (tool.amount() <= 0) {
-                throw new IllegalArgumentException("Pattern has an empty worn ingredient");
-            }
-        }
+        requirePositive(encoded.inputs(), "Pattern has an empty ingredient");
+        requirePositive(encoded.retained(), "Pattern has an empty kept ingredient");
+        requirePositive(encoded.worn(), "Pattern has an empty worn ingredient");
 
         this.recipe = encoded.recipe();
         this.consumed = PatternContents.condense(adapt(encoded.inputs(), adapt));
@@ -93,6 +82,27 @@ public abstract class RecipePattern implements NepPattern {
             inputs[slot++] = new PatternInput(tool.what(), tool.amount(), true, true, substitution);
         }
         this.outputs = List.of(adapt.apply(encoded.result()));
+    }
+
+    private static void requirePositive(List<GenericStack> stacks, String message) {
+        for (GenericStack stack : stacks) {
+            if (stack.amount() <= 0) {
+                throw new IllegalArgumentException(message);
+            }
+        }
+    }
+
+    @Nullable
+    protected static InputSubstitution substitutionFor(
+            DataComponentType<EncodedRecipePattern> component,
+            AEItemKey definition,
+            @Nullable Level level,
+            BiFunction<ResourceLocation, Level, InputSubstitution> substitutions) {
+        if (level == null) {
+            return null;
+        }
+        EncodedRecipePattern encoded = definition.get(component);
+        return encoded == null ? null : substitutions.apply(encoded.recipe(), level);
     }
 
     private static List<GenericStack> adapt(List<GenericStack> stacks, UnaryOperator<GenericStack> adapt) {

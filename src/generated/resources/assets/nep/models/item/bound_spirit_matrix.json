@@ -1,0 +1,10 @@
+{
+    "parent": "nep:block/matrix/cage_core",
+    "textures": {
+        "core": "nep:block/matrix/core/bound_spirit",
+        "corner": "nep:block/matrix/bound_spirit/corner",
+        "particle": "nep:block/matrix/bound_spirit/border",
+        "ring": "nep:block/matrix/bound_spirit/ring",
+        "strut": "nep:block/matrix/bound_spirit/strut"
+    }
+}

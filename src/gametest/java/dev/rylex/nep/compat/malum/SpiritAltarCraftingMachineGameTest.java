@@ -1,18 +1,16 @@
 package dev.rylex.nep.compat.malum;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.GameTestFixtures.isEmpty;
+import static dev.rylex.nep.compat.malum.MalumFixtures.recipeWithExtras;
+
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import com.sammy.malum.common.block.curiosities.spirit_altar.SpiritAltarBlockEntity;
 import com.sammy.malum.common.recipe.SpiritInfusionRecipe;
 import com.sammy.malum.registry.common.block.MalumBlocks;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
-import dev.rylex.nep.pattern.SpiritInfusionPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -25,7 +23,6 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
-import team.lodestar.lodestone.systems.blockentity.LodestoneBlockEntityInventory;
 
 @GameTestHolder(Nep.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -46,7 +43,9 @@ public final class SpiritAltarCraftingMachineGameTest {
         SpiritAltarCraftingMachine.clearCache();
         SpiritInfusionResolver.clearCache();
         helper.setBlock(ALTAR, MalumBlocks.SPIRIT_ALTAR.get().defaultBlockState());
-        return (SpiritAltarBlockEntity) helper.getBlockEntity(ALTAR);
+        SpiritAltarBlockEntity altar = helper.getBlockEntity(ALTAR) instanceof SpiritAltarBlockEntity be ? be : null;
+        helper.assertTrue(altar != null, "the Spirit Altar has no block entity");
+        return altar;
     }
 
     private static void placePedestals(GameTestHelper helper, int count) {
@@ -58,62 +57,12 @@ public final class SpiritAltarCraftingMachineGameTest {
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(ALTAR), null);
-        helper.assertTrue(machine != null, "the Spirit Altar exposed no crafting machine capability");
-        return machine;
-    }
-
-    private static RecipeHolder<SpiritInfusionRecipe> recipeWithExtras(GameTestHelper helper, int extras) {
-        RecipeHolder<SpiritInfusionRecipe> best = null;
-        for (RecipeHolder<SpiritInfusionRecipe> holder : SpiritInfusionResolver.candidates(helper.getLevel())) {
-            SpiritInfusionRecipe recipe = holder.value();
-            if (!holder.id().getNamespace().equals("malum")
-                    || recipe.carryOverComponentData
-                    || recipe.extraInputs.size() != extras
-                    || MalumRecipeIngredients.spiritInfusion(recipe) == null) {
-                continue;
-            }
-            if (best == null || holder.id().compareTo(best.id()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no spirit infusion recipe with " + extras + " extra ingredient(s) was loaded");
-        return best;
+        return GameTestFixtures.craftingMachine(
+                helper, ALTAR, "the Spirit Altar exposed no crafting machine capability");
     }
 
     private static IPatternDetails patternFor(GameTestHelper helper, RecipeHolder<SpiritInfusionRecipe> holder) {
-        EncodedIngredients expected = MalumRecipeIngredients.spiritInfusion(holder.value());
-        helper.assertTrue(expected != null, "the recipe produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded = SpiritInfusionPattern.encode(
-                holder.id(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the spirit infusion pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
-    }
-
-    private static boolean isEmpty(LodestoneBlockEntityInventory inventory) {
-        for (int slot = 0; slot < inventory.getSlots(); slot++) {
-            if (!inventory.getStackInSlot(slot).isEmpty()) {
-                return false;
-            }
-        }
-        return true;
+        return MalumFixtures.spiritInfusionPattern(helper, holder);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
@@ -179,17 +128,13 @@ public final class SpiritAltarCraftingMachineGameTest {
                 "the spirit infusion pattern was rejected");
 
         ItemStack expected = holder.value().result;
-        helper.runAfterDelay(360L, () -> {
+        helper.succeedWhen(() -> {
             IItemHandler barrel = helper.getLevel()
                     .getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(RETURN_TARGET), null);
             helper.assertTrue(barrel != null, "the return target exposed no inventory");
-            for (int slot = 0; slot < barrel.getSlots(); slot++) {
-                if (ItemStack.isSameItem(barrel.getStackInSlot(slot), expected)) {
-                    helper.succeed();
-                    return;
-                }
-            }
-            helper.fail("the finished infusion never reached the inventory the pattern was pushed from");
+            helper.assertTrue(
+                    GameTestFixtures.holds(barrel, expected, 1),
+                    "the finished infusion never reached the inventory the pattern was pushed from");
         });
     }
 }

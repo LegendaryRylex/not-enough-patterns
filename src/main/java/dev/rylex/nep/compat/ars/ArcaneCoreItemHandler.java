@@ -26,35 +26,39 @@ record ArcaneCoreItemHandler(ArcaneCoreTile core, @Nullable Direction side) impl
         return apparatus == null ? 0 : apparatus.getSlots();
     }
 
+    @Nullable
+    private IItemHandler slotHandler(int slot) {
+        IItemHandler apparatus = apparatus();
+        return apparatus == null || slot >= apparatus.getSlots() ? null : apparatus;
+    }
+
     @Override
     public ItemStack getStackInSlot(int slot) {
-        IItemHandler apparatus = apparatus();
-        return apparatus == null || slot >= apparatus.getSlots() ? ItemStack.EMPTY : apparatus.getStackInSlot(slot);
+        IItemHandler handler = slotHandler(slot);
+        return handler == null ? ItemStack.EMPTY : handler.getStackInSlot(slot);
     }
 
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-        IItemHandler apparatus = apparatus();
-        return apparatus == null || slot >= apparatus.getSlots() ? stack : apparatus.insertItem(slot, stack, simulate);
+        IItemHandler handler = slotHandler(slot);
+        return handler == null ? stack : handler.insertItem(slot, stack, simulate);
     }
 
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
-        IItemHandler apparatus = apparatus();
-        return apparatus == null || slot >= apparatus.getSlots()
-                ? ItemStack.EMPTY
-                : apparatus.extractItem(slot, amount, simulate);
+        IItemHandler handler = slotHandler(slot);
+        return handler == null ? ItemStack.EMPTY : handler.extractItem(slot, amount, simulate);
     }
 
     @Override
     public int getSlotLimit(int slot) {
-        IItemHandler apparatus = apparatus();
-        return apparatus == null || slot >= apparatus.getSlots() ? 0 : apparatus.getSlotLimit(slot);
+        IItemHandler handler = slotHandler(slot);
+        return handler == null ? 0 : handler.getSlotLimit(slot);
     }
 
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
-        IItemHandler apparatus = apparatus();
-        return apparatus != null && slot < apparatus.getSlots() && apparatus.isItemValid(slot, stack);
+        IItemHandler handler = slotHandler(slot);
+        return handler != null && handler.isItemValid(slot, stack);
     }
 }

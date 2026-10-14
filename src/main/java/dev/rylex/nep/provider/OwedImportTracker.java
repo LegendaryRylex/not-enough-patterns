@@ -45,8 +45,8 @@ public final class OwedImportTracker {
     public boolean record(IPatternDetails pattern, @Nullable KeyCounter[] inputs, OwedSource source) {
         Map<AEKey, Long> owed = new LinkedHashMap<>();
         for (var output : pattern.getOutputs()) {
-            if (output.amount() > 0 && output.what() instanceof AEKey key) {
-                owed.merge(key, output.amount(), Long::sum);
+            if (output.amount() > 0) {
+                owed.merge(output.what(), output.amount(), Long::sum);
             }
         }
         if (owed.isEmpty()) {
@@ -66,8 +66,8 @@ public final class OwedImportTracker {
                 continue;
             }
             for (var entry : counter) {
-                if (entry.getLongValue() > 0 && entry.getKey() instanceof AEKey key) {
-                    parked.merge(key, entry.getLongValue(), Long::sum);
+                if (entry.getLongValue() > 0) {
+                    parked.merge(entry.getKey(), entry.getLongValue(), Long::sum);
                 }
             }
         }
@@ -105,25 +105,7 @@ public final class OwedImportTracker {
                 }
             }
 
-            Iterator<OwedDispatch> pending = live.iterator();
-            while (pending.hasNext()) {
-                OwedDispatch dispatch = pending.next();
-                if (dispatch.isSettled()) {
-                    pending.remove();
-                    changed = true;
-                    continue;
-                }
-                boolean requested = isRequested(crafting, dispatch);
-                if (requested) {
-                    dispatch.clearGrace();
-                } else if (!dispatch.hasDeadline()) {
-                    dispatch.startGrace(now + grace);
-                }
-                if (!requested && dispatch.expired(now)) {
-                    pending.remove();
-                    changed = true;
-                }
-            }
+            changed |= expireDispatches(live, crafting, now, grace);
 
             if (live.isEmpty()) {
                 strategies.remove(source);
@@ -132,6 +114,30 @@ public final class OwedImportTracker {
         }
 
         return new ImportResult(moved, changed);
+    }
+
+    private static boolean expireDispatches(List<OwedDispatch> live, ICraftingService crafting, long now, long grace) {
+        boolean changed = false;
+        Iterator<OwedDispatch> pending = live.iterator();
+        while (pending.hasNext()) {
+            OwedDispatch dispatch = pending.next();
+            if (dispatch.isSettled()) {
+                pending.remove();
+                changed = true;
+                continue;
+            }
+            boolean requested = isRequested(crafting, dispatch);
+            if (requested) {
+                dispatch.clearGrace();
+            } else if (!dispatch.hasDeadline()) {
+                dispatch.startGrace(now + grace);
+            }
+            if (!requested && dispatch.expired(now)) {
+                pending.remove();
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     private static Map<AEKey, Long> budgets(List<OwedDispatch> live) {
@@ -218,7 +224,7 @@ public final class OwedImportTracker {
         for (int i = 0; i < legacy.size(); i++) {
             var entryTag = legacy.getCompound(i);
             var stack = GenericStack.readTag(registries, entryTag.getCompound("stack"));
-            if (stack == null || stack.amount() <= 0 || !(stack.what() instanceof AEKey key)) {
+            if (stack == null || stack.amount() <= 0) {
                 continue;
             }
             long deadline = entryTag.contains("grace") ? entryTag.getLong("grace") : OwedDispatch.NO_DEADLINE;

@@ -10,6 +10,7 @@ import com.simibubi.create.content.kinetics.crafter.RecipeGridHandler.GroupedIte
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.pattern.GridPlan;
+import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.util.CellAssigner;
 import dev.rylex.nep.util.RecipeCache;
 import java.util.ArrayList;
@@ -93,7 +94,7 @@ final class MechanicalRecipeResolver {
             return null;
         }
 
-        Map<AEItemKey, Long> available = CreateRecipeIngredients.flattenItemInputs(pattern);
+        Map<AEItemKey, Long> available = IngredientMatching.flattenItemInputs(pattern);
         if (available == null) {
             return null;
         }

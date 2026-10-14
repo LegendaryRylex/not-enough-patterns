@@ -1,28 +1,23 @@
 package dev.rylex.nep.compat.ars;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.level.Level;
 
 public enum RitualWeather {
-    ANY("☀", "any"),
-    CLEAR("○", "clear"),
-    RAIN("☂", "rain"),
-    STORM("⚡", "storm");
+    ANY("any"),
+    CLEAR("clear"),
+    RAIN("rain"),
+    STORM("storm");
 
-    public static final StreamCodec<io.netty.buffer.ByteBuf, RitualWeather> STREAM_CODEC =
+    public static final StreamCodec<ByteBuf, RitualWeather> STREAM_CODEC =
             ByteBufCodecs.BYTE.map(RitualWeather::byOrdinal, weather -> (byte) weather.ordinal());
 
-    private final String glyph;
     private final String key;
 
-    RitualWeather(String glyph, String keySuffix) {
-        this.glyph = glyph;
+    RitualWeather(String keySuffix) {
         this.key = "gui.nep.ritual_conductor.weather." + keySuffix;
-    }
-
-    public String glyph() {
-        return glyph;
     }
 
     public String key() {
@@ -30,25 +25,19 @@ public enum RitualWeather {
     }
 
     public RitualWeather next() {
-        return values()[(ordinal() + 1) % values().length];
+        return CyclingSetting.next(values(), this);
     }
 
     public RitualWeather previous() {
-        return values()[(ordinal() + values().length - 1) % values().length];
+        return CyclingSetting.previous(values(), this);
     }
 
     public static RitualWeather byOrdinal(int ordinal) {
-        RitualWeather[] values = values();
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : ANY;
+        return CyclingSetting.byOrdinal(values(), ordinal, ANY);
     }
 
     public static RitualWeather byName(String name) {
-        for (RitualWeather weather : values()) {
-            if (weather.name().equals(name)) {
-                return weather;
-            }
-        }
-        return ANY;
+        return CyclingSetting.byName(values(), name, ANY);
     }
 
     /** Reads the weather flags rather than the fading rain and thunder levels, which lag several seconds behind them. */

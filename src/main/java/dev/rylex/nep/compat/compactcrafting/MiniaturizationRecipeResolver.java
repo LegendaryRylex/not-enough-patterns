@@ -1,12 +1,10 @@
 package dev.rylex.nep.compat.compactcrafting;
 
-import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import dev.compactmods.crafting.api.field.MiniaturizationFieldSize;
 import dev.compactmods.crafting.core.CCMiniaturizationRecipes;
 import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
-import dev.rylex.nep.pattern.PatternStacks;
 import dev.rylex.nep.util.RecipeCache;
 import dev.rylex.nep.util.Uniqueness;
 import java.util.List;
@@ -64,15 +62,5 @@ final class MiniaturizationRecipeResolver {
     @SuppressWarnings("unchecked")
     private static RecipeHolder<MiniaturizationRecipe> cast(RecipeHolder<?> holder) {
         return (RecipeHolder<MiniaturizationRecipe>) holder;
-    }
-
-    @Nullable
-    static GenericStack singleResult(IPatternDetails pattern) {
-        return PatternStacks.singleResult(pattern);
-    }
-
-    @Nullable
-    static List<GenericStack> condensedInputs(IPatternDetails pattern) {
-        return PatternStacks.condensedInputs(pattern);
     }
 }

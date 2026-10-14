@@ -1,13 +1,15 @@
 package dev.rylex.nep.compat.actuallyadditions;
 
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEBlocks;
 import de.ellpeck.actuallyadditions.mod.crafting.EmpowererRecipe;
 import de.ellpeck.actuallyadditions.mod.crafting.LaserRecipe;
 import dev.rylex.nep.ConfigOverrides;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.ManualCraftFixtures;
 import dev.rylex.nep.machine.ManualCraftOutcome;
@@ -22,6 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -56,9 +59,7 @@ public final class AtomicEmpoweringMatrixGameTest {
     private static void keepCharged(GameTestHelper helper, AtomicEmpoweringMatrixBlockEntity matrix, int ticks) {
         for (int tick = 1; tick <= ticks; tick++) {
             helper.runAtTickTime(tick, () -> {
-                for (int i = 0; i < 200; i++) {
-                    matrix.energyStorage().receiveEnergy(Integer.MAX_VALUE, false);
-                }
+                for (int i = 0; i < 200 && matrix.energyStorage().receiveEnergy(Integer.MAX_VALUE, false) > 0; i++) {}
             });
         }
     }
@@ -96,7 +97,7 @@ public final class AtomicEmpoweringMatrixGameTest {
     private static IPatternDetails pattern(
             GameTestHelper helper,
             EncodedIngredients expected,
-            net.minecraft.resources.ResourceLocation recipe,
+            ResourceLocation recipe,
             boolean empowering,
             long batch) {
         List<GenericStack> inputs = new ArrayList<>();
@@ -115,25 +116,8 @@ public final class AtomicEmpoweringMatrixGameTest {
         return details;
     }
 
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
-    }
-
     private static boolean outputHolds(AtomicEmpoweringMatrixBlockEntity matrix, ItemStack expected, int count) {
-        int found = 0;
-        for (int slot = 0; slot < matrix.getOutputBuffer().getSlots(); slot++) {
-            ItemStack stack = matrix.getOutputBuffer().getStackInSlot(slot);
-            if (ItemStack.isSameItem(stack, expected)) {
-                found += stack.getCount();
-            }
-        }
-        return found >= count;
+        return GameTestFixtures.holds(matrix.getOutputBuffer(), expected, count);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)

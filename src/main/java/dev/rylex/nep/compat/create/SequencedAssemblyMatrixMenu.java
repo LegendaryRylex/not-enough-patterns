@@ -99,10 +99,6 @@ public class SequencedAssemblyMatrixMenu extends MachineMenu implements ManualCr
         return pos;
     }
 
-    BlockPos matrixPos() {
-        return pos;
-    }
-
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (matrix == null) {

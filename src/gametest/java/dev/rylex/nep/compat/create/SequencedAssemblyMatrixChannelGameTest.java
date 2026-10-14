@@ -7,7 +7,6 @@ import appeng.api.util.AEColor;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEParts;
 import appeng.me.service.PathingService;
-import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import net.minecraft.core.BlockPos;
@@ -22,6 +21,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class SequencedAssemblyMatrixChannelGameTest {
 
+    private static final int DENSE_CABLE_BASE_CHANNELS = 32;
     private static final String TEMPLATE = "empty_9x6x9";
     private static final String BATCH = "nep_matrix_channels";
 
@@ -32,16 +32,7 @@ public final class SequencedAssemblyMatrixChannelGameTest {
     private SequencedAssemblyMatrixChannelGameTest() {}
 
     private static SequencedAssemblyMatrixBlockEntity placeMatrix(GameTestHelper helper) {
-        helper.setBlock(
-                MATRIX,
-                NepCreateContent.MATRIX
-                        .get()
-                        .defaultBlockState()
-                        .setValue(RotatedPillarKineticBlock.AXIS, Direction.Axis.Z));
-        BlockEntity be = helper.getBlockEntity(MATRIX);
-        helper.assertTrue(
-                be instanceof SequencedAssemblyMatrixBlockEntity, "the matrix did not create its block entity");
-        return (SequencedAssemblyMatrixBlockEntity) be;
+        return CreateFixtures.placeMatrix(helper, MATRIX);
     }
 
     private static void placeDenseCable(GameTestHelper helper, BlockPos pos) {
@@ -81,7 +72,8 @@ public final class SequencedAssemblyMatrixChannelGameTest {
                             expectOnline,
                             "whether a matrix wanting " + demand + " channels is online at " + mode + " wired as "
                                     + wiring + ", where one dense cable carries "
-                                    + 32 * mode.getCableCapacityFactor() + " and an ad-hoc network carries "
+                                    + DENSE_CABLE_BASE_CHANNELS * mode.getCableCapacityFactor()
+                                    + " and an ad-hoc network carries "
                                     + mode.getAdHocNetworkChannels());
                     if (expectOnline) {
                         helper.assertValueEqual(

@@ -5,6 +5,7 @@ import com.simibubi.create.AllBlockEntityTypes;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
+import dev.rylex.nep.machine.MatrixCraftingMachine;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -95,7 +96,11 @@ public final class CreateCompat {
         event.registerBlockEntity(
                 AECapabilities.CRAFTING_MACHINE,
                 NepCreateContent.MATRIX_BLOCK_ENTITY.get(),
-                (be, side) -> new SequencedAssemblyMatrixCraftingMachine(be));
+                (be, side) -> new MatrixCraftingMachine(
+                        be::readyForPatterns,
+                        be::pushMatrixPattern,
+                        NepCreateContent.MATRIX_ITEM,
+                        NepCreateContent.MATRIX));
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 NepCreateContent.MATRIX_BLOCK_ENTITY.get(),

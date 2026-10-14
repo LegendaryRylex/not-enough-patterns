@@ -1,0 +1,55 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "type": "occultism:ritual",
+  "activation_item": {
+    "item": "occultism:book_of_binding_bound_afrit"
+  },
+  "duration": 180,
+  "ingredients": [
+    {
+      "tag": "c:dusts/iesnium"
+    },
+    {
+      "tag": "c:dusts/emerald"
+    },
+    {
+      "tag": "c:dusts/lapis"
+    },
+    {
+      "tag": "c:dusts/amethyst"
+    },
+    {
+      "tag": "c:dusts/obsidian"
+    },
+    {
+      "item": "occultism:book_of_binding_empty"
+    }
+  ],
+  "pentacle_id": "occultism:craft_afrit",
+  "result": {
+    "count": 1,
+    "id": "nep:spirit_infused_book",
+    "components": {
+      "nep:bound_spirit": {
+        "tier": "afrit",
+        "work": "crusher"
+      }
+    }
+  },
+  "ritual_dummy": {
+    "count": 1,
+    "id": "nep:spirit_infused_book",
+    "components": {
+      "nep:bound_spirit": {
+        "tier": "afrit",
+        "work": "crusher"
+      }
+    }
+  },
+  "ritual_type": "occultism:craft"
+}

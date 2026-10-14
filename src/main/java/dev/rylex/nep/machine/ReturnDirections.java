@@ -77,7 +77,7 @@ public final class ReturnDirections {
             ListTag list = tag.getList(key, Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) {
                 CompoundTag entryTag = list.getCompound(i);
-                AEItemKey itemKey = ItemCounts.key(entryTag, registries);
+                AEItemKey itemKey = ItemCounts.key(entryTag, ItemCounts.LEGACY_ID_TAG, registries);
                 if (itemKey != null) {
                     directions.put(itemKey, Direction.from3DDataValue(entryTag.getInt("Dir")));
                 }

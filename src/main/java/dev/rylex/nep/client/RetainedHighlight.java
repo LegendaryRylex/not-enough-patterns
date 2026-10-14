@@ -7,10 +7,11 @@ public final class RetainedHighlight {
     private RetainedHighlight() {}
 
     private static final int SIZE = 16;
+    public static final float OVERLAY_LAYER = 300.0F;
 
     public static void draw(GuiGraphics graphics, int x, int y) {
         graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, 300.0F);
+        graphics.pose().translate(0.0F, 0.0F, OVERLAY_LAYER);
         graphics.hLine(x, x + SIZE - 1, y, RetainedInputs.HIGHLIGHT);
         graphics.hLine(x, x + SIZE - 1, y + SIZE - 1, RetainedInputs.HIGHLIGHT);
         graphics.vLine(x, y, y + SIZE - 1, RetainedInputs.HIGHLIGHT);

@@ -1,31 +1,32 @@
 package dev.rylex.nep.compat.compactcrafting;
 
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.compactcrafting.MiniaturizationFixtures.patternFor;
+
 import appeng.api.AECapabilities;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEBlocks;
 import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
 import dev.rylex.nep.ConfigOverrides;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.ManualCraftFixtures;
 import dev.rylex.nep.machine.ManualCraftOutcome;
 import dev.rylex.nep.machine.ManualCraftResult;
-import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
 import dev.rylex.nep.pattern.encoding.PatternOrigin;
-import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -58,8 +59,7 @@ public final class MiniaturizationMatrixGameTest {
     }
 
     private static void powerUp(GameTestHelper helper) {
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+        GameTestFixtures.powerUp(helper, ME_CONTROLLER, ENERGY_CELL);
     }
 
     private static RecipeHolder<MiniaturizationRecipe> matrixRecipe(GameTestHelper helper) {
@@ -73,53 +73,7 @@ public final class MiniaturizationMatrixGameTest {
 
     @Nullable
     private static RecipeHolder<MiniaturizationRecipe> shortestRecipe(GameTestHelper helper) {
-        RecipeHolder<MiniaturizationRecipe> shortest = null;
-        for (RecipeHolder<MiniaturizationRecipe> candidate :
-                MiniaturizationRecipeResolver.candidates(helper.getLevel())) {
-            if (MiniaturizationRecipeIngredients.miniaturization(candidate, helper.getLevel()) == null) {
-                continue;
-            }
-            if (shortest == null
-                    || candidate.value().getCraftingTime() < shortest.value().getCraftingTime()) {
-                shortest = candidate;
-            }
-        }
-        return shortest;
-    }
-
-    private static IPatternDetails patternFor(GameTestHelper helper, RecipeHolder<MiniaturizationRecipe> holder) {
-        EncodedIngredients expected = MiniaturizationRecipeIngredients.miniaturization(holder, helper.getLevel());
-        helper.assertTrue(expected != null, "the recipe produced no ingredient list");
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> slot : expected.inputs()) {
-            inputs.add(slot.get(0));
-        }
-        ItemStack encoded = MiniaturizationPattern.encode(
-                holder.id(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the miniaturization pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
-    }
-
-    private static int countIn(IItemHandler handler, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack held = handler.getStackInSlot(slot);
-            if (held.is(item)) {
-                total += held.getCount();
-            }
-        }
-        return total;
+        return MiniaturizationFixtures.shortestRecipe(helper, recipe -> true);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
@@ -136,7 +90,7 @@ public final class MiniaturizationMatrixGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aRecipeCostsOneItemPerBlockItsLayersFill(GameTestHelper helper) {
         RecipeHolder<MiniaturizationRecipe> holder = matrixRecipe(helper);
-        EncodedIngredients encoded = MiniaturizationRecipeIngredients.miniaturization(holder, helper.getLevel());
+        EncodedIngredients encoded = MiniaturizationRecipeIngredients.miniaturization(holder.value());
         helper.assertTrue(encoded != null, "the Matrix's own recipe did not encode");
 
         long quartzGlass = 0;
@@ -277,7 +231,7 @@ public final class MiniaturizationMatrixGameTest {
             RecipeHolder<MiniaturizationRecipe> oversized = null;
             for (RecipeHolder<MiniaturizationRecipe> candidate :
                     MiniaturizationRecipeResolver.candidates(helper.getLevel())) {
-                if (MiniaturizationRecipeIngredients.miniaturization(candidate, helper.getLevel()) != null
+                if (MiniaturizationRecipeIngredients.miniaturization(candidate.value()) != null
                         && !MiniaturizationMatrixBlockEntity.fitsFieldCeiling(candidate.value())) {
                     oversized = candidate;
                     break;
@@ -304,15 +258,12 @@ public final class MiniaturizationMatrixGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aJeiTransferredRecipeEncodesAsAMiniaturizationPattern(GameTestHelper helper) {
         RecipeHolder<MiniaturizationRecipe> holder = matrixRecipe(helper);
-        EncodedIngredients expected = MiniaturizationRecipeIngredients.miniaturization(holder, helper.getLevel());
+        EncodedIngredients expected = MiniaturizationRecipeIngredients.miniaturization(holder.value());
         helper.assertTrue(expected != null, "the recipe produced no ingredient list");
 
-        List<GenericStack> shown = new ArrayList<>();
-        for (List<GenericStack> slot : expected.inputs()) {
-            shown.add(slot.get(0));
-        }
         ItemStack processing = PatternDetailsHelper.encodeProcessingPattern(
-                shown, List.of(expected.outputs().get(0)));
+                MiniaturizationFixtures.firstOptions(expected),
+                List.of(expected.outputs().get(0)));
 
         ItemStack converted = PatternConverters.convert(
                 PatternOrigin.ofRecipe(holder.id()), processing, helper.makeMockPlayer(GameType.SURVIVAL));
@@ -331,9 +282,8 @@ public final class MiniaturizationMatrixGameTest {
         MiniaturizationMatrixBlockEntity matrix = place(helper);
         powerUp(helper);
         RecipeHolder<MiniaturizationRecipe> holder = matrixRecipe(helper);
-        List<ManualRequirement> requirements = MiniaturizationRecipeIngredients.manualRequirements(holder.value());
-        helper.assertTrue(requirements != null, "the Matrix recipe cannot be expressed as manual requirements");
-        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+        Player player = MiniaturizationFixtures.manualCraftPlayer(
+                helper, holder, "the Matrix recipe cannot be expressed as manual requirements");
 
         ManualCraftOutcome outcome = matrix.startManualCraft(player, holder.id(), 1);
 

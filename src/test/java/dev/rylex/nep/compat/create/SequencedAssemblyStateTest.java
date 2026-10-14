@@ -25,6 +25,7 @@ class SequencedAssemblyStateTest {
                 1,
                 true,
                 false,
+                SequencedAssemblyState.Network.NO_CHANNELS,
                 List.of(new SequencedAssemblyState.Station(
                         StationKind.DEPLOYER,
                         new BlockPos(1, 2, 3),
@@ -50,6 +51,7 @@ class SequencedAssemblyStateTest {
         assertEquals(state.status(), decoded.status());
         assertEquals(state.halted(), decoded.halted());
         assertEquals(state.outputBlocked(), decoded.outputBlocked());
+        assertEquals(state.network(), decoded.network());
         assertEquals(state.stations(), decoded.stations());
         assertEquals(state.missing(), decoded.missing());
         assertTrue(state.matches(decoded), "a decoded state must compare equal to what was sent");
@@ -65,6 +67,16 @@ class SequencedAssemblyStateTest {
                 state.status(),
                 state.halted(),
                 state.outputBlocked(),
+                SequencedAssemblyState.Network.NO_POWER,
+                state.stations(),
+                state.making(),
+                state.missing(),
+                state.fluids())));
+        assertFalse(state.matches(new SequencedAssemblyState(
+                state.status(),
+                state.halted(),
+                state.outputBlocked(),
+                state.network(),
                 state.stations(),
                 List.of(new SequencedAssemblyState.Making(new ItemStack(Items.DIAMOND), 5)),
                 state.missing(),
@@ -73,6 +85,7 @@ class SequencedAssemblyStateTest {
                 state.status(),
                 state.halted(),
                 state.outputBlocked(),
+                state.network(),
                 state.stations(),
                 state.making(),
                 state.missing(),

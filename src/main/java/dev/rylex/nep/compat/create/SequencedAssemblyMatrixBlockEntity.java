@@ -16,6 +16,7 @@ import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.create.newage.CreateNewAgeCompat;
 import dev.rylex.nep.machine.ComparatorSignal;
+import dev.rylex.nep.machine.HandlerSnapshots;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.ManualCraftHost;
 import dev.rylex.nep.machine.ManualCraftOutcome;
@@ -46,7 +47,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -146,7 +146,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private final PushingCpus pushingCpus = new PushingCpus();
     private final Map<AEItemKey, Long> toReturn = new HashMap<>();
 
-    private final Map<AEItemKey, Template> templates = new HashMap<>();
+    private final Map<AEItemKey, MatrixTemplate> templates = new HashMap<>();
     private final Map<AEItemKey, MatrixJob> jobs = new HashMap<>();
     private final Map<AEItemKey, ResourceLocation> recipeIds = new HashMap<>();
     private final List<GenericStack> missingInputs = new ArrayList<>();
@@ -229,8 +229,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     int stressDraw() {
-        Level level = getLevel();
-        if (level != null && level.isClientSide) {
+        if (isClientSide()) {
             return clientStress;
         }
         return stressDrawAt(Math.abs(getSpeed()));
@@ -252,8 +251,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     float craftProgress() {
-        Level level = getLevel();
-        if (level != null && level.isClientSide) {
+        if (isClientSide()) {
             return clientProgress;
         }
         if (activeResult.isEmpty()) {
@@ -595,10 +593,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     private boolean fitsInOutput(List<ItemStack> results) {
-        ItemStackHandler probe = new OverstackedItemHandler(outputBuffer.getSlots());
-        for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
-            probe.setStackInSlot(slot, outputBuffer.getStackInSlot(slot).copy());
-        }
+        ItemStackHandler probe = HandlerSnapshots.of(outputBuffer);
         for (ItemStack result : results) {
             if (!ItemHandlerHelper.insertItem(probe, result.copy(), false).isEmpty()) {
                 return false;
@@ -746,17 +741,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             forgetReturnIfSettled(takenKey);
             player.getInventory().placeItemBackInInventory(taken);
         }
-        for (int tank = 0; tank < AssemblyFluidBuffer.TANKS; tank++) {
-            FluidStack held = fluids.getFluidInTank(tank);
-            if (held.isEmpty()) {
-                continue;
-            }
-            AEFluidKey key = AEFluidKey.of(held);
-            long dumped = key == null ? 0 : power.dumpToNetwork(key, held.getAmount());
-            if (dumped > 0) {
-                fluids.takeFrom(tank, (int) dumped);
-            }
-        }
+        dumpFluidsToNetwork();
         markScanNeeded();
         setChanged();
     }
@@ -776,20 +761,20 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             return;
         }
         for (AEItemKey output : owedInOrder()) {
-            Template template = templates.get(output);
-            if (template == null || template.keys().isEmpty() || isManualJob(output)) {
+            MatrixTemplate template = templates.get(output);
+            if (template == null || template.isEmpty() || isManualJob(output)) {
                 continue;
             }
             long attempts = attemptsFor(level, output);
             if (attempts <= 0) {
                 continue;
             }
-            List<Long> targets = new ArrayList<>(template.counts().size());
+            List<Long> targets = new ArrayList<>(template.stacks().size());
             boolean shortfall = false;
-            for (int i = 0; i < template.keys().size(); i++) {
-                long target = template.counts().get(i) * attempts;
+            for (GenericStack stack : template.stacks()) {
+                long target = stack.amount() * attempts;
                 targets.add(target);
-                shortfall |= target > bufferedAmount(template.keys().get(i));
+                shortfall |= target > bufferedAmount(stack.what());
             }
             if (!shortfall) {
                 continue;
@@ -805,7 +790,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
                         output,
                         owed.getOrDefault(output, 0L),
                         attempts,
-                        template.keys().size());
+                        template.stacks().size());
             }
             setMissingInputs(power.restock(level, template.keys(), targets));
             return;
@@ -813,10 +798,10 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         setMissingInputs(List.of());
     }
 
-    private List<GenericStack> shortfallOf(Template template, List<Long> targets) {
+    private List<GenericStack> shortfallOf(MatrixTemplate template, List<Long> targets) {
         List<GenericStack> shortfall = new ArrayList<>();
-        for (int i = 0; i < template.keys().size(); i++) {
-            AEKey key = template.keys().get(i);
+        for (int i = 0; i < template.stacks().size(); i++) {
+            AEKey key = template.stacks().get(i).what();
             long missing = targets.get(i) - bufferedAmount(key);
             if (missing > 0) {
                 shortfall.add(new GenericStack(key, missing));
@@ -862,7 +847,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private int liveDemandFor(Level level, AEKey key) {
         long target = 0;
         for (AEItemKey output : owed.keySet()) {
-            Template template = templates.get(output);
+            MatrixTemplate template = templates.get(output);
             if (template == null) {
                 continue;
             }
@@ -870,9 +855,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             if (attempts <= 0) {
                 continue;
             }
-            for (int i = 0; i < template.keys().size(); i++) {
-                if (key.equals(template.keys().get(i))) {
-                    target += template.counts().get(i) * attempts;
+            for (GenericStack stack : template.stacks()) {
+                if (key.equals(stack.what())) {
+                    target += stack.amount() * attempts;
                 }
             }
         }
@@ -968,17 +953,14 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     private void captureTemplate(AEItemKey output, Map<AEItemKey, Long> items, Map<AEFluidKey, Long> patternFluids) {
-        List<AEKey> keys = new ArrayList<>();
-        List<Long> counts = new ArrayList<>();
+        List<GenericStack> stacks = new ArrayList<>();
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
-            keys.add(entry.getKey());
-            counts.add(entry.getValue());
+            stacks.add(new GenericStack(entry.getKey(), entry.getValue()));
         }
         for (Map.Entry<AEFluidKey, Long> entry : patternFluids.entrySet()) {
-            keys.add(entry.getKey());
-            counts.add(entry.getValue());
+            stacks.add(new GenericStack(entry.getKey(), entry.getValue()));
         }
-        templates.put(output, new Template(List.copyOf(keys), List.copyOf(counts)));
+        templates.put(output, new MatrixTemplate(stacks));
     }
 
     @Override
@@ -1029,10 +1011,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     private long insertCraftedItem(AEItemKey key, long amount, boolean simulate) {
         ItemStackHandler target = inputBuffer;
         if (simulate) {
-            target = new OverstackedItemHandler(inputBuffer.getSlots());
-            for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
-                target.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
-            }
+            target = HandlerSnapshots.of(inputBuffer);
         }
         int maxStack = OverstackedItemHandler.SLOT_LIMIT;
         long remaining = amount;
@@ -1129,15 +1108,12 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
             long count = entry.getValue();
             while (count > 0) {
-                int chunk = (int) Math.min(count, OverstackedItemHandler.SLOT_LIMIT);
+                int chunk = (int) Math.min(count, entry.getKey().getMaxStackSize());
                 stacks.add(entry.getKey().toStack(chunk));
                 count -= chunk;
             }
         }
-        ItemStackHandler probe = new OverstackedItemHandler(inputBuffer.getSlots());
-        for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
-            probe.setStackInSlot(slot, inputBuffer.getStackInSlot(slot).copy());
-        }
+        ItemStackHandler probe = HandlerSnapshots.of(inputBuffer);
         for (ItemStack stack : stacks) {
             if (!ItemHandlerHelper.insertItem(probe, stack.copy(), false).isEmpty()) {
                 return false;
@@ -1284,20 +1260,21 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     long energyStored() {
-        Level level = getLevel();
-        return level != null && level.isClientSide ? clientEnergy : energy.stored();
+        return isClientSide() ? clientEnergy : energy.stored();
     }
 
     long energyCapacity() {
-        Level level = getLevel();
-        return level != null && level.isClientSide
+        return isClientSide()
                 ? Math.max(NepConfig.createSequencedAssemblyMatrixEnergyCapacity(), clientEnergyPending)
                 : energy.capacity();
     }
 
     long energyPending() {
-        Level level = getLevel();
-        return level != null && level.isClientSide ? clientEnergyPending : pendingEnergyCost;
+        return isClientSide() ? clientEnergyPending : pendingEnergyCost;
+    }
+
+    private boolean isClientSide() {
+        return level != null && level.isClientSide;
     }
 
     MatrixEnergyBuffer energyStorage() {
@@ -1309,8 +1286,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     int statusFlags() {
-        Level level = getLevel();
-        if (level != null && level.isClientSide) {
+        if (isClientSide()) {
             return clientFlags;
         }
         int flags = 0;
@@ -1363,6 +1339,11 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         rolledResult = ItemStack.EMPTY;
         claimedItems.clear();
         claimedFluids.clear();
+        dumpFluidsToNetwork();
+        clearContent();
+    }
+
+    private void dumpFluidsToNetwork() {
         for (int tank = 0; tank < AssemblyFluidBuffer.TANKS; tank++) {
             FluidStack held = fluids.getFluidInTank(tank);
             if (held.isEmpty()) {
@@ -1374,7 +1355,6 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
                 fluids.takeFrom(tank, (int) dumped);
             }
         }
-        clearContent();
     }
 
     @Override
@@ -1386,6 +1366,9 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         claimedFluids.clear();
         missingInputs.clear();
         owed.clear();
+        manualOwed.clear();
+        templates.clear();
+        pushingCpus.clear();
         jobs.clear();
         recipeIds.clear();
         toReturn.clear();
@@ -1471,11 +1454,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             tag.put(ROLLED_KEY, rolledResult.save(registries));
         }
         if (!missingInputs.isEmpty()) {
-            ListTag missingList = new ListTag();
-            for (GenericStack stack : missingInputs) {
-                missingList.add(GenericStack.writeTag(registries, stack));
-            }
-            tag.put(MISSING_KEY, missingList);
+            tag.put(MISSING_KEY, SequencedAssemblyMatrixPersistence.saveStacks(missingInputs, registries));
         }
         if (clientPacket) {
             tag.putInt(FLAGS_KEY, statusFlags());
@@ -1489,18 +1468,10 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         tag.put(ENERGY_KEY, energy.save());
         tag.putLong(ENERGY_PENDING_KEY, pendingEnergyCost);
         if (!claimedItems.isEmpty()) {
-            ListTag claimedList = new ListTag();
-            for (ItemStack stack : claimedItems) {
-                claimedList.add(stack.save(registries));
-            }
-            tag.put(CLAIMED_ITEMS_KEY, claimedList);
+            tag.put(CLAIMED_ITEMS_KEY, SequencedAssemblyMatrixPersistence.saveItems(claimedItems, registries));
         }
         if (!claimedFluids.isEmpty()) {
-            ListTag claimedList = new ListTag();
-            for (FluidStack stack : claimedFluids) {
-                claimedList.add(stack.save(registries));
-            }
-            tag.put(CLAIMED_FLUIDS_KEY, claimedList);
+            tag.put(CLAIMED_FLUIDS_KEY, SequencedAssemblyMatrixPersistence.saveFluids(claimedFluids, registries));
         }
         tag.put(INPUT_KEY, inputBuffer.serializeNBT(registries));
         tag.put(OUTPUT_KEY, outputBuffer.serializeNBT(registries));
@@ -1509,31 +1480,10 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
             tag.put(RETURN_DIRS_KEY, returnDirections.save(registries));
         }
         if (!templates.isEmpty()) {
-            ListTag templateList = new ListTag();
-            for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
-                Template template = entry.getValue();
-                ListTag entries = new ListTag();
-                for (int i = 0; i < template.keys().size(); i++) {
-                    CompoundTag keyTag = new CompoundTag();
-                    keyTag.put("Key", template.keys().get(i).toTagGeneric(registries));
-                    keyTag.putLong("Per", template.counts().get(i));
-                    entries.add(keyTag);
-                }
-                CompoundTag templateTag = new CompoundTag();
-                ItemCounts.putKey(templateTag, entry.getKey(), registries);
-                templateTag.put("Entries", entries);
-                templateList.add(templateTag);
-            }
-            tag.put(TEMPLATE_KEY, templateList);
+            tag.put(TEMPLATE_KEY, SequencedAssemblyMatrixPersistence.saveTemplates(templates, registries));
         }
         if (!jobs.isEmpty()) {
-            ListTag jobList = new ListTag();
-            for (Map.Entry<AEItemKey, MatrixJob> entry : jobs.entrySet()) {
-                CompoundTag jobTag = entry.getValue().save(registries);
-                ItemCounts.putKey(jobTag, entry.getKey(), registries);
-                jobList.add(jobTag);
-            }
-            tag.put(JOBS_KEY, jobList);
+            tag.put(JOBS_KEY, SequencedAssemblyMatrixPersistence.saveJobs(jobs, registries));
         }
         if (!recipeIds.isEmpty()) {
             tag.put(RECIPE_IDS_KEY, ItemRecipeIds.save(recipeIds, registries));
@@ -1558,16 +1508,7 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         rolledResult = tag.contains(ROLLED_KEY, Tag.TAG_COMPOUND)
                 ? ItemStack.parseOptional(registries, tag.getCompound(ROLLED_KEY))
                 : ItemStack.EMPTY;
-        missingInputs.clear();
-        if (tag.contains(MISSING_KEY, Tag.TAG_LIST)) {
-            ListTag missingList = tag.getList(MISSING_KEY, Tag.TAG_COMPOUND);
-            for (int i = 0; i < missingList.size(); i++) {
-                GenericStack stack = GenericStack.readTag(registries, missingList.getCompound(i));
-                if (stack != null) {
-                    missingInputs.add(stack);
-                }
-            }
-        }
+        SequencedAssemblyMatrixPersistence.loadStacks(missingInputs, tag, MISSING_KEY, registries);
         if (clientPacket) {
             clientFlags = tag.getInt(FLAGS_KEY);
             clientStress = tag.getInt(STRESS_KEY);
@@ -1582,26 +1523,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
                 Math.max(NepConfig.createSequencedAssemblyMatrixEnergyCapacity(), pendingEnergyCost),
                 NepConfig.createSequencedAssemblyMatrixChargeRate());
         energy.load(tag.getCompound(ENERGY_KEY));
-        claimedItems.clear();
-        if (tag.contains(CLAIMED_ITEMS_KEY, Tag.TAG_LIST)) {
-            ListTag claimedList = tag.getList(CLAIMED_ITEMS_KEY, Tag.TAG_COMPOUND);
-            for (int i = 0; i < claimedList.size(); i++) {
-                ItemStack stack = ItemStack.parseOptional(registries, claimedList.getCompound(i));
-                if (!stack.isEmpty()) {
-                    claimedItems.add(stack);
-                }
-            }
-        }
-        claimedFluids.clear();
-        if (tag.contains(CLAIMED_FLUIDS_KEY, Tag.TAG_LIST)) {
-            ListTag claimedList = tag.getList(CLAIMED_FLUIDS_KEY, Tag.TAG_COMPOUND);
-            for (int i = 0; i < claimedList.size(); i++) {
-                FluidStack stack = FluidStack.parseOptional(registries, claimedList.getCompound(i));
-                if (!stack.isEmpty()) {
-                    claimedFluids.add(stack);
-                }
-            }
-        }
+        SequencedAssemblyMatrixPersistence.loadItems(claimedItems, tag, CLAIMED_ITEMS_KEY, registries);
+        SequencedAssemblyMatrixPersistence.loadFluids(claimedFluids, tag, CLAIMED_FLUIDS_KEY, registries);
         if (tag.contains(INPUT_KEY)) {
             inputBuffer.deserializeNBT(registries, tag.getCompound(INPUT_KEY));
         }
@@ -1610,40 +1533,8 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
         }
         ItemCounts.load(toReturn, tag, RETURN_KEY, registries);
         returnDirections.load(tag, RETURN_DIRS_KEY, RETURN_DIR_KEY, toReturn.keySet(), registries);
-        templates.clear();
-        if (tag.contains(TEMPLATE_KEY, Tag.TAG_LIST)) {
-            ListTag templateList = tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND);
-            for (int i = 0; i < templateList.size(); i++) {
-                CompoundTag templateTag = templateList.getCompound(i);
-                ListTag entries = templateTag.getList("Entries", Tag.TAG_COMPOUND);
-                List<AEKey> keys = new ArrayList<>(entries.size());
-                List<Long> counts = new ArrayList<>(entries.size());
-                for (int entry = 0; entry < entries.size(); entry++) {
-                    CompoundTag keyTag = entries.getCompound(entry);
-                    AEKey key = AEKey.fromTagGeneric(registries, keyTag.getCompound("Key"));
-                    if (key != null) {
-                        keys.add(key);
-                        counts.add(keyTag.getLong("Per"));
-                    }
-                }
-                AEItemKey outputItem = ItemCounts.key(templateTag, "Output", registries);
-                if (!keys.isEmpty() && outputItem != null) {
-                    templates.put(outputItem, new Template(List.copyOf(keys), List.copyOf(counts)));
-                }
-            }
-        }
-        jobs.clear();
-        if (tag.contains(JOBS_KEY, Tag.TAG_LIST)) {
-            ListTag jobList = tag.getList(JOBS_KEY, Tag.TAG_COMPOUND);
-            for (int i = 0; i < jobList.size(); i++) {
-                CompoundTag jobTag = jobList.getCompound(i);
-                AEItemKey outputItem = ItemCounts.key(jobTag, "Output", registries);
-                MatrixJob job = MatrixJob.load(registries, jobTag);
-                if (outputItem != null && job != null) {
-                    jobs.put(outputItem, job);
-                }
-            }
-        }
+        SequencedAssemblyMatrixPersistence.loadTemplates(templates, tag, TEMPLATE_KEY, registries);
+        SequencedAssemblyMatrixPersistence.loadJobs(jobs, tag, JOBS_KEY, registries);
         ItemRecipeIds.load(recipeIds, tag, RECIPE_IDS_KEY, registries);
         activeJob = activeResult.isEmpty() ? null : jobs.get(AEItemKey.of(activeResult));
         pushingCpus.load(tag);
@@ -1654,8 +1545,6 @@ public class SequencedAssemblyMatrixBlockEntity extends KineticBlockEntity
     }
 
     private record Plan(List<int[]> itemTakes, List<int[]> fluidTakes) {}
-
-    private record Template(List<AEKey> keys, List<Long> counts) {}
 
     private final class OutputView implements IItemHandler {
 

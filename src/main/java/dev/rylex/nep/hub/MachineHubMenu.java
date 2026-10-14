@@ -18,18 +18,17 @@ public class MachineHubMenu extends MachineMenu {
 
     public static final int BUTTON_SCAN = 1;
     public static final int BUTTON_CLEAR = 2;
-    public static final int BUTTON_ROLE = 100;
     public static final int BUTTON_REMOVE = 200;
 
     public static final int WIDTH = 216;
-    public static final int HEIGHT = 306;
+    public static final int HEIGHT = 300;
     public static final int SHEET_HEIGHT = 320;
     public static final int PLAYER_INVENTORY_X = 27;
-    public static final int PLAYER_INVENTORY_Y = 223;
+    public static final int PLAYER_INVENTORY_Y = 217;
     public static final int PLAYER_SLOT_X = PLAYER_INVENTORY_X + 1;
     public static final int PLAYER_SLOT_Y = PLAYER_INVENTORY_Y + 1;
     public static final int ROW_X = 9;
-    public static final int ROW_Y = 34;
+    public static final int ROW_Y = 32;
     public static final int ROW_HEIGHT = 14;
     public static final int ROW_WIDTH = 190;
     public static final int VISIBLE_ROWS = 12;
@@ -140,11 +139,6 @@ public class MachineHubMenu extends MachineMenu {
             resend();
             return true;
         }
-        if (id >= BUTTON_ROLE) {
-            hub.cycleRole(id - BUTTON_ROLE);
-            resend();
-            return true;
-        }
         return false;
     }
 
@@ -160,6 +154,7 @@ public class MachineHubMenu extends MachineMenu {
             case SET_RETURN_FILTER -> hub.setReturnFilter(index, payload.value(), payload.key());
             case TOGGLE_INSERT_MODE -> hub.toggleInsertFilterMode(index);
             case TOGGLE_RETURN_MODE -> hub.toggleReturnFilterMode(index);
+            case SET_ROLE -> hub.setRole(index, HubRole.byOrdinal(payload.value()));
         }
         resend();
     }

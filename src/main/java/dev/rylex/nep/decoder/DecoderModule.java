@@ -3,22 +3,38 @@ package dev.rylex.nep.decoder;
 import net.neoforged.fml.ModList;
 
 public enum DecoderModule {
-    ACTUALLY_ADDITIONS("actuallyadditions", "actually_additions"),
-    APOTHIC_ENCHANTING("apothic_enchanting", "apothic_enchanting"),
-    ARS_NOUVEAU("ars_nouveau", "ars_nouveau"),
-    COMPACT_CRAFTING("compactcrafting", "compact_crafting"),
-    CREATE("create", "create"),
-    DRACONIC_EVOLUTION("draconicevolution", "draconic_evolution"),
-    MALUM("malum", "malum"),
-    MYSTICAL_AGRICULTURE("mysticalagriculture", "mystical_agriculture"),
-    ORITECH("oritech", "oritech");
+    ACTUALLY_ADDITIONS(0, "actuallyadditions", "actually_additions"),
+    APOTHIC_ENCHANTING(1, "apothic_enchanting", "apothic_enchanting"),
+    ARS_NOUVEAU(2, "ars_nouveau", "ars_nouveau"),
+    COMPACT_CRAFTING(3, "compactcrafting", "compact_crafting"),
+    CREATE(4, "create", "create"),
+    DRACONIC_EVOLUTION(5, "draconicevolution", "draconic_evolution"),
+    MALUM(6, "malum", "malum"),
+    MYSTICAL_AGRICULTURE(7, "mysticalagriculture", "mystical_agriculture"),
+    ORITECH(8, "oritech", "oritech"),
+    OCCULTISM(9, "occultism", "occultism");
 
+    private final int slot;
     private final String modId;
     private final String itemPath;
 
-    DecoderModule(String modId, String itemStem) {
+    DecoderModule(int slot, String modId, String itemStem) {
+        this.slot = slot;
         this.modId = modId;
         this.itemPath = itemStem + "_encoding_module";
+    }
+
+    public static DecoderModule bySlot(int slot) {
+        for (DecoderModule module : values()) {
+            if (module.slot == slot) {
+                return module;
+            }
+        }
+        throw new IndexOutOfBoundsException(slot);
+    }
+
+    public int slot() {
+        return slot;
     }
 
     public String modId() {
@@ -30,7 +46,7 @@ public enum DecoderModule {
     }
 
     public int bit() {
-        return 1 << ordinal();
+        return 1 << slot;
     }
 
     public boolean installed() {

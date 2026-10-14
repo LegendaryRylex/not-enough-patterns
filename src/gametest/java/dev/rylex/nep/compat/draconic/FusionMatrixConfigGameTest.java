@@ -75,18 +75,28 @@ public final class FusionMatrixConfigGameTest {
     public static void aLongCoreSwapGraceHoldsTheEnergyUntilTheCoresGoBack(GameTestHelper helper) {
         int beyondTheDefault = NepConfig.draconicFusionMatrixCoreSwapGrace() + 50;
         ConfigOverrides.Restore restore = ConfigOverrides.override(SWAP_GRACE_FIELD, 24_000);
-        FusionMatrixBlockEntity matrix = fullOfWyvernCores(helper);
-        long filled = matrix.storedEnergy();
-        matrix.getUpgradeSlot().extractItem(0, Integer.MAX_VALUE, false);
+        FusionMatrixBlockEntity matrix;
+        long filled;
+        try {
+            matrix = fullOfWyvernCores(helper);
+            filled = matrix.storedEnergy();
+            matrix.getUpgradeSlot().extractItem(0, Integer.MAX_VALUE, false);
+        } catch (RuntimeException | Error e) {
+            restore.undo();
+            throw e;
+        }
 
         long[] observed = new long[2];
         boolean[] holding = new boolean[1];
         helper.runAtTickTime(beyondTheDefault, () -> {
-            holding[0] = matrix.isHoldingSwappedEnergy();
-            observed[0] = matrix.storedEnergy();
-            setCores(matrix, DEContent.CORE_AWAKENED.get(), NepConfig.draconicFusionMatrixMaxCores());
-            observed[1] = matrix.storedEnergy();
-            restore.undo();
+            try {
+                holding[0] = matrix.isHoldingSwappedEnergy();
+                observed[0] = matrix.storedEnergy();
+                setCores(matrix, DEContent.CORE_AWAKENED.get(), NepConfig.draconicFusionMatrixMaxCores());
+                observed[1] = matrix.storedEnergy();
+            } finally {
+                restore.undo();
+            }
         });
 
         helper.runAfterDelay(beyondTheDefault + 5, () -> {

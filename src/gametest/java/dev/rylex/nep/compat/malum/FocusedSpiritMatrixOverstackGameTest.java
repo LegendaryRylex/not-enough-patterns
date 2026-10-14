@@ -1,25 +1,20 @@
 package dev.rylex.nep.compat.malum;
 
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.malum.MalumFixtures.UMBRAL_SLOT;
+
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
-import appeng.core.definitions.AEBlocks;
 import com.sammy.malum.common.recipe.SpiritInfusionRecipe;
 import com.sammy.malum.registry.common.item.MalumItems;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.OverstackedItemHandler;
-import dev.rylex.nep.pattern.SpiritInfusionPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -47,64 +42,21 @@ public final class FocusedSpiritMatrixOverstackGameTest {
             ResourceLocation.fromNamespaceAndPath("test", "matrix_spirit_heavy");
 
     private static final int SPIRITS_PER_CRAFT = 10;
-    private static final int UMBRAL_SLOT = 4;
 
-    /** Saddles do not stack, so returning more of them than this would outrun a player's own inventory. */
-    private static final int STAGED_BY_HAND = 20;
+    private static final int SADDLES_STAGED = 20;
 
     private FocusedSpiritMatrixOverstackGameTest() {}
 
     private static FocusedSpiritMatrixBlockEntity placeMatrix(GameTestHelper helper) {
-        SpiritInfusionResolver.clearCache();
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-        helper.setBlock(MATRIX, NepMalumContent.MATRIX.get().defaultBlockState());
-        FocusedSpiritMatrixBlockEntity matrix =
-                helper.getBlockEntity(MATRIX) instanceof FocusedSpiritMatrixBlockEntity be ? be : null;
-        helper.assertTrue(matrix != null, "the Focused Spirit Matrix has no block entity");
-        return matrix;
+        return MalumFixtures.placeMatrix(helper, ME_CONTROLLER, ENERGY_CELL, MATRIX);
     }
 
     private static IPatternDetails patternFor(GameTestHelper helper, ResourceLocation recipe) {
-        RecipeHolder<SpiritInfusionRecipe> holder = SpiritInfusionResolver.byId(helper.getLevel(), recipe);
-        helper.assertTrue(holder != null, "the test recipe " + recipe + " did not load");
-        EncodedIngredients expected = MalumRecipeIngredients.spiritInfusion(holder.value());
-        helper.assertTrue(expected != null, "the test recipe " + recipe + " produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded =
-                SpiritInfusionPattern.encode(recipe, inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the pattern for " + recipe + " did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
+        return MalumFixtures.spiritInfusionPattern(helper, recipe);
     }
 
     private static int bankCapacity(IItemHandler bank) {
         return bank.getSlotLimit(UMBRAL_SLOT);
-    }
-
-    private static int countIn(IItemHandler handler, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stack = handler.getStackInSlot(slot);
-            if (stack.is(item)) {
-                total += stack.getCount();
-            }
-        }
-        return total;
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
@@ -218,7 +170,7 @@ public final class FocusedSpiritMatrixOverstackGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void emptyBuffersReturnsAnOverstackedSlotAndLeavesTheSpiritBank(GameTestHelper helper) {
         FocusedSpiritMatrixBlockEntity matrix = placeMatrix(helper);
-        int staged = STAGED_BY_HAND;
+        int staged = SADDLES_STAGED;
         int banked = 12;
 
         matrix.getInputBuffer().insertItem(0, new ItemStack(Items.SADDLE, staged), false);

@@ -1,11 +1,11 @@
 package dev.rylex.nep.pattern;
 
+import static dev.rylex.nep.pattern.TerminalFixture.obsidianToDiamond;
+import static dev.rylex.nep.pattern.TerminalFixture.stack;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.GenericStack;
 import appeng.core.definitions.AEItems;
-import appeng.helpers.IPatternTerminalLogicHost;
 import appeng.parts.encoding.PatternEncodingLogic;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepComponents;
@@ -20,14 +20,12 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -41,10 +39,6 @@ public final class ProcessingPatternConversionGameTest {
     private static final ResourceLocation SOURCE = ResourceLocation.parse("test:conversion");
 
     private ProcessingPatternConversionGameTest() {}
-
-    private static GenericStack stack(Item item, long amount) {
-        return new GenericStack(AEItemKey.of(item), amount);
-    }
 
     private static CraftingInput grid(ItemStack... contents) {
         List<ItemStack> items = new ArrayList<>(Collections.nCopies(9, ItemStack.EMPTY));
@@ -131,8 +125,8 @@ public final class ProcessingPatternConversionGameTest {
                 ProcessingPatternConversionRecipe.converts(convertible),
                 "a pattern that converts did not advertise the recipe, so its tooltip stays silent about the only way"
                         + " back to a processing pattern");
-        helper.assertTrue(
-                !ProcessingPatternConversionRecipe.converts(keepsATool),
+        helper.assertFalse(
+                ProcessingPatternConversionRecipe.converts(keepsATool),
                 "a pattern that keeps an ingredient advertised the recipe, so its tooltip promises a conversion the"
                         + " crafting grid refuses");
         helper.succeed();
@@ -144,7 +138,7 @@ public final class ProcessingPatternConversionGameTest {
                 AndesiteCraftingPattern.encode(SOURCE, List.of(stack(Items.OBSIDIAN, 2)), stack(Items.DIAMOND, 1));
 
         ItemStack converted = ProcessingPatternConversionRecipe.convert(pattern);
-        helper.assertTrue(!converted.isEmpty(), "the pattern did not convert at all");
+        helper.assertFalse(converted.isEmpty(), "the pattern did not convert at all");
         helper.assertValueEqual(
                 converted.get(NepComponents.SOURCE_RECIPE.get()),
                 SOURCE,
@@ -157,9 +151,9 @@ public final class ProcessingPatternConversionGameTest {
         ItemStack pattern =
                 AndesiteCraftingPattern.encode(SOURCE, List.of(stack(Items.OBSIDIAN, 2)), stack(Items.DIAMOND, 1));
         ItemStack converted = ProcessingPatternConversionRecipe.convert(pattern);
-        helper.assertTrue(!converted.isEmpty(), "the pattern did not convert at all");
+        helper.assertFalse(converted.isEmpty(), "the pattern did not convert at all");
 
-        PatternEncodingLogic logic = new Terminal(helper.getLevel()).getLogic();
+        PatternEncodingLogic logic = new TerminalFixture(helper.getLevel()).getLogic();
         logic.getEncodedPatternInv().setItemDirect(0, converted);
 
         helper.assertValueEqual(
@@ -172,10 +166,9 @@ public final class ProcessingPatternConversionGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void anOrdinaryProcessingPatternTeachesATerminalNothing(GameTestHelper helper) {
-        ItemStack processing = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(stack(Items.OBSIDIAN, 1)), List.of(stack(Items.DIAMOND, 1)));
+        ItemStack processing = obsidianToDiamond(1);
 
-        PatternEncodingLogic logic = new Terminal(helper.getLevel()).getLogic();
+        PatternEncodingLogic logic = new TerminalFixture(helper.getLevel()).getLogic();
         logic.getEncodedPatternInv().setItemDirect(0, processing);
 
         helper.assertTrue(
@@ -187,37 +180,12 @@ public final class ProcessingPatternConversionGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void anAe2PatternIsLeftAlone(GameTestHelper helper) {
-        ItemStack processing = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(stack(Items.OBSIDIAN, 1)), List.of(stack(Items.DIAMOND, 1)));
+        ItemStack processing = obsidianToDiamond(1);
 
         helper.assertTrue(
                 ProcessingPatternConversionRecipe.convert(processing).isEmpty(),
                 "an AE2 processing pattern was accepted by the conversion recipe, which would re-encode it for no"
                         + " reason");
         helper.succeed();
-    }
-
-    private static final class Terminal implements IPatternTerminalLogicHost {
-
-        private final Level level;
-        private final PatternEncodingLogic logic;
-
-        private Terminal(Level level) {
-            this.level = level;
-            this.logic = new PatternEncodingLogic(this);
-        }
-
-        @Override
-        public PatternEncodingLogic getLogic() {
-            return logic;
-        }
-
-        @Override
-        public Level getLevel() {
-            return level;
-        }
-
-        @Override
-        public void markForSave() {}
     }
 }

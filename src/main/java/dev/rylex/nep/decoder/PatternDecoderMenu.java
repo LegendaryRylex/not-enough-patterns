@@ -56,7 +56,7 @@ public class PatternDecoderMenu extends MachineMenu {
     }
 
     public ItemStack moduleIn(DecoderModule module) {
-        return slots.get(module.ordinal()).getItem();
+        return slots.get(module.slot()).getItem();
     }
 
     @Override
@@ -72,7 +72,7 @@ public class PatternDecoderMenu extends MachineMenu {
     protected boolean movePlayerStackIntoMachine(ItemStack stack) {
         return stack.getItem() instanceof EncodingModuleItem module
                 && moveItemStackTo(
-                        stack, module.module().ordinal(), module.module().ordinal() + 1, false);
+                        stack, module.module().slot(), module.module().slot() + 1, false);
     }
 
     @Override

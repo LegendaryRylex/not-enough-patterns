@@ -5,6 +5,7 @@ import appeng.api.behaviors.StackTransferContext;
 import appeng.api.config.Actionable;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEKeyType;
+import dev.rylex.nep.Nep;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -54,7 +55,18 @@ public final class OwedFluidImport implements StackImportStrategy {
             long inserted = storage.insert(key, drained.getAmount(), Actionable.MODULATE, context.getActionSource());
             long leftover = drained.getAmount() - inserted;
             if (leftover > 0) {
-                handler.fill(key.toStack((int) leftover), IFluidHandler.FluidAction.EXECUTE);
+                int returned = handler.fill(key.toStack((int) leftover), IFluidHandler.FluidAction.EXECUTE);
+                long refused = leftover - returned;
+                if (refused > 0) {
+                    long retried = storage.insert(key, refused, Actionable.MODULATE, context.getActionSource());
+                    inserted += retried;
+                    if (retried < refused) {
+                        Nep.LOGGER.warn(
+                                "Lost {} mB of {} when neither the source tank nor storage took it",
+                                refused - retried,
+                                key);
+                    }
+                }
             }
             if (inserted > 0) {
                 context.reduceOperationsRemaining(inserted);

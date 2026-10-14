@@ -128,10 +128,6 @@ public class FocusedSpiritMatrixMenu extends MachineMenu implements ManualCraftM
         return pos;
     }
 
-    BlockPos matrixPos() {
-        return pos;
-    }
-
     boolean upgradeSlotEmpty() {
         return !upgradeSlot.hasItem();
     }

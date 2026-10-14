@@ -11,6 +11,7 @@ import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.actuallyadditions.ActuallyAdditionsRecipeIngredients.Demand;
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
+import dev.rylex.nep.machine.DemandTally;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.ManualCraftHost;
 import dev.rylex.nep.machine.ManualCraftOutcome;
@@ -20,12 +21,13 @@ import dev.rylex.nep.machine.ManualStaging;
 import dev.rylex.nep.machine.MatrixEnergyBuffer;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.machine.MatrixStatus;
+import dev.rylex.nep.machine.StackColumns;
 import dev.rylex.nep.pattern.AtomicReconstructionPattern;
 import dev.rylex.nep.pattern.EmpoweringPattern;
 import dev.rylex.nep.pattern.RecipePattern;
+import dev.rylex.nep.util.EnumNames;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,6 +132,8 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         TOO_MANY_INPUTS,
         BUFFER_FULL
     }
+
+    private record Resolved(Kind kind, ItemStack result, List<Demand> demands, long cost) {}
 
     private record Template(Kind kind, List<AEKey> keys, List<Long> counts, ResourceLocation recipe) {}
 
@@ -293,27 +297,13 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
     }
 
     private Stall claimIngredients(Level level, Template template) {
-        ItemStack result;
-        List<Demand> demands;
-        long cost;
-        if (template.kind() == Kind.EMPOWERING) {
-            RecipeHolder<EmpowererRecipe> holder =
-                    ActuallyAdditionsRecipeResolver.empoweringById(level, template.recipe());
-            if (holder == null) {
-                return Stall.NO_RECIPE;
-            }
-            result = holder.value().getOutput().copy();
-            demands = ActuallyAdditionsRecipeIngredients.empoweringDemand(holder.value());
-            cost = (long) holder.value().getEnergyPerStand() * EmpowererLayout.STANDS;
-        } else {
-            RecipeHolder<LaserRecipe> holder = ActuallyAdditionsRecipeResolver.laserById(level, template.recipe());
-            if (holder == null) {
-                return Stall.NO_RECIPE;
-            }
-            result = holder.value().getResultItem(level.registryAccess()).copy();
-            demands = ActuallyAdditionsRecipeIngredients.laserDemand(holder.value());
-            cost = holder.value().getEnergy();
+        Resolved resolved = resolve(level, template.kind(), template.recipe());
+        if (resolved == null) {
+            return Stall.NO_RECIPE;
         }
+        ItemStack result = resolved.result();
+        List<Demand> demands = resolved.demands();
+        long cost = resolved.cost();
         if (result.isEmpty()) {
             return Stall.NO_RECIPE;
         }
@@ -348,6 +338,30 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
                     craftCost);
         }
         return Stall.NONE;
+    }
+
+    @Nullable
+    private static Resolved resolve(Level level, Kind kind, ResourceLocation recipe) {
+        if (kind == Kind.EMPOWERING) {
+            RecipeHolder<EmpowererRecipe> holder = ActuallyAdditionsRecipeResolver.empoweringById(level, recipe);
+            if (holder == null) {
+                return null;
+            }
+            return new Resolved(
+                    kind,
+                    holder.value().getOutput().copy(),
+                    ActuallyAdditionsRecipeIngredients.empoweringDemand(holder.value()),
+                    (long) holder.value().getEnergyPerStand() * EmpowererLayout.STANDS);
+        }
+        RecipeHolder<LaserRecipe> holder = ActuallyAdditionsRecipeResolver.laserById(level, recipe);
+        if (holder == null) {
+            return null;
+        }
+        return new Resolved(
+                kind,
+                holder.value().getResultItem(level.registryAccess()).copy(),
+                ActuallyAdditionsRecipeIngredients.laserDemand(holder.value()),
+                holder.value().getEnergy());
     }
 
     @Nullable
@@ -555,23 +569,16 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
             return ManualCraftOutcome.failed(ManualCraftResult.DISABLED);
         }
 
-        Kind kind;
-        List<ManualRequirement> requirements;
-        ItemStack result;
-        RecipeHolder<EmpowererRecipe> empowering = ActuallyAdditionsRecipeResolver.empoweringById(level, recipe);
-        if (empowering != null) {
-            kind = Kind.EMPOWERING;
-            requirements = ActuallyAdditionsRecipeIngredients.empoweringRequirements(empowering.value());
-            result = empowering.value().getOutput().copy();
-        } else {
-            RecipeHolder<LaserRecipe> laser = ActuallyAdditionsRecipeResolver.laserById(level, recipe);
-            if (laser == null) {
-                return ManualCraftOutcome.failed(ManualCraftResult.UNKNOWN_RECIPE);
-            }
-            kind = Kind.LASER;
-            requirements = ActuallyAdditionsRecipeIngredients.laserRequirements(laser.value());
-            result = laser.value().getResultItem(level.registryAccess()).copy();
+        Resolved resolved = resolve(level, Kind.EMPOWERING, recipe);
+        if (resolved == null) {
+            resolved = resolve(level, Kind.LASER, recipe);
         }
+        if (resolved == null) {
+            return ManualCraftOutcome.failed(ManualCraftResult.UNKNOWN_RECIPE);
+        }
+        Kind kind = resolved.kind();
+        ItemStack result = resolved.result();
+        List<ManualRequirement> requirements = ActuallyAdditionsRecipeIngredients.requirementsOf(resolved.demands());
         if (result.isEmpty() || requirements.isEmpty()) {
             return ManualCraftOutcome.failed(ManualCraftResult.UNSUPPORTED);
         }
@@ -623,40 +630,21 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
             setMissingInputs(List.of());
             return;
         }
-        List<AEKey> keys = new ArrayList<>();
-        List<Long> targets = new ArrayList<>();
+        DemandTally tally = new DemandTally();
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
             Template template = templates.get(entry.getKey());
             if (template == null || isManualJob(entry.getKey())) {
                 continue;
             }
             for (int i = 0; i < template.keys().size(); i++) {
-                long target = template.counts().get(i) * entry.getValue();
-                int existing = keys.indexOf(template.keys().get(i));
-                if (existing >= 0) {
-                    targets.set(existing, targets.get(existing) + target);
-                } else {
-                    keys.add(template.keys().get(i));
-                    targets.add(target);
-                }
+                tally.add(template.keys().get(i), template.counts().get(i) * entry.getValue());
             }
         }
-        if (keys.isEmpty()) {
+        if (tally.isEmpty()) {
             setMissingInputs(List.of());
             return;
         }
-        List<Integer> order = new ArrayList<>();
-        for (int i = 0; i < keys.size(); i++) {
-            order.add(i);
-        }
-        order.sort(Comparator.comparing(i -> keys.get(i).toString()));
-        List<AEKey> stableKeys = new ArrayList<>(keys.size());
-        List<Long> stableTargets = new ArrayList<>(targets.size());
-        for (int i : order) {
-            stableKeys.add(keys.get(i));
-            stableTargets.add(targets.get(i));
-        }
-        setMissingInputs(power.restock(level, stableKeys, stableTargets));
+        setMissingInputs(tally.restock(level, power));
     }
 
     int manualDemandFor(ItemStack stack) {
@@ -754,14 +742,6 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
 
     boolean hasEnergyFault() {
         return energyFault;
-    }
-
-    long pendingJobs() {
-        long total = 0;
-        for (long count : owed.values()) {
-            total += count;
-        }
-        return total;
     }
 
     Stall stall() {
@@ -897,22 +877,13 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         pushingCpus.load(tag);
         power.load(tag.getCompound(NODE_KEY));
-        stall = byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
-        refusal = byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
+        stall = EnumNames.byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
+        refusal = EnumNames.byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
         refusalTicks = refusal == Refusal.NONE
                 ? 0
                 : Math.max(1, Math.min(REFUSAL_MEMORY_TICKS, tag.getInt(REFUSAL_TICKS_KEY)));
-        activeKind = byName(Kind.values(), tag.getString(ACTIVE_KIND_KEY), Kind.EMPOWERING);
+        activeKind = EnumNames.byName(Kind.values(), tag.getString(ACTIVE_KIND_KEY), Kind.EMPOWERING);
         markScanNeeded();
-    }
-
-    private static <E extends Enum<E>> E byName(E[] values, String name, E fallback) {
-        for (E value : values) {
-            if (value.name().equals(name)) {
-                return value;
-            }
-        }
-        return fallback;
     }
 
     private ListTag saveTemplates(HolderLookup.Provider registries) {
@@ -921,15 +892,9 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
             CompoundTag tag = new CompoundTag();
             ItemCounts.putKey(tag, entry.getKey(), registries);
             tag.putString("Kind", entry.getValue().kind().name());
-            ListTag stacks = new ListTag();
-            for (int i = 0; i < entry.getValue().keys().size(); i++) {
-                stacks.add(GenericStack.writeTag(
-                        registries,
-                        new GenericStack(
-                                entry.getValue().keys().get(i),
-                                entry.getValue().counts().get(i))));
-            }
-            tag.put("Stacks", stacks);
+            tag.put(
+                    "Stacks",
+                    new StackColumns(entry.getValue().keys(), entry.getValue().counts()).write(registries));
             tag.putString("Recipe", entry.getValue().recipe().toString());
             list.add(tag);
         }
@@ -940,28 +905,19 @@ public class AtomicEmpoweringMatrixBlockEntity extends BufferedMatrixBlockEntity
         templates.clear();
         for (int i = 0; i < list.size(); i++) {
             CompoundTag tag = list.getCompound(i);
-            AEItemKey item = ItemCounts.key(tag, registries);
+            AEItemKey item = ItemCounts.key(tag, ItemCounts.LEGACY_ID_TAG, registries);
             ResourceLocation recipe = ResourceLocation.tryParse(tag.getString("Recipe"));
             if (item == null || recipe == null) {
                 continue;
             }
-            ListTag stacks = tag.getList("Stacks", Tag.TAG_COMPOUND);
-            List<AEKey> keys = new ArrayList<>();
-            List<Long> counts = new ArrayList<>();
-            for (int s = 0; s < stacks.size(); s++) {
-                GenericStack stack = GenericStack.readTag(registries, stacks.getCompound(s));
-                if (stack != null) {
-                    keys.add(stack.what());
-                    counts.add(stack.amount());
-                }
-            }
-            if (!keys.isEmpty()) {
+            StackColumns columns = StackColumns.read(tag, "Stacks", registries);
+            if (!columns.keys().isEmpty()) {
                 templates.put(
                         item,
                         new Template(
-                                byName(Kind.values(), tag.getString("Kind"), Kind.EMPOWERING),
-                                List.copyOf(keys),
-                                List.copyOf(counts),
+                                EnumNames.byName(Kind.values(), tag.getString("Kind"), Kind.EMPOWERING),
+                                columns.keys(),
+                                columns.counts(),
                                 recipe));
             }
         }

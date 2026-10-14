@@ -17,6 +17,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 public class HubLinkerItem extends Item {
 
@@ -64,27 +65,9 @@ public class HubLinkerItem extends Item {
             return InteractionResult.SUCCESS;
         }
 
-        int limit = NepConfig.machineHubMaximumLinks();
-        if (plan.size() >= limit) {
-            message(player, Component.translatable("chat.nep.hub_linker.full", limit), ChatFormatting.RED);
-            return InteractionResult.SUCCESS;
-        }
-        if (HubScan.networkBlock(level, pos)) {
-            message(
-                    player,
-                    Component.translatable("chat.nep.hub_linker.network_block", format(pos)),
-                    ChatFormatting.RED);
-            return InteractionResult.SUCCESS;
-        }
-        if (HubRules.load().unlinkable(level.getBlockState(pos))) {
-            message(player, Component.translatable("chat.nep.hub_linker.unlinkable", format(pos)), ChatFormatting.RED);
-            return InteractionResult.SUCCESS;
-        }
-        if (!HubScan.linkable(level, pos)) {
-            message(
-                    player,
-                    Component.translatable("chat.nep.hub_linker.no_inventory", format(pos)),
-                    ChatFormatting.RED);
+        Component rejection = rejection(level, pos, plan.size());
+        if (rejection != null) {
+            message(player, rejection, ChatFormatting.RED);
             return InteractionResult.SUCCESS;
         }
 
@@ -100,6 +83,24 @@ public class HubLinkerItem extends Item {
                         plan.size()),
                 ChatFormatting.GREEN);
         return InteractionResult.SUCCESS;
+    }
+
+    @Nullable
+    private static Component rejection(Level level, BlockPos pos, int planSize) {
+        int limit = NepConfig.machineHubMaximumLinks();
+        if (planSize >= limit) {
+            return Component.translatable("chat.nep.hub_linker.full", limit);
+        }
+        if (HubScan.networkBlock(level, pos)) {
+            return Component.translatable("chat.nep.hub_linker.network_block", format(pos));
+        }
+        if (HubRules.load().unlinkable(level.getBlockState(pos))) {
+            return Component.translatable("chat.nep.hub_linker.unlinkable", format(pos));
+        }
+        if (!HubScan.linkable(level, pos)) {
+            return Component.translatable("chat.nep.hub_linker.no_inventory", format(pos));
+        }
+        return null;
     }
 
     @Override

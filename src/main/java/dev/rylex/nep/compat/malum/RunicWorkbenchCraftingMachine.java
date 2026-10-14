@@ -1,43 +1,34 @@
 package dev.rylex.nep.compat.malum;
 
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEItems;
 import com.sammy.malum.common.block.curiosities.runic_workbench.RunicWorkbenchBlockEntity;
 import com.sammy.malum.registry.common.block.MalumBlocks;
-import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.machine.PushOutcome;
-import dev.rylex.nep.machine.RejectLog;
 import dev.rylex.nep.pattern.RuneworkingPattern;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-public class RunicWorkbenchCraftingMachine implements ICraftingMachine {
+public class RunicWorkbenchCraftingMachine extends MemoizedPushMachine {
 
-    private static final int MAX_MEMOIZED_REJECTS = 512;
-
-    private static final Set<AEItemKey> UNSATISFIABLE = new HashSet<>();
-    private static final RejectLog REJECT_LOG = new RejectLog();
+    private static final Memo MEMO = new Memo();
 
     private final RunicWorkbenchBlockEntity workbench;
 
     public RunicWorkbenchCraftingMachine(RunicWorkbenchBlockEntity workbench) {
+        super(workbench, MEMO, "Runic Workbench");
         this.workbench = workbench;
     }
 
     static void clearCache() {
-        UNSATISFIABLE.clear();
-        REJECT_LOG.clear();
+        MEMO.clear();
     }
 
     @Override
@@ -48,32 +39,12 @@ public class RunicWorkbenchCraftingMachine implements ICraftingMachine {
     }
 
     @Override
-    public boolean acceptsPlans() {
+    boolean enabled() {
         return NepConfig.malumRuneworking();
     }
 
     @Override
-    public boolean pushPattern(IPatternDetails patternDetails, KeyCounter[] inputs, Direction ejectionDirection) {
-        Level level = workbench.getLevel();
-        if (level == null || level.isClientSide() || !NepConfig.malumRuneworking()) {
-            return false;
-        }
-
-        AEItemKey key = patternDetails.getDefinition();
-        if (UNSATISFIABLE.contains(key)) {
-            return false;
-        }
-
-        PushOutcome outcome = attempt(level, patternDetails, inputs, ejectionDirection);
-        if (outcome.unsatisfiable() && UNSATISFIABLE.size() < MAX_MEMOIZED_REJECTS) {
-            UNSATISFIABLE.add(key);
-        }
-        log(level, patternDetails, outcome);
-        return outcome.accepted();
-    }
-
-    private PushOutcome attempt(
-            Level level, IPatternDetails patternDetails, KeyCounter[] inputs, Direction ejectionDirection) {
+    PushOutcome attempt(Level level, IPatternDetails patternDetails, KeyCounter[] inputs, Direction ejectionDirection) {
         if (!(patternDetails instanceof RuneworkingPattern)
                 && patternDetails.getDefinition().getItem() != AEItems.PROCESSING_PATTERN.asItem()) {
             return PushOutcome.unsatisfiable("not a runeworking or processing pattern");
@@ -84,14 +55,9 @@ public class RunicWorkbenchCraftingMachine implements ICraftingMachine {
             return PushOutcome.unsatisfiable("no runeworking recipe matched the pattern");
         }
 
-        Map<AEItemKey, Long> provided = new HashMap<>();
-        for (KeyCounter counter : inputs) {
-            for (var entry : counter) {
-                if (!(entry.getKey() instanceof AEItemKey itemKey) || entry.getLongValue() <= 0) {
-                    return PushOutcome.unsatisfiable("runeworking takes items only");
-                }
-                provided.merge(itemKey, entry.getLongValue(), Long::sum);
-            }
+        Map<AEItemKey, Long> provided = collectItems(inputs);
+        if (provided == null) {
+            return PushOutcome.unsatisfiable("runeworking takes items only");
         }
         if (!provided.equals(plan.expectedItems())) {
             return PushOutcome.unsatisfiable(
@@ -113,8 +79,8 @@ public class RunicWorkbenchCraftingMachine implements ICraftingMachine {
     }
 
     private PushOutcome commit(Level level, RuneworkingResolver.Plan plan, Direction ejection) {
-        workbench.inventory.setStackInSlot(0, SpiritAltarCraftingMachine.toStack(plan.primary()));
-        ItemStack secondary = SpiritAltarCraftingMachine.toStack(plan.secondary());
+        workbench.inventory.setStackInSlot(0, toStack(plan.primary()));
+        ItemStack secondary = toStack(plan.secondary());
 
         SpiritReclaimer.expect(workbench, ejection);
         if (!workbench.tryCraft(level, workbench.inventory.getStackInSlot(0), secondary, true)) {
@@ -125,24 +91,5 @@ public class RunicWorkbenchCraftingMachine implements ICraftingMachine {
 
         workbench.setChanged();
         return PushOutcome.accepted("shaping " + plan.result());
-    }
-
-    private void log(Level level, IPatternDetails patternDetails, PushOutcome outcome) {
-        if (!NepConfig.debugLogging()) {
-            return;
-        }
-        if (!outcome.accepted()
-                && !outcome.unsatisfiable()
-                && !REJECT_LOG.shouldLog(level, workbench.getBlockPos(), outcome.detail())) {
-            return;
-        }
-        Nep.LOGGER.info(
-                "Runic Workbench {} {} push: {} (output={})",
-                workbench.getBlockPos(),
-                outcome.accepted() ? "accepted" : "rejected",
-                outcome.detail(),
-                patternDetails.getOutputs().isEmpty()
-                        ? "?"
-                        : patternDetails.getOutputs().get(0).toString());
     }
 }

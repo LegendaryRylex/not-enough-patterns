@@ -11,7 +11,6 @@ import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -131,7 +130,7 @@ public final class HubScan {
         return !vanilla || items(level, pos) != null || fluids(level, pos) != null;
     }
 
-    private static boolean beyond(BlockPos origin, BlockPos pos, int reach) {
+    static boolean beyond(BlockPos origin, BlockPos pos, int reach) {
         int dx = Math.abs(pos.getX() - origin.getX());
         int dy = Math.abs(pos.getY() - origin.getY());
         int dz = Math.abs(pos.getZ() - origin.getZ());
@@ -139,8 +138,7 @@ public final class HubScan {
     }
 
     private static String namespace(BlockState state) {
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        return id == null ? VANILLA : id.getNamespace();
+        return BuiltInRegistries.BLOCK.getKey(state.getBlock()).getNamespace();
     }
 
     public static boolean networkBlock(Level level, BlockPos pos) {

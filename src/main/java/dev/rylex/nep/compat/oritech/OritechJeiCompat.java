@@ -4,6 +4,9 @@ import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.jei.JeiTransferSource;
 import dev.rylex.nep.compat.jei.ManualTransferHandler;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
@@ -63,13 +66,22 @@ public final class OritechJeiCompat {
         return NepConfig.oritechParticleCollision() ? OritechRecipeIngredients.collision(recipe) : null;
     }
 
+    private record IdIndex(List<RecipeHolder<OritechRecipe>> source, Map<OritechRecipe, ResourceLocation> ids) {}
+
+    private static volatile IdIndex idIndex = new IdIndex(List.of(), Map.of());
+
     @Nullable
     private static ResourceLocation collisionId(OritechRecipe recipe, Level level) {
-        for (RecipeHolder<OritechRecipe> holder : OritechRecipeResolver.collisionCandidates(level)) {
-            if (holder.value() == recipe) {
-                return holder.id();
+        List<RecipeHolder<OritechRecipe>> candidates = OritechRecipeResolver.collisionCandidates(level);
+        IdIndex index = idIndex;
+        if (index.source() != candidates) {
+            Map<OritechRecipe, ResourceLocation> ids = new IdentityHashMap<>();
+            for (RecipeHolder<OritechRecipe> holder : candidates) {
+                ids.putIfAbsent(holder.value(), holder.id());
             }
+            index = new IdIndex(candidates, ids);
+            idIndex = index;
         }
-        return null;
+        return index.ids().get(recipe);
     }
 }

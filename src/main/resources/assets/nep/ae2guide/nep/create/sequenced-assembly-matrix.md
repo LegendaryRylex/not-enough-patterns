@@ -8,6 +8,8 @@ item_ids:
   - nep:sequenced_assembly_matrix
   - nep:matrix_circuitry
   - nep:hardened_obsidian_plate
+categories:
+  - Matrices
 ---
 # <Color id="gold">Assembly Matrix</Color>
 

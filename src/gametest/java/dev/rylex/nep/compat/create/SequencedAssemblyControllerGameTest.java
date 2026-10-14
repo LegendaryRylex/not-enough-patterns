@@ -1,16 +1,21 @@
 package dev.rylex.nep.compat.create;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.compat.create.CreateFixtures.itemHandler;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
+import appeng.api.parts.IPartHost;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
+import appeng.api.util.AEColor;
+import appeng.core.definitions.AEBlocks;
+import appeng.core.definitions.AEParts;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.ConfigOverrides;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import java.util.List;
@@ -55,8 +60,7 @@ public final class SequencedAssemblyControllerGameTest {
     }
 
     private static int comparator(GameTestHelper helper) {
-        BlockPos absolute = helper.absolutePos(CONTROLLER);
-        return helper.getLevel().getBlockState(absolute).getAnalogOutputSignal(helper.getLevel(), absolute);
+        return CreateFixtures.comparator(helper, CONTROLLER);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
@@ -71,9 +75,7 @@ public final class SequencedAssemblyControllerGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void hoppersAndPipesCanFeedTheStagingBuffer(GameTestHelper helper) {
         SequencedAssemblyControllerBlockEntity controller = place(helper);
-        IItemHandler handler =
-                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(CONTROLLER), null);
-        helper.assertTrue(handler != null, "the controller exposed no item handler");
+        IItemHandler handler = itemHandler(helper, CONTROLLER, "the controller exposed no item handler");
 
         ItemStack leftover = handler.insertItem(0, new ItemStack(Items.COBBLESTONE, 6), false);
 
@@ -89,9 +91,7 @@ public final class SequencedAssemblyControllerGameTest {
         controller.getBuffer().insertItem(0, new ItemStack(Items.COBBLESTONE, 6), false);
         controller.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 8), false);
 
-        IItemHandler handler =
-                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(CONTROLLER), null);
-        helper.assertTrue(handler != null, "the controller exposed no item handler");
+        IItemHandler handler = itemHandler(helper, CONTROLLER, "the controller exposed no item handler");
 
         for (int slot = 0; slot < handler.getSlots(); slot++) {
             helper.assertTrue(
@@ -191,14 +191,7 @@ public final class SequencedAssemblyControllerGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void repeatedStepsAskForOneStationEach(GameTestHelper helper) {
-        helper.setBlock(
-                DEPLOYER,
-                AllBlocks.DEPLOYER.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.DOWN));
-        helper.setBlock(
-                SECOND_DEPLOYER,
-                AllBlocks.DEPLOYER.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.DOWN));
-        helper.setBlock(PRESS, AllBlocks.MECHANICAL_PRESS.getDefaultState());
-        helper.setBlock(DEPOT, AllBlocks.DEPOT.getDefaultState());
+        placeTrackStations(helper);
 
         SequencedAssemblyRecipe track =
                 SequencedAssemblyResolver.resolveById(helper.getLevel(), ResourceLocation.parse(TRACK_RECIPE));
@@ -223,8 +216,70 @@ public final class SequencedAssemblyControllerGameTest {
         helper.succeed();
     }
 
-    private static SequencedAssemblyControllerBlockEntity trackLine(GameTestHelper helper) {
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aPoweredControllerReportsNoNetworkFault(GameTestHelper helper) {
         SequencedAssemblyControllerBlockEntity controller = place(helper);
+        helper.setBlock(CONTROLLER.above(), AEBlocks.CREATIVE_ENERGY_CELL.block());
+        helper.runAfterDelay(40, () -> {
+            helper.assertValueEqual(
+                    controller.buildState().network(),
+                    SequencedAssemblyState.Network.OK,
+                    "the network fault of a controller on its own powered cell");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void controllersSharingAnAdHocNetworkReportMissingChannels(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity first = place(helper);
+        helper.setBlock(CONTROLLER.south(), AEBlocks.CREATIVE_ENERGY_CELL.block());
+        BlockPos secondPos = CONTROLLER.south(2);
+        helper.setBlock(secondPos, NepCreateContent.CONTROLLER.get().defaultBlockState());
+        SequencedAssemblyControllerBlockEntity second =
+                (SequencedAssemblyControllerBlockEntity) helper.getBlockEntity(secondPos);
+        helper.runAfterDelay(40, () -> {
+            helper.assertValueEqual(
+                    first.buildState().network(),
+                    SequencedAssemblyState.Network.NO_CHANNELS,
+                    "the network fault of two controllers sharing one ad-hoc network's channels");
+            helper.assertValueEqual(
+                    second.buildState().network(),
+                    SequencedAssemblyState.Network.NO_CHANNELS,
+                    "the network fault of the second controller on that network");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aControllerOnAnUnpoweredCableReportsNoPower(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        BlockPos cable = CONTROLLER.above();
+        helper.setBlock(cable, AEBlocks.CABLE_BUS.block());
+        BlockEntity host = helper.getBlockEntity(cable);
+        helper.assertTrue(host instanceof IPartHost, "the cable bus placed no part host");
+        ((IPartHost) host).addPart(AEParts.GLASS_CABLE.item(AEColor.TRANSPARENT), null, null);
+        helper.runAfterDelay(40, () -> {
+            helper.assertValueEqual(
+                    controller.buildState().network(),
+                    SequencedAssemblyState.Network.NO_POWER,
+                    "the network fault of a controller on a cable with no energy source");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = TEMPLATE, batch = BATCH)
+    public static void aLoneControllerReportsNoNetworkFault(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        helper.runAfterDelay(20, () -> {
+            helper.assertValueEqual(
+                    controller.buildState().network(),
+                    SequencedAssemblyState.Network.OK,
+                    "the network fault of a controller with nothing attached");
+            helper.succeed();
+        });
+    }
+
+    private static void placeTrackStations(GameTestHelper helper) {
         helper.setBlock(
                 DEPLOYER,
                 AllBlocks.DEPLOYER.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.DOWN));
@@ -233,6 +288,11 @@ public final class SequencedAssemblyControllerGameTest {
                 AllBlocks.DEPLOYER.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.DOWN));
         helper.setBlock(PRESS, AllBlocks.MECHANICAL_PRESS.getDefaultState());
         helper.setBlock(DEPOT, AllBlocks.DEPOT.getDefaultState());
+    }
+
+    private static SequencedAssemblyControllerBlockEntity trackLine(GameTestHelper helper) {
+        SequencedAssemblyControllerBlockEntity controller = place(helper);
+        placeTrackStations(helper);
         controller.applyPlan(
                 helper.absolutePos(new BlockPos(0, 1, 2)),
                 helper.absolutePos(DEPOT),
@@ -254,18 +314,12 @@ public final class SequencedAssemblyControllerGameTest {
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
         helper.assertTrue(details != null, "the track pattern did not decode");
 
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(CONTROLLER), null);
-        helper.assertTrue(machine != null, "the controller exposed no crafting machine capability");
+        ICraftingMachine machine = GameTestFixtures.craftingMachine(
+                helper, CONTROLLER, "the controller exposed no crafting machine capability");
 
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
         helper.assertTrue(
-                machine.pushPattern(details, inputs, Direction.UP), "the controller refused the track pattern");
+                machine.pushPattern(details, GameTestFixtures.inputsOf(details), Direction.UP),
+                "the controller refused the track pattern");
     }
 
     private static void cancelEverything(GameTestHelper helper, SequencedAssemblyControllerBlockEntity controller) {
@@ -274,9 +328,7 @@ public final class SequencedAssemblyControllerGameTest {
     }
 
     private static void putOnDepot(GameTestHelper helper, ItemStack stack) {
-        IItemHandler depot =
-                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(DEPOT), null);
-        helper.assertTrue(depot != null, "the output Depot exposed no item handler");
+        IItemHandler depot = itemHandler(helper, DEPOT, "the output Depot exposed no item handler");
         helper.assertTrue(
                 ItemHandlerHelper.insertItem(depot, stack, false).isEmpty(), "the output Depot refused the item");
     }
@@ -314,11 +366,16 @@ public final class SequencedAssemblyControllerGameTest {
     @GameTest(template = TEMPLATE, batch = "nep_controller_no_reclaim", timeoutTicks = 200)
     public static void aZeroReclaimGraceLeavesTheDepotAlone(GameTestHelper helper) {
         ConfigOverrides.Restore restore = ConfigOverrides.override(RECLAIM_GRACE_FIELD, 0);
-        SequencedAssemblyControllerBlockEntity controller = trackLine(helper);
-        pushTrackPattern(helper);
+        try {
+            SequencedAssemblyControllerBlockEntity controller = trackLine(helper);
+            pushTrackPattern(helper);
 
-        cancelEverything(helper, controller);
-        putOnDepot(helper, new ItemStack(Items.IRON_INGOT, 3));
+            cancelEverything(helper, controller);
+            putOnDepot(helper, new ItemStack(Items.IRON_INGOT, 3));
+        } catch (RuntimeException | Error e) {
+            restore.undo();
+            throw e;
+        }
 
         helper.runAfterDelay(40, () -> {
             restore.undo();
@@ -331,10 +388,15 @@ public final class SequencedAssemblyControllerGameTest {
     @GameTest(template = TEMPLATE, batch = "nep_controller_short_reclaim", timeoutTicks = 200)
     public static void theReclaimWindowClosesOnceItRunsOut(GameTestHelper helper) {
         ConfigOverrides.Restore restore = ConfigOverrides.override(RECLAIM_GRACE_FIELD, 20);
-        SequencedAssemblyControllerBlockEntity controller = trackLine(helper);
-        pushTrackPattern(helper);
+        try {
+            SequencedAssemblyControllerBlockEntity controller = trackLine(helper);
+            pushTrackPattern(helper);
 
-        cancelEverything(helper, controller);
+            cancelEverything(helper, controller);
+        } catch (RuntimeException | Error e) {
+            restore.undo();
+            throw e;
+        }
 
         helper.runAfterDelay(60, () -> {
             restore.undo();

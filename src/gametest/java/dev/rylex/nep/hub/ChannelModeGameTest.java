@@ -28,8 +28,8 @@ public final class ChannelModeGameTest {
     private static final BlockPos FAR_CONTROLLER = new BlockPos(2, 3, 2);
     private static final BlockPos PROVIDER = new BlockPos(2, 2, 2);
 
-    private static final String CHANNELS_FIELD = "MACHINE_HUB_CHANNELS";
-    private static final String CHANNELS_PER_LINK_FIELD = "MACHINE_HUB_CHANNELS_PER_LINK";
+    private static final int DENSE_CABLE_CHANNELS = 32;
+    private static final int PLAIN_DEVICE_CHANNELS = 8;
 
     private ChannelModeGameTest() {}
 
@@ -38,6 +38,15 @@ public final class ChannelModeGameTest {
         MachineHubBlockEntity hub = MachineHubBlockEntity.at(helper.getLevel(), helper.absolutePos(HUB));
         helper.assertTrue(hub != null, "the Machine Hub placed no block entity");
         return hub;
+    }
+
+    private static MachineHubBlockEntity hubWithOverride(GameTestHelper helper, String field, Object value) {
+        ConfigOverrides.Restore restore = ConfigOverrides.override(field, value);
+        try {
+            return hub(helper);
+        } finally {
+            restore.undo();
+        }
     }
 
     private static IGridNode node(GameTestHelper helper, MachineHubBlockEntity hub) {
@@ -65,9 +74,7 @@ public final class ChannelModeGameTest {
     }
 
     private static void againstAController(GameTestHelper helper, ChannelMode mode, int demand, boolean expectOnline) {
-        ConfigOverrides.Restore restore = ConfigOverrides.override(CHANNELS_FIELD, demand);
-        MachineHubBlockEntity hub = hub(helper);
-        restore.undo();
+        MachineHubBlockEntity hub = hubWithOverride(helper, HubConfigFields.CHANNELS, demand);
         helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
         energy(helper, ME_CONTROLLER.above());
 
@@ -81,7 +88,7 @@ public final class ChannelModeGameTest {
                     node.isActive(),
                     expectOnline,
                     "whether a hub wanting " + demand + " channels is online at " + mode + ", where one dense cable"
-                            + " carries " + 32 * mode.getCableCapacityFactor());
+                            + " carries " + DENSE_CABLE_CHANNELS * mode.getCableCapacityFactor());
             if (expectOnline) {
                 helper.assertValueEqual(
                         node.getGrid().getPathingService().getUsedChannels(),
@@ -92,9 +99,7 @@ public final class ChannelModeGameTest {
     }
 
     private static void behindAPlainDevice(GameTestHelper helper, ChannelMode mode, int demand, boolean expectOnline) {
-        ConfigOverrides.Restore restore = ConfigOverrides.override(CHANNELS_FIELD, demand);
-        MachineHubBlockEntity hub = hub(helper);
-        restore.undo();
+        MachineHubBlockEntity hub = hubWithOverride(helper, HubConfigFields.CHANNELS, demand);
         helper.setBlock(PROVIDER, AEBlocks.PATTERN_PROVIDER.block());
         helper.setBlock(FAR_CONTROLLER, AEBlocks.CONTROLLER.block());
         energy(helper, FAR_CONTROLLER.above());
@@ -105,7 +110,8 @@ public final class ChannelModeGameTest {
                     node.isActive(),
                     expectOnline,
                     "whether a hub wanting " + demand + " channels is online behind a pattern provider at " + mode
-                            + ", where one plain device carries " + 8 * mode.getCableCapacityFactor());
+                            + ", where one plain device carries "
+                            + PLAIN_DEVICE_CHANNELS * mode.getCableCapacityFactor());
             if (expectOnline) {
                 helper.assertValueEqual(
                         node.getGrid().getPathingService().getUsedChannels(),
@@ -172,9 +178,7 @@ public final class ChannelModeGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
     public static void aLinkedHubStillBillsEveryLinkWhenCablesCarryFourTimesAsMany(GameTestHelper helper) {
-        ConfigOverrides.Restore restore = ConfigOverrides.override(CHANNELS_PER_LINK_FIELD, 4);
-        MachineHubBlockEntity hub = hub(helper);
-        restore.undo();
+        MachineHubBlockEntity hub = hubWithOverride(helper, HubConfigFields.CHANNELS_PER_LINK, 4);
         helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
         energy(helper, ME_CONTROLLER.above());
         helper.setBlock(HUB.north(), Blocks.CHEST);

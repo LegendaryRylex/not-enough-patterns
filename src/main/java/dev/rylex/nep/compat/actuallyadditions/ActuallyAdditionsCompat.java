@@ -4,6 +4,7 @@ import appeng.api.AECapabilities;
 import de.ellpeck.actuallyadditions.mod.blocks.ActuallyBlocks;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
+import dev.rylex.nep.machine.MatrixCraftingMachine;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -41,7 +42,11 @@ public final class ActuallyAdditionsCompat {
         event.registerBlockEntity(
                 AECapabilities.CRAFTING_MACHINE,
                 NepActuallyAdditionsContent.MATRIX_BLOCK_ENTITY.get(),
-                (be, side) -> new AtomicEmpoweringMatrixCraftingMachine(be));
+                (be, side) -> new MatrixCraftingMachine(
+                        be::readyForPatterns,
+                        be::pushMatrixPattern,
+                        NepActuallyAdditionsContent.MATRIX_ITEM,
+                        NepActuallyAdditionsContent.MATRIX));
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 NepActuallyAdditionsContent.MATRIX_BLOCK_ENTITY.get(),

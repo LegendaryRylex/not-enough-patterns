@@ -13,6 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.event.level.LevelEvent;
 
 public final class ArcaneLecterns {
     private ArcaneLecterns() {}
@@ -24,6 +25,12 @@ public final class ArcaneLecterns {
         if (level != null && !level.isClientSide()) {
             LOADED.computeIfAbsent(level, key -> Collections.newSetFromMap(new WeakHashMap<>()))
                     .add(lectern);
+        }
+    }
+
+    static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof Level level) {
+            LOADED.remove(level);
         }
     }
 

@@ -5,13 +5,13 @@ import java.util.List;
 import java.util.Set;
 import net.minecraft.core.Direction;
 import net.neoforged.neoforge.client.model.generators.ModelBuilder;
+import org.jetbrains.annotations.Nullable;
 
 final class NepMachineModels {
     private NepMachineModels() {}
 
     private static final float SIZE = 16.0F;
     private static final float CENTRE = 8.0F;
-    private static final int GLOW = 15;
     private static final float DIAGONAL = 45.0F;
     private static final float CYL_FLAT = 0.41F;
     private static final float CYL_CORNER = 0.72F;
@@ -36,8 +36,33 @@ final class NepMachineModels {
     private static final float COG_TOOTH = 0.85F;
     private static final float COG_HUB = 1.25F;
     private static final float COG_DEPTH = 0.75F;
+    private static final float DAIS_TOP = 3.0F;
+    private static final float DECAL_LIFT = 0.05F;
+    private static final float CANDLE_WIDTH = 2.0F;
+    private static final float CANDLE_TOP = 7.0F;
+    private static final float CANDLE_WICK = 0.75F;
+    private static final float CANDLE_FLAME = 0.5F;
+    private static final float[][] CANDLE_CORNERS = {{1, 1}, {13, 1}, {1, 13}, {13, 13}};
+    private static final float FIRE_FLOOR = 10.5F;
+    private static final float FIRE_LOW = 4.5F;
+    private static final float FIRE_HIGH = 11.5F;
+    private static final float FIRE_TILT = 22.5F;
+    private static final float FIRE_INSET = 0.35F;
 
-    record Box(float x1, float y1, float z1, float x2, float y2, float z2, String texture, Direction.Axis diagonal) {
+    /** Share of a tilted fire plane's height its hinge sits at, matching Occultism's spirit_fire (y 8 of 22.4). */
+    private static final float FIRE_PIVOT = 8.0F / 22.4F;
+
+    private static final float FIRE_EDGE = 0.01F;
+
+    record Box(
+            float x1,
+            float y1,
+            float z1,
+            float x2,
+            float y2,
+            float z2,
+            String texture,
+            @Nullable Direction.Axis diagonal) {
 
         Box turned() {
             Direction.Axis axis = diagonal == Direction.Axis.Z
@@ -131,6 +156,110 @@ final class NepMachineModels {
         return boxes;
     }
 
+    static List<Box> brazier() {
+        List<Box> boxes = new ArrayList<>();
+        boxes.add(box(0, 0, 0, 16, 3, 16, "dark"));
+        boxes.add(box(5.5F, 3, 5.5F, 10.5F, 8, 10.5F, "plate"));
+        boxes.add(box(5, 5.5F, 5, 11, 6.5F, 11, "frame"));
+        boxes.add(box(4.5F, 8, 4.5F, 11.5F, 9, 11.5F, "frame"));
+        boxes.add(box(3, 9, 3, 13, 10, 13, "frame"));
+        boxes.add(box(3, 10, 3, 13, 11, 4, "frame"));
+        boxes.add(box(3, 10, 12, 13, 11, 13, "frame"));
+        boxes.add(box(3, 10, 4, 4, 11, 12, "frame"));
+        boxes.add(box(12, 10, 4, 13, 11, 12, "frame"));
+        boxes.add(box(4, 10, 4, 12, FIRE_FLOOR, 12, "dark"));
+        for (float[] corner : CANDLE_CORNERS) {
+            float x = corner[0] + CANDLE_WICK;
+            float z = corner[1] + CANDLE_WICK;
+            boxes.add(box(x, CANDLE_TOP, z, x + CANDLE_FLAME, CANDLE_TOP + 1, z + CANDLE_FLAME, "glow"));
+        }
+        return boxes;
+    }
+
+    static <T extends ModelBuilder<T>> void emitBrazierDetail(ModelBuilder<T> model) {
+        model.element()
+                .from(0, DAIS_TOP + DECAL_LIFT, 0)
+                .to(SIZE, DAIS_TOP + DECAL_LIFT, SIZE)
+                .face(Direction.UP)
+                .texture("#pentacle")
+                .uvs(0, 0, SIZE, SIZE)
+                .end()
+                .end();
+        for (float[] corner : CANDLE_CORNERS) {
+            ModelBuilder<T>.ElementBuilder candle = model.element()
+                    .from(corner[0], DAIS_TOP, corner[1])
+                    .to(corner[0] + CANDLE_WIDTH, CANDLE_TOP, corner[1] + CANDLE_WIDTH);
+            for (Direction direction : List.of(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST)) {
+                candle.face(direction).texture("#candle").uvs(11, 9, 13, 13).end();
+            }
+            candle.face(Direction.UP).texture("#candle").uvs(11, 9, 13, 10).end();
+            candle.end();
+        }
+    }
+
+    private record FirePlane(
+            float[] from, float[] to, @Nullable Direction.Axis axis, float angle, Direction... faces) {}
+
+    static <T extends ModelBuilder<T>> void emitSpiritFire(ModelBuilder<T> model, float fireHeight, float outerInset) {
+        float top = FIRE_FLOOR + fireHeight;
+        float near = CENTRE - FIRE_INSET;
+        float far = CENTRE + FIRE_INSET;
+        float start = FIRE_LOW + outerInset;
+        float end = FIRE_HIGH - outerInset;
+        float low = start + FIRE_EDGE;
+        float high = end - FIRE_EDGE;
+        List<FirePlane> planes = List.of(
+                tilted(FIRE_LOW, far, FIRE_HIGH, far, top, Direction.Axis.X, -FIRE_TILT, Direction.SOUTH),
+                tilted(FIRE_LOW, near, FIRE_HIGH, near, top, Direction.Axis.X, FIRE_TILT, Direction.NORTH),
+                tilted(far, FIRE_LOW, far, FIRE_HIGH, top, Direction.Axis.Z, -FIRE_TILT, Direction.WEST),
+                tilted(near, FIRE_LOW, near, FIRE_HIGH, top, Direction.Axis.Z, FIRE_TILT, Direction.EAST),
+                flat(start, low, end, low, top, Direction.NORTH, Direction.SOUTH),
+                flat(start, high, end, high, top, Direction.NORTH, Direction.SOUTH),
+                flat(low, start, low, end, top, Direction.EAST, Direction.WEST),
+                flat(high, start, high, end, top, Direction.EAST, Direction.WEST));
+        for (FirePlane plane : planes) {
+            firePlane(model, plane.from(), plane.to(), plane.axis(), plane.angle(), plane.faces());
+        }
+    }
+
+    private static FirePlane tilted(
+            float x1, float z1, float x2, float z2, float top, Direction.Axis axis, float angle, Direction face) {
+        return new FirePlane(new float[] {x1, FIRE_FLOOR, z1}, new float[] {x2, top, z2}, axis, angle, face);
+    }
+
+    private static FirePlane flat(float x1, float z1, float x2, float z2, float top, Direction... faces) {
+        return new FirePlane(new float[] {x1, FIRE_FLOOR, z1}, new float[] {x2, top, z2}, null, 0, faces);
+    }
+
+    private static <T extends ModelBuilder<T>> void firePlane(
+            ModelBuilder<T> model,
+            float[] from,
+            float[] to,
+            @Nullable Direction.Axis axis,
+            float angle,
+            Direction... faces) {
+        ModelBuilder<T>.ElementBuilder element = model.element()
+                .from(from[0], from[1], from[2])
+                .to(to[0], to[1], to[2])
+                .shade(false);
+        if (axis != null) {
+            element.rotation()
+                    .angle(angle)
+                    .axis(axis)
+                    .origin(CENTRE, from[1] + (to[1] - from[1]) * FIRE_PIVOT, CENTRE)
+                    .rescale(true)
+                    .end();
+        }
+        for (Direction face : faces) {
+            element.face(face)
+                    .texture("#fire")
+                    .uvs(0, 0, SIZE, SIZE)
+                    .emissivity(ModelFaces.GLOW, ModelFaces.GLOW)
+                    .end();
+        }
+        element.end();
+    }
+
     static List<Box> brassCasing() {
         List<Box> boxes = new ArrayList<>();
         boxes.add(box(0, 0, 0, 16, 2, 16, "casing"));
@@ -201,15 +330,12 @@ final class NepMachineModels {
                         .end();
             }
             for (Direction direction : Direction.values()) {
-                ModelBuilder<T>.ElementBuilder.FaceBuilder face =
-                        element.face(direction).texture("#" + box.texture());
-                if (glowing.contains(box.texture())) {
-                    face.emissivity(GLOW, GLOW);
-                }
-                if (box.diagonal() == null && onSurface(direction, from, to)) {
-                    face.cullface(direction);
-                }
-                face.end();
+                ModelFaces.face(
+                        element,
+                        direction,
+                        "#" + box.texture(),
+                        glowing.contains(box.texture()),
+                        box.diagonal() == null && ModelFaces.onSurface(direction, from, to));
             }
             element.end();
         }
@@ -264,10 +390,5 @@ final class NepMachineModels {
                 box(x1, cy - radius, cz - flat, x2, cy + radius, cz + flat, texture),
                 box(x1 + STAGGER, cy - flat, cz - radius, x2 - STAGGER, cy + flat, cz + radius, texture),
                 box(x1 + 2 * STAGGER, cy - corner, cz - corner, x2 - 2 * STAGGER, cy + corner, cz + corner, texture));
-    }
-
-    private static boolean onSurface(Direction direction, float[] from, float[] to) {
-        int axis = direction.getAxis().ordinal();
-        return direction.getAxisDirection() == Direction.AxisDirection.POSITIVE ? to[axis] == SIZE : from[axis] == 0.0F;
     }
 }

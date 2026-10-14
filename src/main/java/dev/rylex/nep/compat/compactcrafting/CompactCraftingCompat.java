@@ -3,6 +3,7 @@ package dev.rylex.nep.compat.compactcrafting;
 import appeng.api.AECapabilities;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
+import dev.rylex.nep.machine.MatrixCraftingMachine;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -34,7 +35,11 @@ public final class CompactCraftingCompat {
         event.registerBlockEntity(
                 AECapabilities.CRAFTING_MACHINE,
                 NepCompactCraftingContent.MATRIX_BLOCK_ENTITY.get(),
-                (be, side) -> new MiniaturizationMatrixCraftingMachine(be));
+                (be, side) -> new MatrixCraftingMachine(
+                        be::readyForPatterns,
+                        be::pushMatrixPattern,
+                        NepCompactCraftingContent.MATRIX_ITEM,
+                        NepCompactCraftingContent.MATRIX));
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 NepCompactCraftingContent.MATRIX_BLOCK_ENTITY.get(),

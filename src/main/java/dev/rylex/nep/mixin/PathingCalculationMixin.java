@@ -8,6 +8,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.rylex.nep.machine.ChannelDemand;
+import dev.rylex.nep.machine.WholeChannelDemand;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -67,6 +68,6 @@ public abstract class PathingCalculationMixin {
     }
 
     private static int nep$demandOf(GridNode node) {
-        return Math.max(1, ChannelDemand.of(node));
+        return WholeChannelDemand.of(node);
     }
 }

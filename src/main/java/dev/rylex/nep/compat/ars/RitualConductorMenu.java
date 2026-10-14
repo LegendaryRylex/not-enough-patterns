@@ -132,10 +132,10 @@ public class RitualConductorMenu extends MachineMenu {
         }
         switch (id) {
             case BUTTON_CLEAR -> conductor.clearConfiguration();
-            case BUTTON_WEATHER -> conductor.cycleWeather();
-            case BUTTON_DAYLIGHT -> conductor.cycleDaylight();
-            case BUTTON_WEATHER_BACK -> conductor.cycleWeatherBack();
-            case BUTTON_DAYLIGHT_BACK -> conductor.cycleDaylightBack();
+            case BUTTON_WEATHER -> conductor.cycleWeather(true);
+            case BUTTON_DAYLIGHT -> conductor.cycleDaylight(true);
+            case BUTTON_WEATHER_BACK -> conductor.cycleWeather(false);
+            case BUTTON_DAYLIGHT_BACK -> conductor.cycleDaylight(false);
             case BUTTON_COLLECT -> conductor.toggleCollectOutput();
             case BUTTON_INTERVAL_DOWN -> conductor.adjustRunInterval(-FINE_STEP);
             case BUTTON_INTERVAL_UP -> conductor.adjustRunInterval(FINE_STEP);

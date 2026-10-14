@@ -11,7 +11,6 @@ import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.util.RecipeCache;
 import dev.rylex.nep.util.Uniqueness;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.resources.ResourceLocation;
@@ -56,12 +55,7 @@ final class RuneworkingResolver {
 
     @Nullable
     static RecipeHolder<RuneworkingRecipe> byId(Level level, ResourceLocation recipe) {
-        for (RecipeHolder<RuneworkingRecipe> candidate : candidates(level)) {
-            if (candidate.id().equals(recipe)) {
-                return candidate;
-            }
-        }
-        return null;
+        return ResolverSupport.byId(candidates(level), recipe);
     }
 
     @Nullable
@@ -71,22 +65,10 @@ final class RuneworkingResolver {
         if (chosen == null) {
             return null;
         }
-        Map<AEItemKey, Long> expectedItems = expectedItems(inputs);
+        Map<AEItemKey, Long> expectedItems = PatternStacks.expectedItems(inputs);
         if (expectedItems == null) {
             return null;
         }
         return new Plan(holder, chosen[0], chosen[1], expectedItems, result);
-    }
-
-    @Nullable
-    private static Map<AEItemKey, Long> expectedItems(List<GenericStack> inputs) {
-        Map<AEItemKey, Long> expected = new LinkedHashMap<>();
-        for (GenericStack stack : inputs) {
-            if (!(stack.what() instanceof AEItemKey key)) {
-                return null;
-            }
-            expected.merge(key, stack.amount(), Long::sum);
-        }
-        return Map.copyOf(expected);
     }
 }

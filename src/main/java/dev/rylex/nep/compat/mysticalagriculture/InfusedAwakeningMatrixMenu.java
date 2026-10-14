@@ -94,10 +94,6 @@ public class InfusedAwakeningMatrixMenu extends MachineMenu implements ManualCra
         return pos;
     }
 
-    BlockPos matrixPos() {
-        return pos;
-    }
-
     boolean isInputSlot(@Nullable Slot slot) {
         return slot != null && slot.index >= 0 && slot.index < InfusedAwakeningMatrixBlockEntity.INPUT_SLOTS;
     }

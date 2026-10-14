@@ -1,30 +1,24 @@
 package dev.rylex.nep.compat.malum;
 
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.malum.MalumFixtures.UMBRAL_SLOT;
+import static dev.rylex.nep.compat.malum.MalumFixtures.node;
+
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEBlocks;
-import com.sammy.malum.common.recipe.SpiritInfusionRecipe;
 import com.sammy.malum.registry.common.item.MalumItems;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.machine.OverstackedItemHandler;
-import dev.rylex.nep.pattern.SpiritInfusionPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -50,41 +44,11 @@ public final class FocusedSpiritMatrixReturnGameTest {
     private FocusedSpiritMatrixReturnGameTest() {}
 
     private static FocusedSpiritMatrixBlockEntity placeMatrix(GameTestHelper helper) {
-        SpiritInfusionResolver.clearCache();
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-        helper.setBlock(MATRIX, NepMalumContent.MATRIX.get().defaultBlockState());
-        FocusedSpiritMatrixBlockEntity matrix =
-                helper.getBlockEntity(MATRIX) instanceof FocusedSpiritMatrixBlockEntity be ? be : null;
-        helper.assertTrue(matrix != null, "the Focused Spirit Matrix has no block entity");
-        return matrix;
+        return MalumFixtures.placeMatrix(helper, ME_CONTROLLER, ENERGY_CELL, MATRIX);
     }
 
     private static IPatternDetails patternFor(GameTestHelper helper) {
-        RecipeHolder<SpiritInfusionRecipe> holder = SpiritInfusionResolver.byId(helper.getLevel(), RECIPE);
-        helper.assertTrue(holder != null, "the test recipe " + RECIPE + " did not load");
-        EncodedIngredients expected = MalumRecipeIngredients.spiritInfusion(holder.value());
-        helper.assertTrue(expected != null, "the test recipe produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded =
-                SpiritInfusionPattern.encode(RECIPE, inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
+        return MalumFixtures.spiritInfusionPattern(helper, RECIPE);
     }
 
     private static void push(GameTestHelper helper, FocusedSpiritMatrixBlockEntity matrix) {
@@ -93,28 +57,11 @@ public final class FocusedSpiritMatrixReturnGameTest {
                 matrix.pushMatrixPattern(details, inputsOf(details), EJECTION), "the Matrix refused the test pattern");
     }
 
-    private static int countIn(IItemHandler handler, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stack = handler.getStackInSlot(slot);
-            if (stack.is(item)) {
-                total += stack.getCount();
-            }
-        }
-        return total;
-    }
-
     private static IItemHandler target(GameTestHelper helper) {
         IItemHandler handler = helper.getLevel()
                 .getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(TARGET), EJECTION.getOpposite());
         helper.assertTrue(handler != null, "the block on the ejection side exposed no item handler");
         return handler;
-    }
-
-    private static MatrixGridNode node(GameTestHelper helper, FocusedSpiritMatrixBlockEntity matrix) {
-        helper.assertTrue(
-                matrix.gridNodeHost() instanceof MatrixGridNode, "the Matrix is not backed by a matrix grid node");
-        return (MatrixGridNode) matrix.gridNodeHost();
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
@@ -137,7 +84,6 @@ public final class FocusedSpiritMatrixReturnGameTest {
     public static void theMatrixReturnsItsResultToAPatternProvider(GameTestHelper helper) {
         FocusedSpiritMatrixBlockEntity matrix = placeMatrix(helper);
         helper.setBlock(TARGET, AEBlocks.PATTERN_PROVIDER.block().defaultBlockState());
-        target(helper);
         push(helper, matrix);
 
         helper.succeedWhen(() -> {
@@ -172,7 +118,7 @@ public final class FocusedSpiritMatrixReturnGameTest {
     public static void aCraftedSpiritDeliveredByTheNetworkLandsInTheBank(GameTestHelper helper) {
         FocusedSpiritMatrixBlockEntity matrix = placeMatrix(helper);
         AEItemKey umbral = AEItemKey.of(MalumItems.UMBRAL_SPIRIT.get());
-        int slotLimit = matrix.getSpiritBank().getSlotLimit(4);
+        int slotLimit = matrix.getSpiritBank().getSlotLimit(UMBRAL_SLOT);
         long offered = slotLimit + 36L;
 
         helper.assertValueEqual(

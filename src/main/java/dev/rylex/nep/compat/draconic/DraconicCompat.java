@@ -6,6 +6,7 @@ import com.brandon3055.draconicevolution.blocks.tileentity.TileFusionCraftingCor
 import com.brandon3055.draconicevolution.init.DEContent;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
+import dev.rylex.nep.machine.MatrixCraftingMachine;
 import dev.rylex.nep.pattern.FusionCraftingPattern;
 import dev.rylex.nep.provider.MachineImports;
 import net.neoforged.api.distmarker.Dist;
@@ -55,7 +56,11 @@ public final class DraconicCompat {
         event.registerBlockEntity(
                 AECapabilities.CRAFTING_MACHINE,
                 NepDraconicContent.MATRIX_BLOCK_ENTITY.get(),
-                (be, side) -> new FusionMatrixCraftingMachine(be));
+                (be, side) -> new MatrixCraftingMachine(
+                        be::readyForPatterns,
+                        be::pushMatrixPattern,
+                        NepDraconicContent.MATRIX_ITEM,
+                        NepDraconicContent.MATRIX));
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 NepDraconicContent.MATRIX_BLOCK_ENTITY.get(),

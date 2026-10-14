@@ -6,6 +6,8 @@ navigation:
   position: 30
 item_ids:
   - nep:infused_awakening_matrix
+categories:
+  - Matrices
 ---
 # <Color id="gold">Infused Awakening Matrix</Color>
 

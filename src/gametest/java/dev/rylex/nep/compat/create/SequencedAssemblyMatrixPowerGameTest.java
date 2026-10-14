@@ -1,37 +1,28 @@
 package dev.rylex.nep.compat.create;
 
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.AECapabilities;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
-import appeng.api.stacks.AEFluidKey;
-import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import appeng.core.definitions.AEBlocks;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
-import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
-import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
 import com.simibubi.create.content.kinetics.motor.CreativeMotorBlockEntity;
-import com.simibubi.create.content.processing.recipe.ProcessingOutput;
-import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepItems;
-import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
 import dev.rylex.nep.pattern.encoding.PatternOrigin;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluids;
@@ -41,7 +32,6 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
 
 @GameTestHolder(Nep.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -56,21 +46,11 @@ public final class SequencedAssemblyMatrixPowerGameTest {
     private static final BlockPos ENERGY = ME_CONTROLLER.above();
 
     private static final Direction EJECTION = Direction.WEST;
-    private static final int FILL_PER_STEP = 500;
 
     private SequencedAssemblyMatrixPowerGameTest() {}
 
     private static SequencedAssemblyMatrixBlockEntity placeMatrix(GameTestHelper helper) {
-        helper.setBlock(
-                MATRIX,
-                NepCreateContent.MATRIX
-                        .get()
-                        .defaultBlockState()
-                        .setValue(RotatedPillarKineticBlock.AXIS, Direction.Axis.Z));
-        BlockEntity be = helper.getBlockEntity(MATRIX);
-        helper.assertTrue(
-                be instanceof SequencedAssemblyMatrixBlockEntity, "the matrix did not create its block entity");
-        return (SequencedAssemblyMatrixBlockEntity) be;
+        return CreateFixtures.placeMatrix(helper, MATRIX);
     }
 
     private static void placeMotor(GameTestHelper helper, int rpm) {
@@ -87,43 +67,10 @@ public final class SequencedAssemblyMatrixPowerGameTest {
         helper.setBlock(ENERGY, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
     }
 
-    private static ResourceLocation plateRecipe(GameTestHelper helper) {
-        for (RecipeHolder<SequencedAssemblyRecipe> holder : helper.getLevel()
-                .getRecipeManager()
-                .getAllRecipesFor(
-                        AllRecipeTypes.SEQUENCED_ASSEMBLY.<RecipeWrapper, SequencedAssemblyRecipe>getType())) {
-            for (ProcessingOutput output : holder.value().resultPool) {
-                if (output.getStack().is(NepCreateContent.HARDENED_OBSIDIAN_PLATE.get())) {
-                    return holder.id();
-                }
-            }
-        }
-        helper.fail("no sequenced assembly recipe produces the hardened obsidian plate");
-        return null;
-    }
-
-    private static IPatternDetails platePattern(GameTestHelper helper) {
-        ItemStack encoded = SequencedAssemblyPattern.encode(
-                plateRecipe(helper),
-                List.of(
-                        new GenericStack(AEItemKey.of(AllItems.POWDERED_OBSIDIAN.get()), 1),
-                        new GenericStack(AEFluidKey.of(Fluids.LAVA), FILL_PER_STEP),
-                        new GenericStack(AEFluidKey.of(Fluids.WATER), FILL_PER_STEP)),
-                new GenericStack(AEItemKey.of(NepCreateContent.HARDENED_OBSIDIAN_PLATE.get()), 1));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the hardened obsidian plate pattern did not decode");
-        return details;
-    }
-
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void encodingWithoutJeiStillYieldsAnAssemblyPattern(GameTestHelper helper) {
         placeMatrix(helper);
-        ItemStack processing = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(
-                        new GenericStack(AEItemKey.of(AllItems.POWDERED_OBSIDIAN.get()), 1),
-                        new GenericStack(AEFluidKey.of(Fluids.LAVA), FILL_PER_STEP),
-                        new GenericStack(AEFluidKey.of(Fluids.WATER), FILL_PER_STEP)),
-                List.of(new GenericStack(AEItemKey.of(NepCreateContent.HARDENED_OBSIDIAN_PLATE.get()), 1)));
+        ItemStack processing = CreateFixtures.processingPlatePattern();
 
         ItemStack converted =
                 PatternConverters.convert(PatternOrigin.MANUAL, processing, helper.makeMockPlayer(GameType.SURVIVAL));
@@ -146,12 +93,7 @@ public final class SequencedAssemblyMatrixPowerGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aRecipeViewerTransferIsLeftAsAProcessingPattern(GameTestHelper helper) {
         placeMatrix(helper);
-        ItemStack processing = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(
-                        new GenericStack(AEItemKey.of(AllItems.POWDERED_OBSIDIAN.get()), 1),
-                        new GenericStack(AEFluidKey.of(Fluids.LAVA), FILL_PER_STEP),
-                        new GenericStack(AEFluidKey.of(Fluids.WATER), FILL_PER_STEP)),
-                List.of(new GenericStack(AEItemKey.of(NepCreateContent.HARDENED_OBSIDIAN_PLATE.get()), 1)));
+        ItemStack processing = CreateFixtures.processingPlatePattern();
 
         ItemStack converted = PatternConverters.convert(
                 PatternOrigin.RECIPE_VIEWER, processing, helper.makeMockPlayer(GameType.SURVIVAL));
@@ -169,12 +111,7 @@ public final class SequencedAssemblyMatrixPowerGameTest {
                 helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(MATRIX), null);
         helper.assertTrue(machine != null, "the matrix exposed no crafting machine capability");
 
-        ItemStack encoded = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(
-                        new GenericStack(AEItemKey.of(AllItems.POWDERED_OBSIDIAN.get()), 1),
-                        new GenericStack(AEFluidKey.of(Fluids.LAVA), FILL_PER_STEP),
-                        new GenericStack(AEFluidKey.of(Fluids.WATER), FILL_PER_STEP)),
-                List.of(new GenericStack(AEItemKey.of(NepCreateContent.HARDENED_OBSIDIAN_PLATE.get()), 1)));
+        ItemStack encoded = CreateFixtures.processingPlatePattern();
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
         helper.assertTrue(details != null, "the processing pattern did not decode");
         helper.assertTrue(
@@ -183,35 +120,12 @@ public final class SequencedAssemblyMatrixPowerGameTest {
         helper.succeed();
     }
 
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
-    }
-
     private static void pushPlatePattern(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(MATRIX), null);
-        helper.assertTrue(machine != null, "the matrix exposed no crafting machine capability");
-        IPatternDetails details = platePattern(helper);
-        helper.assertTrue(
-                machine.pushPattern(details, inputsOf(details), EJECTION),
-                "the matrix refused the hardened obsidian plate pattern");
+        CreateFixtures.pushPlatePattern(helper, MATRIX, EJECTION);
     }
 
     private static int outputCount(SequencedAssemblyMatrixBlockEntity matrix, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < matrix.getOutputBuffer().getSlots(); slot++) {
-            ItemStack stack = matrix.getOutputBuffer().getStackInSlot(slot);
-            if (stack.is(item)) {
-                total += stack.getCount();
-            }
-        }
-        return total;
+        return GameTestFixtures.countIn(matrix.getOutputBuffer(), item);
     }
 
     private static String describe(SequencedAssemblyMatrixBlockEntity matrix) {
@@ -406,8 +320,8 @@ public final class SequencedAssemblyMatrixPowerGameTest {
 
         matrix.getInputBuffer().insertItem(0, new ItemStack(AllItems.POWDERED_OBSIDIAN.get(), 1), false);
         IFluidHandler tanks = matrix.fluidHandler();
-        tanks.fill(new FluidStack(Fluids.LAVA, FILL_PER_STEP), IFluidHandler.FluidAction.EXECUTE);
-        tanks.fill(new FluidStack(Fluids.WATER, FILL_PER_STEP), IFluidHandler.FluidAction.EXECUTE);
+        tanks.fill(new FluidStack(Fluids.LAVA, CreateFixtures.PLATE_FILL_PER_STEP), IFluidHandler.FluidAction.EXECUTE);
+        tanks.fill(new FluidStack(Fluids.WATER, CreateFixtures.PLATE_FILL_PER_STEP), IFluidHandler.FluidAction.EXECUTE);
 
         helper.runAfterDelay(120, () -> {
             helper.assertTrue(matrix.getSpeed() != 0, "the creative motor never drove the matrix");

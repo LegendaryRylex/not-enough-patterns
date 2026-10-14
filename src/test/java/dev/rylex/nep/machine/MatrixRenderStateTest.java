@@ -25,6 +25,7 @@ class MatrixRenderStateTest {
     void everyPhaseStaysContinuousAcrossItsWrapsAndEveryRateChange() {
         MatrixRenderState state = new MatrixRenderState();
         Motion[] motions = Motion.values();
+        assertEquals(motions.length, PERIODS.length, "PERIODS is indexed by Motion order");
         float[] previous = new float[motions.length];
         float[] travelled = new float[motions.length];
         float[] peak = new float[motions.length];

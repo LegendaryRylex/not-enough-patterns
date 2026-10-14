@@ -1,0 +1,56 @@
+{
+    "parent": "minecraft:item/generated",
+    "overrides": [
+        {
+            "model": "nep:item/spirit_infused_book_foliot_crusher",
+            "predicate": {
+                "nep:bound_spirit": 1.0
+            }
+        },
+        {
+            "model": "nep:item/spirit_infused_book_foliot_crystallizer",
+            "predicate": {
+                "nep:bound_spirit": 2.0
+            }
+        },
+        {
+            "model": "nep:item/spirit_infused_book_djinni_crusher",
+            "predicate": {
+                "nep:bound_spirit": 3.0
+            }
+        },
+        {
+            "model": "nep:item/spirit_infused_book_djinni_crystallizer",
+            "predicate": {
+                "nep:bound_spirit": 4.0
+            }
+        },
+        {
+            "model": "nep:item/spirit_infused_book_afrit_crusher",
+            "predicate": {
+                "nep:bound_spirit": 5.0
+            }
+        },
+        {
+            "model": "nep:item/spirit_infused_book_afrit_crystallizer",
+            "predicate": {
+                "nep:bound_spirit": 6.0
+            }
+        },
+        {
+            "model": "nep:item/spirit_infused_book_marid_crusher",
+            "predicate": {
+                "nep:bound_spirit": 7.0
+            }
+        },
+        {
+            "model": "nep:item/spirit_infused_book_marid_crystallizer",
+            "predicate": {
+                "nep:bound_spirit": 8.0
+            }
+        }
+    ],
+    "textures": {
+        "layer0": "nep:item/spirit_infused_book"
+    }
+}

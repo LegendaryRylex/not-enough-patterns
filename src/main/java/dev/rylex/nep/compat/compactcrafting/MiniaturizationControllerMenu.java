@@ -90,10 +90,6 @@ public class MiniaturizationControllerMenu extends MachineMenu implements Manual
         return pos;
     }
 
-    BlockPos controllerPos() {
-        return pos;
-    }
-
     boolean isInputSlot(@Nullable Slot slot) {
         return slot != null && slot.index >= 0 && slot.index < MiniaturizationControllerBlockEntity.INPUT_SLOTS;
     }

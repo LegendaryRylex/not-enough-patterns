@@ -1,14 +1,17 @@
 package dev.rylex.nep.compat.malum;
 
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.compat.malum.MalumFixtures.UMBRAL_SLOT;
+import static dev.rylex.nep.compat.malum.MalumFixtures.freshMatrix;
+import static dev.rylex.nep.compat.malum.MalumFixtures.node;
+
 import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.KeyCounter;
-import appeng.core.definitions.AEBlocks;
 import com.sammy.malum.registry.common.block.MalumBlocks;
 import com.sammy.malum.registry.common.item.MalumItems;
 import dev.rylex.nep.Nep;
-import dev.rylex.nep.machine.MatrixGridNode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -18,7 +21,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import net.neoforged.neoforge.items.IItemHandler;
 
 @GameTestHolder(Nep.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -31,37 +33,12 @@ public final class FocusedSpiritMatrixStorageGameTest {
     private static final BlockPos ME_CONTROLLER = new BlockPos(2, 1, 3);
     private static final BlockPos ENERGY_CELL = ME_CONTROLLER.above();
 
-    private static final int UMBRAL_SLOT = 4;
     private static final int BANKED = 20;
 
     private FocusedSpiritMatrixStorageGameTest() {}
 
     private static FocusedSpiritMatrixBlockEntity placeMatrix(GameTestHelper helper) {
-        SpiritInfusionResolver.clearCache();
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-        helper.setBlock(MATRIX, NepMalumContent.MATRIX.get().defaultBlockState());
-        FocusedSpiritMatrixBlockEntity matrix =
-                helper.getBlockEntity(MATRIX) instanceof FocusedSpiritMatrixBlockEntity be ? be : null;
-        helper.assertTrue(matrix != null, "the Focused Spirit Matrix has no block entity");
-        return matrix;
-    }
-
-    private static int countIn(IItemHandler handler, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stack = handler.getStackInSlot(slot);
-            if (stack.is(item)) {
-                total += stack.getCount();
-            }
-        }
-        return total;
-    }
-
-    private static MatrixGridNode node(GameTestHelper helper, FocusedSpiritMatrixBlockEntity matrix) {
-        helper.assertTrue(
-                matrix.gridNodeHost() instanceof MatrixGridNode, "the Matrix is not backed by a matrix grid node");
-        return (MatrixGridNode) matrix.gridNodeHost();
+        return MalumFixtures.placeMatrix(helper, ME_CONTROLLER, ENERGY_CELL, MATRIX);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
@@ -155,10 +132,7 @@ public final class FocusedSpiritMatrixStorageGameTest {
         int craftTicks = matrix.craftTicks();
 
         CompoundTag saved = matrix.saveWithFullMetadata(helper.getLevel().registryAccess());
-        FocusedSpiritMatrixBlockEntity reloaded = new FocusedSpiritMatrixBlockEntity(
-                NepMalumContent.MATRIX_BLOCK_ENTITY.get(),
-                helper.absolutePos(MATRIX),
-                NepMalumContent.MATRIX.get().defaultBlockState());
+        FocusedSpiritMatrixBlockEntity reloaded = freshMatrix(helper, MATRIX);
         reloaded.loadWithComponents(saved, helper.getLevel().registryAccess());
 
         helper.assertValueEqual(
@@ -197,16 +171,10 @@ public final class FocusedSpiritMatrixStorageGameTest {
         matrix.getUpgradeSlot().insertItem(0, new ItemStack(MalumBlocks.RUNEWOOD_OBELISK.get(), obelisks), false);
 
         CompoundTag update = matrix.getUpdateTag(helper.getLevel().registryAccess());
-        FocusedSpiritMatrixBlockEntity synced = new FocusedSpiritMatrixBlockEntity(
-                NepMalumContent.MATRIX_BLOCK_ENTITY.get(),
-                helper.absolutePos(MATRIX),
-                NepMalumContent.MATRIX.get().defaultBlockState());
+        FocusedSpiritMatrixBlockEntity synced = freshMatrix(helper, MATRIX);
         synced.loadWithComponents(update, helper.getLevel().registryAccess());
         CompoundTag saved = matrix.saveWithFullMetadata(helper.getLevel().registryAccess());
-        FocusedSpiritMatrixBlockEntity reloaded = new FocusedSpiritMatrixBlockEntity(
-                NepMalumContent.MATRIX_BLOCK_ENTITY.get(),
-                helper.absolutePos(MATRIX),
-                NepMalumContent.MATRIX.get().defaultBlockState());
+        FocusedSpiritMatrixBlockEntity reloaded = freshMatrix(helper, MATRIX);
         reloaded.loadWithComponents(saved, helper.getLevel().registryAccess());
 
         helper.assertValueEqual(

@@ -66,8 +66,8 @@ final class CreatePatternEncoders {
         if (!NepConfig.createSequencedAssembly() && !NepConfig.createSequencedAssemblyMatrix()) {
             return null;
         }
-        List<GenericStack> inputs = condensedInputs(encoded);
-        GenericStack result = singleResult(encoded);
+        List<GenericStack> inputs = PatternStacks.condensedInputs(encoded);
+        GenericStack result = PatternStacks.singleResult(encoded);
         if (inputs == null || result == null || !(result.what() instanceof AEItemKey outputKey)) {
             return null;
         }
@@ -113,8 +113,8 @@ final class CreatePatternEncoders {
     @Nullable
     private static ItemStack andesiteCrafting(
             IPatternDetails encoded, RecipeHolder<?> holder, @Nullable EncodedIngredients expected) {
-        List<GenericStack> inputs = condensedInputs(encoded);
-        GenericStack result = singleResult(encoded);
+        List<GenericStack> inputs = PatternStacks.condensedInputs(encoded);
+        GenericStack result = PatternStacks.singleResult(encoded);
         if (inputs == null || result == null) {
             return null;
         }
@@ -156,25 +156,20 @@ final class CreatePatternEncoders {
 
     @Nullable
     private static PatternFallback.Result andesiteCraftingByResult(IPatternDetails encoded, Level level) {
-        List<GenericStack> inputs = condensedInputs(encoded);
-        GenericStack result = singleResult(encoded);
+        List<GenericStack> inputs = PatternStacks.condensedInputs(encoded);
+        GenericStack result = PatternStacks.singleResult(encoded);
         if (inputs == null || result == null) {
             return null;
         }
 
-        RecipeHolder<?> only = null;
-        Split split = null;
+        List<AndesiteMatch> matches = new ArrayList<>();
 
         if (NepConfig.createDeploying()) {
             for (RecipeHolder<? extends ItemApplicationRecipe> holder : ApplicationRecipeResolver.candidates(level)) {
                 Split candidate =
                         splitAndesite(CreateRecipeIngredients.itemApplication(holder, level), holder, inputs, result);
                 if (candidate != null) {
-                    if (only != null) {
-                        return null;
-                    }
-                    only = holder;
-                    split = candidate;
+                    matches.add(new AndesiteMatch(holder, candidate));
                 }
             }
         }
@@ -184,20 +179,24 @@ final class CreatePatternEncoders {
                 Split candidate =
                         splitAndesite(CreateRecipeIngredients.spoutFilling(holder, level), holder, inputs, result);
                 if (candidate != null) {
-                    if (only != null) {
-                        return null;
-                    }
-                    only = holder;
-                    split = candidate;
+                    matches.add(new AndesiteMatch(holder, candidate));
                 }
             }
         }
 
-        return only == null
-                ? null
-                : PatternFallback.Result.of(AndesiteCraftingPattern.encode(
-                        only.id(), split.consumed(), split.kept(), split.worn(), result));
+        if (matches.size() != 1) {
+            return null;
+        }
+        AndesiteMatch only = matches.get(0);
+        return PatternFallback.Result.of(AndesiteCraftingPattern.encode(
+                only.holder().id(),
+                only.split().consumed(),
+                only.split().kept(),
+                only.split().worn(),
+                result));
     }
+
+    private record AndesiteMatch(RecipeHolder<?> holder, Split split) {}
 
     @Nullable
     private static PatternFallback.Result mechanicalCraftingByResult(IPatternDetails encoded, Level level) {
@@ -213,7 +212,7 @@ final class CreatePatternEncoders {
         if (!NepConfig.createSequencedAssembly() && !NepConfig.createSequencedAssemblyMatrix()) {
             return null;
         }
-        GenericStack result = singleResult(encoded);
+        GenericStack result = PatternStacks.singleResult(encoded);
         if (result == null || !(result.what() instanceof AEItemKey outputKey)) {
             return null;
         }
@@ -223,7 +222,7 @@ final class CreatePatternEncoders {
             return null;
         }
 
-        List<GenericStack> inputs = condensedInputs(encoded);
+        List<GenericStack> inputs = PatternStacks.condensedInputs(encoded);
         if (inputs != null) {
             RecipeHolder<SequencedAssemblyRecipe> only = Uniqueness.onlyMatch(
                     candidates,
@@ -247,15 +246,5 @@ final class CreatePatternEncoders {
         }
         return MechanicalCraftingPattern.encode(
                 plan.width(), plan.height(), cells, encoded.getOutputs().get(0));
-    }
-
-    @Nullable
-    private static GenericStack singleResult(IPatternDetails encoded) {
-        return PatternStacks.singleResult(encoded);
-    }
-
-    @Nullable
-    private static List<GenericStack> condensedInputs(IPatternDetails encoded) {
-        return PatternStacks.condensedInputs(encoded);
     }
 }

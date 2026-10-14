@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 class PushingCpusTest {
 
     private static final String POSITIONS_KEY = "PushCpus";
+    private static final String PARTIAL_KEY = "PushCpusPartial";
 
     @Test
     void aPushWithNoCpuBehindItIsRememberedAsPartial() {
@@ -23,7 +24,7 @@ class PushingCpusTest {
         CompoundTag tag = new CompoundTag();
         cpus.save(tag);
 
-        assertTrue(tag.getBoolean("PushCpusPartial"), "a hand pushed pattern was not recorded as an unattributed push");
+        assertTrue(tag.getBoolean(PARTIAL_KEY), "a hand pushed pattern was not recorded as an unattributed push");
     }
 
     @Test
@@ -46,7 +47,7 @@ class PushingCpusTest {
 
         CompoundTag again = new CompoundTag();
         loaded.save(again);
-        assertEquals(tag.getBoolean("PushCpusPartial"), again.getBoolean("PushCpusPartial"));
+        assertEquals(tag.getBoolean(PARTIAL_KEY), again.getBoolean(PARTIAL_KEY));
         assertEquals(tag.getLongArray(POSITIONS_KEY).length, again.getLongArray(POSITIONS_KEY).length);
     }
 
@@ -75,7 +76,7 @@ class PushingCpusTest {
     void positionsRoundTripThroughTheSaveTag() {
         CompoundTag tag = new CompoundTag();
         tag.putLongArray(POSITIONS_KEY, new long[] {new BlockPos(3, 4, 5).asLong()});
-        tag.putBoolean("PushCpusPartial", false);
+        tag.putBoolean(PARTIAL_KEY, false);
 
         PushingCpus cpus = new PushingCpus();
         cpus.load(tag);
@@ -83,7 +84,7 @@ class PushingCpusTest {
         CompoundTag again = new CompoundTag();
         cpus.save(again);
         assertEquals(new BlockPos(3, 4, 5).asLong(), again.getLongArray(POSITIONS_KEY)[0]);
-        assertFalse(again.getBoolean("PushCpusPartial"));
+        assertFalse(again.getBoolean(PARTIAL_KEY));
     }
 
     @Test

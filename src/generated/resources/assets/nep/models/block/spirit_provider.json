@@ -1,0 +1,7 @@
+{
+    "parent": "occultism:block/sacrificial_bowl",
+    "textures": {
+        "1": "nep:block/spirit_provider",
+        "particle": "nep:block/spirit_provider"
+    }
+}

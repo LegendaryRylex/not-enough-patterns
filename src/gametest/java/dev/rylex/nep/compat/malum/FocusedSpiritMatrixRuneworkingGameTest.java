@@ -1,26 +1,20 @@
 package dev.rylex.nep.compat.malum;
 
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
-import appeng.core.definitions.AEBlocks;
 import com.sammy.malum.common.recipe.RuneworkingRecipe;
+import com.sammy.malum.registry.common.block.MalumBlocks;
 import dev.rylex.nep.Nep;
-import dev.rylex.nep.pattern.RuneworkingPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import net.neoforged.neoforge.items.IItemHandler;
 
 @GameTestHolder(Nep.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -36,68 +30,27 @@ public final class FocusedSpiritMatrixRuneworkingGameTest {
     private FocusedSpiritMatrixRuneworkingGameTest() {}
 
     private static FocusedSpiritMatrixBlockEntity placeMatrix(GameTestHelper helper) {
-        RuneworkingResolver.clearCache();
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-        helper.setBlock(MATRIX, NepMalumContent.MATRIX.get().defaultBlockState());
-        FocusedSpiritMatrixBlockEntity matrix =
-                helper.getBlockEntity(MATRIX) instanceof FocusedSpiritMatrixBlockEntity be ? be : null;
-        helper.assertTrue(matrix != null, "the Focused Spirit Matrix has no block entity");
-        return matrix;
+        return MalumFixtures.placeMatrix(helper, ME_CONTROLLER, ENERGY_CELL, MATRIX);
     }
 
     private static RecipeHolder<RuneworkingRecipe> spiritFedRecipe(GameTestHelper helper) {
-        RecipeHolder<RuneworkingRecipe> best = null;
-        for (RecipeHolder<RuneworkingRecipe> holder : RuneworkingResolver.candidates(helper.getLevel())) {
-            ItemStack[] secondary = holder.value().secondaryInput.ingredient().getItems();
-            if (!holder.id().getNamespace().equals("malum")
-                    || MalumRecipeIngredients.runeworking(holder.value()) == null
-                    || secondary.length == 0
-                    || !SpiritBank.hasDedicatedSlot(secondary[0])) {
-                continue;
-            }
-            if (best == null || holder.id().compareTo(best.id()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no runeworking recipe pays in spirits, so the bank path is untested");
-        return best;
+        return MalumFixtures.pickBest(
+                helper,
+                RuneworkingResolver.candidates(helper.getLevel()),
+                holder -> {
+                    ItemStack[] secondary =
+                            holder.value().secondaryInput.ingredient().getItems();
+                    return holder.id().getNamespace().equals("malum")
+                            && MalumRecipeIngredients.runeworking(holder.value()) != null
+                            && secondary.length != 0
+                            && SpiritBank.hasDedicatedSlot(secondary[0]);
+                },
+                MalumFixtures.byId(),
+                "no runeworking recipe pays in spirits, so the bank path is untested");
     }
 
     private static IPatternDetails patternFor(GameTestHelper helper, RecipeHolder<RuneworkingRecipe> holder) {
-        EncodedIngredients expected = MalumRecipeIngredients.runeworking(holder.value());
-        helper.assertTrue(expected != null, "the runeworking recipe produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded = RuneworkingPattern.encode(
-                holder.id(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the runeworking pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
-    }
-
-    private static int countIn(IItemHandler handler, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stack = handler.getStackInSlot(slot);
-            if (stack.is(item)) {
-                total += stack.getCount();
-            }
-        }
-        return total;
+        return MalumFixtures.runeworkingPattern(helper, holder);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
@@ -146,11 +99,7 @@ public final class FocusedSpiritMatrixRuneworkingGameTest {
         int max = FocusedSpiritMatrixUpgrades.maxObelisks();
         helper.assertTrue(
                 matrix.getUpgradeSlot()
-                        .insertItem(
-                                0,
-                                new ItemStack(
-                                        com.sammy.malum.registry.common.block.MalumBlocks.RUNEWOOD_OBELISK.get(), max),
-                                false)
+                        .insertItem(0, new ItemStack(MalumBlocks.RUNEWOOD_OBELISK.get(), max), false)
                         .isEmpty(),
                 "the upgrade slot would not take a full stack of Runewood Obelisks");
         helper.assertTrue(matrix.craftTicks() < bare, "Runewood Obelisks did not cut the craft time");

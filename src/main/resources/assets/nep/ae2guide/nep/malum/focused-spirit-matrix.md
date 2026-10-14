@@ -6,6 +6,8 @@ navigation:
   position: 20
 item_ids:
   - nep:focused_spirit_matrix
+categories:
+  - Matrices
 ---
 # <Color id="blue">Focused Spirit Matrix</Color>
 

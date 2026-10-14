@@ -8,7 +8,6 @@ import dev.shadowsoffire.apothic_enchanting.table.infusion.InfusionRecipe;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 final class ApothicRecipeIngredients {
@@ -33,7 +32,7 @@ final class ApothicRecipeIngredients {
         }
         List<List<GenericStack>> inputs = new ArrayList<>(3);
         inputs.add(List.copyOf(alternatives));
-        inputs.add(List.of(new GenericStack(AEItemKey.of(Items.LAPIS_LAZULI), InfusionCosts.LAPIS)));
+        inputs.add(List.of(InfusionCosts.lapis()));
         List<GenericStack> experience = InfusionPayments.options(recipe, InfusionCosts.Rates.fromConfig());
         if (!experience.isEmpty()) {
             inputs.add(experience);
@@ -44,7 +43,7 @@ final class ApothicRecipeIngredients {
     static List<GenericStack> chosen(InfusionRecipe recipe, AEItemKey input, @Nullable AEKey payment) {
         List<GenericStack> inputs = new ArrayList<>(3);
         inputs.add(new GenericStack(input, 1));
-        inputs.add(new GenericStack(AEItemKey.of(Items.LAPIS_LAZULI), InfusionCosts.LAPIS));
+        inputs.add(InfusionCosts.lapis());
         GenericStack experience = InfusionPayments.chosen(recipe, InfusionCosts.Rates.fromConfig(), payment);
         if (experience != null) {
             inputs.add(experience);

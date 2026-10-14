@@ -76,6 +76,8 @@ final class NepOritechContent {
 
     static final DeferredItem<BlockItem> MATRIX_ITEM = ITEMS.registerSimpleBlockItem(MATRIX);
 
+    static final DeferredItem<Item> CORE = ITEMS.registerSimpleItem("particle_collision_core");
+
     static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ParticleCollisionMatrixBlockEntity>>
             MATRIX_BLOCK_ENTITY = BLOCK_ENTITIES.register("particle_collision_matrix", () -> BlockEntityType.Builder.of(
                     (pos, state) -> new ParticleCollisionMatrixBlockEntity(
@@ -104,12 +106,14 @@ final class NepOritechContent {
         COMPONENTS.register(modBus);
         modBus.addListener(NepOritechContent::onBuildCreativeTab);
         NepConfigGates.register(MATRIX_ITEM, NepConfig::oritechParticleCollisionMatrix);
+        NepConfigGates.register(CORE, NepConfig::oritechParticleCollisionMatrix);
         NepConfigGates.register(CONTROLLER_ITEM, NepConfig::oritechParticleCollisionController);
         NepConfigGates.register(LINKER, NepConfig::oritechParticleCollisionController);
     }
 
     private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == NepCreativeTabs.MAIN.getKey()) {
+            event.accept(CORE.get());
             event.accept(MATRIX_ITEM.get());
             event.accept(CONTROLLER_ITEM.get());
             event.accept(LINKER.get());

@@ -10,13 +10,14 @@ import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.oritech.ParticleCollisionControllerBlock.ControllerStatus;
 import dev.rylex.nep.compat.oritech.oritechthings.OritechThingsCompat;
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
+import dev.rylex.nep.machine.DemandTally;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.pattern.ParticleCollisionPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
+import dev.rylex.nep.util.EnumNames;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +95,7 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
     private static final String FIELD_HELD_KEY = "FieldHeld";
     private static final String FIELD_LIMIT_KEY = "FieldLimit";
 
-    private final Map<AEItemKey, Template> templates = new HashMap<>();
+    private final Map<AEItemKey, CollisionTemplate> templates = new HashMap<>();
     private final List<BlockPos> links = new ArrayList<>(LINKS);
     private final List<ItemStack> inFlight = new ArrayList<>(LINKS);
     private final IItemHandler outputView = new OutputView();
@@ -128,23 +129,29 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
     }
 
     enum Stall {
-        NONE,
-        INGREDIENTS,
-        OUTPUT_FULL,
-        NOT_ACCELERATING,
-        PARTNER_BUSY,
-        ACCELERATOR_BUSY,
-        UNLOADED,
-        NO_RING,
-        NO_COLLISION,
-        PARTICLE_LOST,
-        TOO_SLOW,
-        MISSING_ACCELERATOR,
-        NO_LINKS,
-        NO_RECIPE;
+        NONE(0),
+        INGREDIENTS(1),
+        OUTPUT_FULL(2),
+        NOT_ACCELERATING(3),
+        PARTNER_BUSY(4),
+        ACCELERATOR_BUSY(5),
+        UNLOADED(6),
+        NO_RING(7),
+        NO_COLLISION(8),
+        PARTICLE_LOST(9),
+        TOO_SLOW(10),
+        MISSING_ACCELERATOR(11),
+        NO_LINKS(12),
+        NO_RECIPE(13);
+
+        private final int severity;
+
+        Stall(int severity) {
+            this.severity = severity;
+        }
 
         private static Stall worse(Stall first, Stall second) {
-            return first.ordinal() >= second.ordinal() ? first : second;
+            return first.severity >= second.severity ? first : second;
         }
     }
 
@@ -159,9 +166,6 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
         TOO_FAST,
         BUFFER_FULL
     }
-
-    private record Template(
-            List<AEKey> keys, List<Long> counts, @Nullable ResourceLocation recipe) {}
 
     public ParticleCollisionControllerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(
@@ -657,7 +661,7 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
 
     @Nullable
     private RecipeHolder<OritechRecipe> recipeFor(Level level, AEItemKey output) {
-        Template template = templates.get(output);
+        CollisionTemplate template = templates.get(output);
         return template == null || template.recipe() == null
                 ? null
                 : OritechRecipeResolver.collisionById(level, template.recipe());
@@ -695,7 +699,7 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
                     Refusal.TOO_FAST,
                     "recipe needs speed " + plan.minimumSpeed() + " and the ring has only reached " + speedLimit());
         }
-        Template existing = templates.get(producedItem);
+        CollisionTemplate existing = templates.get(producedItem);
         if (existing != null && !collision.recipe().equals(existing.recipe())) {
             return reject(
                     Refusal.MIXED_RECIPES,
@@ -758,13 +762,7 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
     }
 
     private void captureTemplate(AEItemKey output, Map<AEItemKey, Long> items, ResourceLocation recipe) {
-        List<AEKey> keys = new ArrayList<>(items.size());
-        List<Long> counts = new ArrayList<>(items.size());
-        for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
-            keys.add(entry.getKey());
-            counts.add(entry.getValue());
-        }
-        templates.put(output, new Template(List.copyOf(keys), List.copyOf(counts), recipe));
+        templates.put(output, CollisionTemplate.capture(items, recipe));
     }
 
     private void autoRequest(Level level) {
@@ -772,40 +770,19 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
             setMissingInputs(List.of());
             return;
         }
-        List<AEKey> keys = new ArrayList<>();
-        List<Long> targets = new ArrayList<>();
+        DemandTally tally = new DemandTally();
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-            Template template = templates.get(entry.getKey());
+            CollisionTemplate template = templates.get(entry.getKey());
             if (template == null) {
                 continue;
             }
-            for (int i = 0; i < template.keys().size(); i++) {
-                long target = template.counts().get(i) * entry.getValue();
-                int existing = keys.indexOf(template.keys().get(i));
-                if (existing >= 0) {
-                    targets.set(existing, targets.get(existing) + target);
-                } else {
-                    keys.add(template.keys().get(i));
-                    targets.add(target);
-                }
-            }
+            template.addDemand(tally, entry.getValue());
         }
-        if (keys.isEmpty()) {
+        if (tally.isEmpty()) {
             setMissingInputs(List.of());
             return;
         }
-        List<Integer> order = new ArrayList<>();
-        for (int i = 0; i < keys.size(); i++) {
-            order.add(i);
-        }
-        order.sort(Comparator.comparing(i -> keys.get(i).toString()));
-        List<AEKey> stableKeys = new ArrayList<>(keys.size());
-        List<Long> stableTargets = new ArrayList<>(targets.size());
-        for (int i : order) {
-            stableKeys.add(keys.get(i));
-            stableTargets.add(targets.get(i));
-        }
-        setMissingInputs(power.restock(level, stableKeys, stableTargets));
+        setMissingInputs(tally.restock(level, power));
     }
 
     @Override
@@ -828,14 +805,11 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
         }
         long target = 0;
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-            Template template = templates.get(entry.getKey());
+            CollisionTemplate template = templates.get(entry.getKey());
             if (template == null) {
                 continue;
             }
-            int index = template.keys().indexOf(key);
-            if (index >= 0) {
-                target += template.counts().get(index) * entry.getValue();
-            }
+            target += template.demandFor(key, entry.getValue());
         }
         return (int) Math.max(0, Math.min(Integer.MAX_VALUE, target - bufferedAmount(key)));
     }
@@ -969,14 +943,6 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
         return links.size();
     }
 
-    long pendingJobs() {
-        long total = 0;
-        for (long count : owed.values()) {
-            total += count;
-        }
-        return total;
-    }
-
     private void setStall(Stall reason) {
         if (stall != reason) {
             stall = reason;
@@ -1022,6 +988,9 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
     }
 
     void dropBuffers(Level level, BlockPos pos) {
+        if (phase != Phase.IDLE) {
+            recallActive(level);
+        }
         for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), inputBuffer.getStackInSlot(slot));
         }
@@ -1126,12 +1095,12 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
         }
         pushingCpus.load(tag);
         power.load(tag.getCompound(NODE_KEY));
-        stall = byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
-        refusal = byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
+        stall = EnumNames.byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
+        refusal = EnumNames.byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
         refusalTicks = refusal == Refusal.NONE
                 ? 0
                 : Math.max(1, Math.min(REFUSAL_MEMORY_TICKS, tag.getInt(REFUSAL_TICKS_KEY)));
-        phase = byName(Phase.values(), tag.getString(PHASE_KEY), Phase.IDLE);
+        phase = EnumNames.byName(Phase.values(), tag.getString(PHASE_KEY), Phase.IDLE);
         phaseTicks = tag.getInt(PHASE_TICKS_KEY);
         speedTicks = tag.getInt(SPEED_TICKS_KEY);
         cooldown = tag.getInt(COOLDOWN_KEY);
@@ -1151,64 +1120,12 @@ public class ParticleCollisionControllerBlockEntity extends BufferedMatrixBlockE
         markScanNeeded();
     }
 
-    private static <E extends Enum<E>> E byName(E[] values, String name, E fallback) {
-        for (E value : values) {
-            if (value.name().equals(name)) {
-                return value;
-            }
-        }
-        return fallback;
-    }
-
     private ListTag saveTemplates(HolderLookup.Provider registries) {
-        ListTag list = new ListTag();
-        for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
-            CompoundTag tag = new CompoundTag();
-            ItemCounts.putKey(tag, entry.getKey(), registries);
-            ListTag stacks = new ListTag();
-            for (int i = 0; i < entry.getValue().keys().size(); i++) {
-                stacks.add(GenericStack.writeTag(
-                        registries,
-                        new GenericStack(
-                                entry.getValue().keys().get(i),
-                                entry.getValue().counts().get(i))));
-            }
-            tag.put("Stacks", stacks);
-            if (entry.getValue().recipe() != null) {
-                tag.putString("Recipe", entry.getValue().recipe().toString());
-            }
-            list.add(tag);
-        }
-        return list;
+        return CollisionTemplate.save(templates, registries);
     }
 
     private void loadTemplates(ListTag list, HolderLookup.Provider registries) {
-        templates.clear();
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag tag = list.getCompound(i);
-            AEItemKey item = ItemCounts.key(tag, registries);
-            if (item == null) {
-                continue;
-            }
-            ListTag stacks = tag.getList("Stacks", Tag.TAG_COMPOUND);
-            List<AEKey> keys = new ArrayList<>();
-            List<Long> counts = new ArrayList<>();
-            for (int s = 0; s < stacks.size(); s++) {
-                GenericStack stack = GenericStack.readTag(registries, stacks.getCompound(s));
-                if (stack != null) {
-                    keys.add(stack.what());
-                    counts.add(stack.amount());
-                }
-            }
-            if (!keys.isEmpty()) {
-                templates.put(
-                        item,
-                        new Template(
-                                List.copyOf(keys),
-                                List.copyOf(counts),
-                                ResourceLocation.tryParse(tag.getString("Recipe"))));
-            }
-        }
+        CollisionTemplate.load(templates, list, registries, false);
     }
 
     @Override

@@ -15,6 +15,7 @@ public record SequencedAssemblyState(
         int status,
         boolean halted,
         boolean outputBlocked,
+        Network network,
         List<Station> stations,
         List<Making> making,
         List<GenericStack> missing,
@@ -25,6 +26,23 @@ public record SequencedAssemblyState(
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SequencedAssemblyState> STREAM_CODEC =
             StreamCodec.of(SequencedAssemblyState::encode, SequencedAssemblyState::decode);
+
+    public enum LineStatus {
+        NONE,
+        READY,
+        PROBLEM;
+
+        public static LineStatus byCode(int code) {
+            LineStatus[] all = values();
+            return code >= 0 && code < all.length ? all[code] : NONE;
+        }
+    }
+
+    public enum Network {
+        OK,
+        NO_POWER,
+        NO_CHANNELS
+    }
 
     public enum Issue {
         OK,
@@ -47,13 +65,14 @@ public record SequencedAssemblyState(
     }
 
     static SequencedAssemblyState empty() {
-        return new SequencedAssemblyState(0, false, false, List.of(), List.of(), List.of(), List.of());
+        return new SequencedAssemblyState(0, false, false, Network.OK, List.of(), List.of(), List.of(), List.of());
     }
 
     boolean matches(SequencedAssemblyState other) {
         if (status != other.status
                 || halted != other.halted
                 || outputBlocked != other.outputBlocked
+                || network != other.network
                 || making.size() != other.making.size()
                 || fluids.size() != other.fluids.size()
                 || !stations.equals(other.stations)
@@ -83,6 +102,7 @@ public record SequencedAssemblyState(
         buf.writeVarInt(state.status);
         buf.writeBoolean(state.halted);
         buf.writeBoolean(state.outputBlocked);
+        buf.writeVarInt(state.network.ordinal());
         buf.writeVarInt(state.stations.size());
         for (Station station : state.stations) {
             buf.writeVarInt(station.kind().ordinal());
@@ -106,11 +126,12 @@ public record SequencedAssemblyState(
     }
 
     private static SequencedAssemblyState decode(RegistryFriendlyByteBuf buf) {
-        int status = buf.readVarInt();
+        int status = LineStatus.byCode(buf.readVarInt()).ordinal();
         boolean halted = buf.readBoolean();
         boolean outputBlocked = buf.readBoolean();
+        Network network = network(buf.readVarInt());
         int stationCount = buf.readVarInt();
-        List<Station> stations = new ArrayList<>(stationCount);
+        List<Station> stations = new ArrayList<>(Math.min(stationCount, 1024));
         for (int i = 0; i < stationCount; i++) {
             StationKind kind = kind(buf.readVarInt());
             BlockPos pos = buf.readBlockPos();
@@ -119,13 +140,13 @@ public record SequencedAssemblyState(
             stations.add(new Station(kind, pos, issue, expected));
         }
         int makingCount = buf.readVarInt();
-        List<Making> making = new ArrayList<>(makingCount);
+        List<Making> making = new ArrayList<>(Math.min(makingCount, 1024));
         for (int i = 0; i < makingCount; i++) {
             ItemStack output = ItemStack.STREAM_CODEC.decode(buf);
             making.add(new Making(output, buf.readVarLong()));
         }
         int missingCount = buf.readVarInt();
-        List<GenericStack> missing = new ArrayList<>(missingCount);
+        List<GenericStack> missing = new ArrayList<>(Math.min(missingCount, 1024));
         for (int i = 0; i < missingCount; i++) {
             GenericStack stack = GenericStack.readBuffer(buf);
             if (stack != null) {
@@ -133,16 +154,21 @@ public record SequencedAssemblyState(
             }
         }
         int fluidCount = buf.readVarInt();
-        List<FluidStack> fluids = new ArrayList<>(fluidCount);
+        List<FluidStack> fluids = new ArrayList<>(Math.min(fluidCount, 1024));
         for (int i = 0; i < fluidCount; i++) {
             fluids.add(FluidStack.OPTIONAL_STREAM_CODEC.decode(buf));
         }
-        return new SequencedAssemblyState(status, halted, outputBlocked, stations, making, missing, fluids);
+        return new SequencedAssemblyState(status, halted, outputBlocked, network, stations, making, missing, fluids);
     }
 
     private static StationKind kind(int ordinal) {
         StationKind[] values = StationKind.values();
         return ordinal >= 0 && ordinal < values.length ? values[ordinal] : StationKind.UNKNOWN;
+    }
+
+    private static Network network(int ordinal) {
+        Network[] values = Network.values();
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : Network.OK;
     }
 
     private static Issue issue(int ordinal) {

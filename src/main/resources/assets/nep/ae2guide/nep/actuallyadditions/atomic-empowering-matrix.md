@@ -6,6 +6,8 @@ navigation:
   position: 33
 item_ids:
   - nep:atomic_empowering_matrix
+categories:
+  - Matrices
 ---
 # <Color id="gold">Atomic Empowering Matrix</Color>
 

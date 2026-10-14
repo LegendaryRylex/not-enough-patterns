@@ -1,30 +1,25 @@
 package dev.rylex.nep.compat.ars;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.level.Level;
 
 public enum RitualDaylight {
-    ANY("◐", "any"),
-    DAY("☼", "day"),
-    NIGHT("☾", "night");
+    ANY("any"),
+    DAY("day"),
+    NIGHT("night");
 
     private static final long DAY_LENGTH = 24_000L;
     private static final long DUSK = 12_000L;
 
-    public static final StreamCodec<io.netty.buffer.ByteBuf, RitualDaylight> STREAM_CODEC =
+    public static final StreamCodec<ByteBuf, RitualDaylight> STREAM_CODEC =
             ByteBufCodecs.BYTE.map(RitualDaylight::byOrdinal, daylight -> (byte) daylight.ordinal());
 
-    private final String glyph;
     private final String key;
 
-    RitualDaylight(String glyph, String keySuffix) {
-        this.glyph = glyph;
+    RitualDaylight(String keySuffix) {
         this.key = "gui.nep.ritual_conductor.daylight." + keySuffix;
-    }
-
-    public String glyph() {
-        return glyph;
     }
 
     public String key() {
@@ -32,25 +27,19 @@ public enum RitualDaylight {
     }
 
     public RitualDaylight next() {
-        return values()[(ordinal() + 1) % values().length];
+        return CyclingSetting.next(values(), this);
     }
 
     public RitualDaylight previous() {
-        return values()[(ordinal() + values().length - 1) % values().length];
+        return CyclingSetting.previous(values(), this);
     }
 
     public static RitualDaylight byOrdinal(int ordinal) {
-        RitualDaylight[] values = values();
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : ANY;
+        return CyclingSetting.byOrdinal(values(), ordinal, ANY);
     }
 
     public static RitualDaylight byName(String name) {
-        for (RitualDaylight daylight : values()) {
-            if (daylight.name().equals(name)) {
-                return daylight;
-            }
-        }
-        return ANY;
+        return CyclingSetting.byName(values(), name, ANY);
     }
 
     public boolean satisfiedBy(Level level) {

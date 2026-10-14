@@ -119,7 +119,8 @@ public class DepotCraftingMachine implements ICraftingMachine {
         if (above instanceof SpoutBlockEntity spout && NepConfig.createFilling()) {
             return pushFilling(level, spout, patternDetails, inputs);
         }
-        return PushOutcome.retry("no enabled Deployer or Spout two blocks above the depot (found " + above + ")");
+        return PushOutcome.retry("no enabled Deployer or Spout two blocks above the depot (found "
+                + (above == null ? "nothing" : above) + ")");
     }
 
     private PushOutcome pushDeploying(
@@ -128,28 +129,11 @@ public class DepotCraftingMachine implements ICraftingMachine {
             IPatternDetails patternDetails,
             KeyCounter[] inputs,
             Direction ejectionDirection) {
-        ApplicationRecipeResolver.Plan template = ApplicationRecipeResolver.resolve(patternDetails, level);
-        if (template == null) {
-            return PushOutcome.unsatisfiable("no deploying/item_application recipe matched the pattern");
+        PlanResolution resolution = resolvePlan(level, patternDetails, inputs);
+        if (resolution.refusal() != null) {
+            return resolution.refusal();
         }
-
-        Map<AEItemKey, Long> items = new HashMap<>();
-        Map<AEFluidKey, Long> fluids = new HashMap<>();
-        if (!DepotMachines.collectInputs(inputs, items, fluids) || !fluids.isEmpty()) {
-            return PushOutcome.unsatisfiable("unexpected fluid input for a deploying pattern");
-        }
-
-        ApplicationRecipeResolver.Plan plan = template;
-        if (!items.equals(template.expectedItems())) {
-            if (!template.wornTool()) {
-                return PushOutcome.unsatisfiable(
-                        "pushed items " + items + " do not match the recipe's inputs " + template.expectedItems());
-            }
-            plan = ApplicationRecipeResolver.resolveProvided(patternDetails, level, inputs);
-            if (plan == null) {
-                return PushOutcome.retry("pushed items " + items + " do not match the recipe's inputs");
-            }
-        }
+        ApplicationRecipeResolver.Plan plan = resolution.plan();
 
         if (!DepotMachines.depotReady(depot)) {
             return PushOutcome.retry("depot is occupied");
@@ -173,28 +157,11 @@ public class DepotCraftingMachine implements ICraftingMachine {
         ItemStack suppliedTool = plan.suppliedTool() == null
                 ? ItemStack.EMPTY
                 : plan.suppliedTool().toStack();
-        boolean loadTool = false;
-
-        if (plan.wornTool()) {
-            if (suppliedTool.isEmpty()) {
-                return PushOutcome.retry("this recipe wears its tool down, so the pattern has to supply one");
-            }
-            if (!held.isEmpty()) {
-                return PushOutcome.retry(
-                        "deployer is still holding " + held + "; a worn tool is lent fresh for each craft");
-            }
-            loadTool = true;
-        } else if (plan.keptTool() != null) {
-            if (suppliedTool.isEmpty()) {
-                if (held.isEmpty() || !plan.keptTool().test(held)) {
-                    return PushOutcome.retry("deployer must hold the non-consumed tool for this recipe");
-                }
-            } else if (held.isEmpty()) {
-                loadTool = true;
-            } else if (!plan.keptTool().test(held)) {
-                return PushOutcome.retry("deployer is holding " + held + ", which this recipe does not use");
-            }
+        ToolDecision tool = decideTool(plan, suppliedTool, held);
+        if (tool.refusal() != null) {
+            return tool.refusal();
         }
+        boolean loadTool = tool.loadTool();
 
         BlockPos providerPos = depot.getBlockPos().relative(ejectionDirection);
         Direction providerFace = ejectionDirection.getOpposite();
@@ -231,6 +198,73 @@ public class DepotCraftingMachine implements ICraftingMachine {
             ItemHandlerHelper.insertItem(provider, suppliedTool, false);
         }
         return PushOutcome.accepted("deploying " + depotStack + " with " + (deployed.isEmpty() ? held : deployed));
+    }
+
+    private record PlanResolution(
+            ApplicationRecipeResolver.@Nullable Plan plan,
+            @Nullable PushOutcome refusal) {}
+
+    private static PlanResolution resolvePlan(Level level, IPatternDetails patternDetails, KeyCounter[] inputs) {
+        ApplicationRecipeResolver.Plan template = ApplicationRecipeResolver.resolve(patternDetails, level);
+        if (template == null) {
+            return refused(PushOutcome.unsatisfiable("no deploying/item_application recipe matched the pattern"));
+        }
+
+        Map<AEItemKey, Long> items = new HashMap<>();
+        Map<AEFluidKey, Long> fluids = new HashMap<>();
+        if (!DepotMachines.collectInputs(inputs, items, fluids) || !fluids.isEmpty()) {
+            return refused(PushOutcome.unsatisfiable("unexpected fluid input for a deploying pattern"));
+        }
+
+        ApplicationRecipeResolver.Plan plan = template;
+        if (!items.equals(template.expectedItems())) {
+            if (!template.wornTool()) {
+                return refused(PushOutcome.unsatisfiable(
+                        "pushed items " + items + " do not match the recipe's inputs " + template.expectedItems()));
+            }
+            plan = ApplicationRecipeResolver.resolveProvided(patternDetails, level, inputs);
+            if (plan == null) {
+                return refused(PushOutcome.retry("pushed items " + items + " do not match the recipe's inputs"));
+            }
+        }
+        return new PlanResolution(plan, null);
+    }
+
+    private static PlanResolution refused(PushOutcome outcome) {
+        return new PlanResolution(null, outcome);
+    }
+
+    private record ToolDecision(boolean loadTool, @Nullable PushOutcome refusal) {}
+
+    private static ToolDecision decideTool(
+            ApplicationRecipeResolver.Plan plan, ItemStack suppliedTool, ItemStack held) {
+        if (plan.wornTool()) {
+            if (suppliedTool.isEmpty()) {
+                return new ToolDecision(
+                        false, PushOutcome.retry("this recipe wears its tool down, so the pattern has to supply one"));
+            }
+            if (!held.isEmpty()) {
+                return new ToolDecision(
+                        false,
+                        PushOutcome.retry(
+                                "deployer is still holding " + held + "; a worn tool is lent fresh for each craft"));
+            }
+            return new ToolDecision(true, null);
+        }
+        if (plan.keptTool() != null) {
+            if (suppliedTool.isEmpty()) {
+                if (held.isEmpty() || !plan.keptTool().test(held)) {
+                    return new ToolDecision(
+                            false, PushOutcome.retry("deployer must hold the non-consumed tool for this recipe"));
+                }
+            } else if (held.isEmpty()) {
+                return new ToolDecision(true, null);
+            } else if (!plan.keptTool().test(held)) {
+                return new ToolDecision(
+                        false, PushOutcome.retry("deployer is holding " + held + ", which this recipe does not use"));
+            }
+        }
+        return new ToolDecision(false, null);
     }
 
     private PushOutcome pushFilling(
@@ -301,6 +335,7 @@ public class DepotCraftingMachine implements ICraftingMachine {
         return Kind.NONE;
     }
 
+    @Nullable
     private BlockEntity machineAbove() {
         Level level = depot.getLevel();
         if (level == null) {

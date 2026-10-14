@@ -9,6 +9,7 @@ import com.simibubi.create.content.fluids.transfer.FillingRecipe;
 import com.simibubi.create.content.fluids.transfer.GenericItemFilling;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
 import dev.rylex.nep.util.RecipeCache;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,9 +25,14 @@ import org.jetbrains.annotations.Nullable;
 final class FillingRecipeResolver {
     private FillingRecipeResolver() {}
 
-    record Plan(AEItemKey depotItem, AEFluidKey fluid, long fluidAmount, Map<AEItemKey, Long> expectedItems) {}
+    record Plan(AEItemKey depotItem, AEFluidKey fluid, long fluidAmount) {
+        Map<AEItemKey, Long> expectedItems() {
+            return Map.of(depotItem, 1L);
+        }
+    }
 
-    private static final RecipeCache<Map<AEItemKey, Optional<Plan>>> CACHE = RecipeCache.of(level -> new HashMap<>());
+    private static final RecipeCache<Map<AEItemKey, Optional<Plan>>> CACHE =
+            RecipeCache.of(level -> Collections.synchronizedMap(new HashMap<>()));
 
     static void clearCache() {
         CACHE.clear();
@@ -84,17 +90,17 @@ final class FillingRecipeResolver {
                     || !matches(holder, recipe, depotStack, fluid, fluidAmount, expected, outputCount)) {
                 return null;
             }
-            return new Plan(depotItem, fluid, fluidAmount, Map.of(depotItem, 1L));
+            return new Plan(depotItem, fluid, fluidAmount);
         }
 
         for (RecipeHolder<FillingRecipe> holder : level.getRecipeManager().getAllRecipesFor(recipeType())) {
             if (matches(holder, holder.value(), depotStack, fluid, fluidAmount, expected, outputCount)) {
-                return new Plan(depotItem, fluid, fluidAmount, Map.of(depotItem, 1L));
+                return new Plan(depotItem, fluid, fluidAmount);
             }
         }
 
         if (matchesGenericFill(level, depotStack, fluid, fluidAmount, expected, outputCount)) {
-            return new Plan(depotItem, fluid, fluidAmount, Map.of(depotItem, 1L));
+            return new Plan(depotItem, fluid, fluidAmount);
         }
         return null;
     }

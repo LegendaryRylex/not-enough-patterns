@@ -9,6 +9,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import java.util.List;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.junit.jupiter.api.Test;
@@ -22,18 +23,22 @@ class EmpoweringPatternTest {
         return new EmpoweringPattern(AEItemKey.of(encoded), null);
     }
 
-    private static GenericStack one(net.minecraft.world.item.Item item) {
+    private static GenericStack one(Item item) {
         return new GenericStack(AEItemKey.of(item), 1);
     }
 
-    @Test
-    void aDuplicateModifierCondensesIntoOneInputWithTwoOfIt() {
-        EmpoweringPattern pattern = pattern(List.of(
+    private static List<GenericStack> fiveStacks() {
+        return List.of(
                 one(Items.DIAMOND_BLOCK),
                 one(Items.LIGHT_BLUE_DYE),
                 one(Items.CLAY_BALL),
                 one(Items.CLAY_BALL),
-                one(Items.CLAY)));
+                one(Items.CLAY));
+    }
+
+    @Test
+    void aDuplicateModifierCondensesIntoOneInputWithTwoOfIt() {
+        EmpoweringPattern pattern = pattern(fiveStacks());
 
         IPatternDetails.IInput[] inputs = pattern.getInputs();
 
@@ -49,12 +54,7 @@ class EmpoweringPatternTest {
 
     @Test
     void everyIngredientIsConsumed() {
-        EmpoweringPattern pattern = pattern(List.of(
-                one(Items.DIAMOND_BLOCK),
-                one(Items.LIGHT_BLUE_DYE),
-                one(Items.CLAY_BALL),
-                one(Items.CLAY_BALL),
-                one(Items.CLAY)));
+        EmpoweringPattern pattern = pattern(fiveStacks());
 
         assertTrue(pattern.retained().isEmpty(), "empowering keeps nothing back");
         for (IPatternDetails.IInput input : pattern.getInputs()) {

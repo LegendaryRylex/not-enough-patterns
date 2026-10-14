@@ -1,42 +1,10 @@
 package dev.rylex.nep.compat.ae2lt.mixin;
 
-import java.util.List;
-import java.util.Set;
-import net.neoforged.fml.loading.LoadingModList;
-import org.objectweb.asm.tree.ClassNode;
-import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
-import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import dev.rylex.nep.mixin.ModGatedMixinPlugin;
 
-public class Ae2LtMixinPlugin implements IMixinConfigPlugin {
+public class Ae2LtMixinPlugin extends ModGatedMixinPlugin {
 
-    private static final String TARGET_MOD = "ae2lt";
-
-    @Override
-    public void onLoad(String mixinPackage) {}
-
-    @Override
-    public String getRefMapperConfig() {
-        return null;
+    public Ae2LtMixinPlugin() {
+        super("ae2lt", "TianshuPatternEncodingTermMenuMixin");
     }
-
-    @Override
-    public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return true;
-    }
-
-    @Override
-    public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {}
-
-    @Override
-    public List<String> getMixins() {
-        return LoadingModList.get().getModFileById(TARGET_MOD) == null
-                ? List.of()
-                : List.of("TianshuPatternEncodingTermMenuMixin");
-    }
-
-    @Override
-    public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo info) {}
-
-    @Override
-    public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo info) {}
 }

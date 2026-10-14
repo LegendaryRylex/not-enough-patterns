@@ -28,14 +28,15 @@ import dev.rylex.nep.machine.OverstackedItemHandler;
 import dev.rylex.nep.pattern.RuneworkingPattern;
 import dev.rylex.nep.pattern.SpiritFocusingPattern;
 import dev.rylex.nep.pattern.SpiritInfusionPattern;
+import dev.rylex.nep.util.EnumNames;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.ObjLongConsumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -101,6 +102,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
     private static final String REFUSAL_KEY = "Refusal";
     private static final String REFUSAL_TICKS_KEY = "RefusalTicks";
     private static final String PRESERVATION_KEY = "PreservationTicks";
+    private static final String ACTIVE_DURABILITY_KEY = "ActiveDurability";
 
     private final ItemStackHandler upgradeSlot = new ItemStackHandler(UPGRADE_SLOTS) {
         @Override
@@ -158,7 +160,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
 
     private final SpiritBank spirits = new SpiritBank(this::onSpiritsChanged);
 
-    private final Map<AEItemKey, Template> templates = new HashMap<>();
+    private final Map<AEItemKey, MatrixTemplate> templates = new HashMap<>();
     private final IItemHandler outputView = new OutputView();
     private final IItemHandler machineView =
             MachineItemView.demandLimited(inputBuffer, outputView, this::manualDemandFor);
@@ -210,8 +212,6 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         RUNEWORKING_DISABLED,
         BUFFER_FULL
     }
-
-    private record Template(List<AEKey> keys, List<Long> counts, ResourceLocation recipe, Process process) {}
 
     private record ManualPlan(
             Process process, ItemStack result, List<ManualRequirement> requirements, boolean carriesData) {}
@@ -325,7 +325,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
     private long committed(AEKey key) {
         long total = 0;
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-            Template template = templates.get(entry.getKey());
+            MatrixTemplate template = templates.get(entry.getKey());
             if (template == null) {
                 continue;
             }
@@ -357,7 +357,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         return Math.max(0, Math.min(banked, spare));
     }
 
-    void forEachFreeSpirit(java.util.function.ObjLongConsumer<AEKey> out) {
+    void forEachFreeSpirit(ObjLongConsumer<AEKey> out) {
         Set<AEItemKey> seen = new HashSet<>();
         for (int slot = 0; slot < spirits.getSlots(); slot++) {
             AEItemKey key = AEItemKey.of(spirits.getStackInSlot(slot));
@@ -379,7 +379,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         long room = spirits.getSlotLimit(slot) - spirits.getStackInSlot(slot).getCount();
         int accepted = (int) Math.max(0, Math.min(amount, room));
         if (accepted > 0 && mode == Actionable.MODULATE) {
-            ItemStack leftover = spirits.insertItem(slot, SpiritBankStorage.stackOf(key, accepted), false);
+            ItemStack leftover = spirits.insertItem(slot, key.toStack(accepted), false);
             accepted -= leftover.getCount();
         }
         return accepted;
@@ -460,12 +460,8 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
                 left.shrink((int) power.dumpToNetwork(key, left.getCount()));
             }
             if (!left.isEmpty()) {
-                Containers.dropItemStack(
-                        level,
-                        getBlockPos().getX(),
-                        getBlockPos().getY(),
-                        getBlockPos().getZ(),
-                        left);
+                BlockPos pos = getBlockPos();
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), left);
             }
         }
         claimedItems.clear();
@@ -547,7 +543,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
             if (owed.getOrDefault(wanted, 0L) <= 0) {
                 continue;
             }
-            Template template = templates.get(wanted);
+            MatrixTemplate template = templates.get(wanted);
             if (template == null) {
                 reason = Stall.worse(reason, Stall.NO_RECIPE);
                 continue;
@@ -563,7 +559,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         return false;
     }
 
-    private Stall claimIngredients(Level level, AEItemKey wanted, Template template) {
+    private Stall claimIngredients(Level level, AEItemKey wanted, MatrixTemplate template) {
         ItemStack result;
         int craftTicks;
         int durabilityCost = 0;
@@ -661,7 +657,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
      * was staged for it rather than the bank's stock.
      */
     @Nullable
-    private List<int[]> planConsumption(Template template) {
+    private List<int[]> planConsumption(MatrixTemplate template) {
         int[][] slotLeft = new int[2][];
         slotLeft[INPUT_HANDLER] = countsOf(inputBuffer);
         slotLeft[SPIRIT_HANDLER] = countsOf(spirits);
@@ -795,7 +791,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         }
         ItemStack result = plan.result();
         AEItemKey produced = AEItemKey.of(result);
-        Template existing = templates.get(produced);
+        MatrixTemplate existing = templates.get(produced);
         if (existing != null && !recipe.equals(existing.recipe())) {
             return ManualCraftOutcome.failed(ManualCraftResult.BUSY);
         }
@@ -814,7 +810,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
             produced = AEItemKey.of(result);
         }
 
-        captureTemplate(produced, staged.perCraft(), recipe, plan.process());
+        templates.put(produced, MatrixTemplate.capture(staged.perCraft(), recipe, plan.process()));
         owed.merge(produced, (long) staged.batches(), Long::sum);
         manualOwed.merge(produced, (long) staged.batches(), Long::sum);
         clearRefusal();
@@ -950,7 +946,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
             return reject(Refusal.NO_ITEM_OUTPUT, "pattern has no item output");
         }
         AEItemKey producedItem = outputKey;
-        Template existing = templates.get(producedItem);
+        MatrixTemplate existing = templates.get(producedItem);
         if (existing != null && !existing.recipe().equals(recipe)) {
             return reject(
                     Refusal.MIXED_RECIPES,
@@ -981,7 +977,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         }
 
         returnDirections.record(producedItem, ejectionDirection);
-        captureTemplate(producedItem, items, recipe, process);
+        templates.put(producedItem, MatrixTemplate.capture(items, recipe, process));
         owed.merge(producedItem, 1L, Long::sum);
         pushingCpus.record();
         clearRefusal();
@@ -1004,7 +1000,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
             int maxStack = key.toStack().getMaxStackSize();
             while (count > 0) {
                 int chunk = (int) Math.min(count, maxStack);
-                target.add(SpiritBankStorage.stackOf(key, chunk));
+                target.add(key.toStack(chunk));
                 count -= chunk;
             }
         }
@@ -1076,17 +1072,6 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         return true;
     }
 
-    private void captureTemplate(
-            AEItemKey output, Map<AEItemKey, Long> items, ResourceLocation recipe, Process process) {
-        List<AEKey> keys = new ArrayList<>(items.size());
-        List<Long> counts = new ArrayList<>(items.size());
-        for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
-            keys.add(entry.getKey());
-            counts.add(entry.getValue());
-        }
-        templates.put(output, new Template(List.copyOf(keys), List.copyOf(counts), recipe, process));
-    }
-
     private void autoRequest(Level level) {
         RestockPlan plan = restockPlan();
         if (plan == null) {
@@ -1107,70 +1092,9 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         setMissingInputs(unmet);
     }
 
-    /** Spirits are named by the bank's fixed layout rather than by what it holds, so a slot drained to zero still restocks. */
     @Nullable
     RestockPlan restockPlan() {
-        boolean pullIngredients = NepConfig.malumFocusedSpiritMatrixAutoRequest() && !owed.isEmpty();
-        if (!pullIngredients && !spiritRestock) {
-            return null;
-        }
-        List<AEKey> keys = new ArrayList<>();
-        List<Long> targets = new ArrayList<>();
-        if (pullIngredients) {
-            for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-                Template template = templates.get(entry.getKey());
-                if (template == null || isManualJob(entry.getKey())) {
-                    continue;
-                }
-                for (int i = 0; i < template.keys().size(); i++) {
-                    long target = template.counts().get(i) * entry.getValue();
-                    int existing = keys.indexOf(template.keys().get(i));
-                    if (existing >= 0) {
-                        targets.set(existing, targets.get(existing) + target);
-                    } else {
-                        keys.add(template.keys().get(i));
-                        targets.add(target);
-                    }
-                }
-            }
-        }
-        int ingredientKeys = keys.size();
-        Map<AEKey, Long> needs = new HashMap<>();
-        for (int i = 0; i < ingredientKeys; i++) {
-            needs.put(keys.get(i), targets.get(i));
-        }
-        if (spiritRestock) {
-            long stock = NepConfig.malumFocusedSpiritMatrixSpiritStock();
-            for (int slot = 0; slot < SpiritBank.SLOTS; slot++) {
-                if (slot == SpiritBank.JOKER_SLOT) {
-                    continue;
-                }
-                AEItemKey key = AEItemKey.of(SpiritBank.spiritFor(slot));
-                int existing = keys.indexOf(key);
-                if (existing >= 0) {
-                    targets.set(existing, Math.max(targets.get(existing), stock));
-                } else {
-                    keys.add(key);
-                    targets.add(stock);
-                }
-            }
-        }
-        if (keys.isEmpty()) {
-            return null;
-        }
-        List<Integer> order = new ArrayList<>();
-        for (int i = 0; i < keys.size(); i++) {
-            order.add(i);
-        }
-        order.sort(Comparator.comparingInt((Integer i) -> i < ingredientKeys ? 0 : 1)
-                .thenComparing(i -> keys.get(i).toString()));
-        List<AEKey> stableKeys = new ArrayList<>(keys.size());
-        List<Long> stableTargets = new ArrayList<>(targets.size());
-        for (int i : order) {
-            stableKeys.add(keys.get(i));
-            stableTargets.add(targets.get(i));
-        }
-        return new RestockPlan(stableKeys, stableTargets, Map.copyOf(needs));
+        return MatrixRestock.plan(owed, templates, this::isManualJob, spiritRestock);
     }
 
     int manualDemandFor(ItemStack stack) {
@@ -1196,17 +1120,7 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
     }
 
     private int reportedDemandFor(AEKey key) {
-        long target = 0;
-        for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
-            Template template = templates.get(entry.getKey());
-            if (template == null) {
-                continue;
-            }
-            int index = template.keys().indexOf(key);
-            if (index >= 0) {
-                target += template.counts().get(index) * entry.getValue();
-            }
-        }
+        long target = committed(key);
         return (int) Math.max(0, Math.min(Integer.MAX_VALUE, target - bufferedAmount(key)));
     }
 
@@ -1298,14 +1212,6 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         return craftTicks <= 0 ? 1.0F : Math.min(1.0F, progress / (float) craftTicks);
     }
 
-    long pendingJobs() {
-        long total = 0;
-        for (long count : owed.values()) {
-            total += count;
-        }
-        return total;
-    }
-
     Stall stall() {
         return stall;
     }
@@ -1348,28 +1254,22 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
     }
 
     void dropBuffers(Level level, BlockPos pos) {
-        for (int slot = 0; slot < inputBuffer.getSlots(); slot++) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), inputBuffer.getStackInSlot(slot));
-        }
-        for (int slot = 0; slot < outputBuffer.getSlots(); slot++) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), outputBuffer.getStackInSlot(slot));
-        }
-        for (int slot = 0; slot < spirits.getSlots(); slot++) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), spirits.getStackInSlot(slot));
-        }
-        for (int slot = 0; slot < upgradeSlot.getSlots(); slot++) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), upgradeSlot.getStackInSlot(slot));
-        }
-        for (int slot = 0; slot < catalyzerSlot.getSlots(); slot++) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), catalyzerSlot.getStackInSlot(slot));
-        }
-        for (int slot = 0; slot < impetusSlot.getSlots(); slot++) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), impetusSlot.getStackInSlot(slot));
-        }
+        dropAll(level, pos, inputBuffer);
+        dropAll(level, pos, outputBuffer);
+        dropAll(level, pos, spirits);
+        dropAll(level, pos, upgradeSlot);
+        dropAll(level, pos, catalyzerSlot);
+        dropAll(level, pos, impetusSlot);
         for (ItemStack stack : claimedItems) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack);
         }
         clearContent();
+    }
+
+    private static void dropAll(Level level, BlockPos pos, IItemHandler handler) {
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), handler.getStackInSlot(slot));
+        }
     }
 
     @Override
@@ -1391,13 +1291,13 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         tag.put(IMPETUS_KEY, impetusSlot.serializeNBT(registries));
         tag.putString(ACTIVE_PROCESS_KEY, activeProcess.name());
         tag.putInt(ACTIVE_TICKS_KEY, activeCraftTicks);
-        tag.putInt("ActiveDurability", activeDurabilityCost);
+        tag.putInt(ACTIVE_DURABILITY_KEY, activeDurabilityCost);
         tag.put(SPIRITS_KEY, spirits.serializeNBT(registries));
         tag.putBoolean(SPIRIT_RESTOCK_KEY, spiritRestock);
         tag.put(OWED_KEY, ItemCounts.save(owed, registries));
         tag.put(RETURN_KEY, ItemCounts.save(toReturn, registries));
         tag.put(RETURN_DIRS_KEY, returnDirections.save(registries));
-        tag.put(TEMPLATE_KEY, saveTemplates(registries));
+        tag.put(TEMPLATE_KEY, MatrixTemplate.saveAll(templates, registries));
         if (!activeResult.isEmpty()) {
             tag.put(ACTIVE_KEY, activeResult.save(registries));
         }
@@ -1435,15 +1335,15 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         upgradeSlot.deserializeNBT(registries, tag.getCompound(UPGRADE_KEY));
         catalyzerSlot.deserializeNBT(registries, tag.getCompound(CATALYZER_KEY));
         impetusSlot.deserializeNBT(registries, tag.getCompound(IMPETUS_KEY));
-        activeProcess = byName(Process.values(), tag.getString(ACTIVE_PROCESS_KEY), Process.INFUSION);
+        activeProcess = EnumNames.byName(Process.values(), tag.getString(ACTIVE_PROCESS_KEY), Process.INFUSION);
         activeCraftTicks = tag.getInt(ACTIVE_TICKS_KEY);
-        activeDurabilityCost = tag.getInt("ActiveDurability");
+        activeDurabilityCost = tag.getInt(ACTIVE_DURABILITY_KEY);
         loadBuffer(spirits, registries, tag.getCompound(SPIRITS_KEY));
         spiritRestock = !tag.contains(SPIRIT_RESTOCK_KEY) || tag.getBoolean(SPIRIT_RESTOCK_KEY);
         ItemCounts.load(owed, tag, OWED_KEY, registries);
         ItemCounts.load(toReturn, tag, RETURN_KEY, registries);
         returnDirections.load(tag, RETURN_DIRS_KEY, "ReturnDir", toReturn.keySet(), registries);
-        loadTemplates(tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND), registries);
+        MatrixTemplate.loadAll(templates, tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND), registries);
         activeResult = tag.contains(ACTIVE_KEY)
                 ? ItemStack.parse(registries, tag.getCompound(ACTIVE_KEY)).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
@@ -1467,70 +1367,14 @@ public class FocusedSpiritMatrixBlockEntity extends BufferedMatrixBlockEntity im
         }
         pushingCpus.load(tag);
         power.load(tag.getCompound(NODE_KEY));
-        stall = byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
-        refusal = byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
+        stall = EnumNames.byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
+        refusal = EnumNames.byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
         refusalTicks = refusal == Refusal.NONE
                 ? 0
                 : Math.max(1, Math.min(REFUSAL_MEMORY_TICKS, tag.getInt(REFUSAL_TICKS_KEY)));
         preservationTicks = Math.max(0, tag.getInt(PRESERVATION_KEY));
         refreshUpgrades();
         markScanNeeded();
-    }
-
-    private static <E extends Enum<E>> E byName(E[] values, String name, E fallback) {
-        for (E value : values) {
-            if (value.name().equals(name)) {
-                return value;
-            }
-        }
-        return fallback;
-    }
-
-    private ListTag saveTemplates(HolderLookup.Provider registries) {
-        ListTag list = new ListTag();
-        for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
-            CompoundTag tag = new CompoundTag();
-            ItemCounts.putKey(tag, entry.getKey(), registries);
-            ListTag stacks = new ListTag();
-            for (int i = 0; i < entry.getValue().keys().size(); i++) {
-                stacks.add(GenericStack.writeTag(
-                        registries,
-                        new GenericStack(
-                                entry.getValue().keys().get(i),
-                                entry.getValue().counts().get(i))));
-            }
-            tag.put("Stacks", stacks);
-            tag.putString("Recipe", entry.getValue().recipe().toString());
-            tag.putString("Process", entry.getValue().process().name());
-            list.add(tag);
-        }
-        return list;
-    }
-
-    private void loadTemplates(ListTag list, HolderLookup.Provider registries) {
-        templates.clear();
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag tag = list.getCompound(i);
-            AEItemKey item = ItemCounts.key(tag, registries);
-            ResourceLocation recipe = ResourceLocation.tryParse(tag.getString("Recipe"));
-            if (item == null || recipe == null) {
-                continue;
-            }
-            ListTag stacks = tag.getList("Stacks", Tag.TAG_COMPOUND);
-            List<AEKey> keys = new ArrayList<>();
-            List<Long> counts = new ArrayList<>();
-            for (int s = 0; s < stacks.size(); s++) {
-                GenericStack stack = GenericStack.readTag(registries, stacks.getCompound(s));
-                if (stack != null) {
-                    keys.add(stack.what());
-                    counts.add(stack.amount());
-                }
-            }
-            if (!keys.isEmpty()) {
-                Process process = byName(Process.values(), tag.getString("Process"), Process.INFUSION);
-                templates.put(item, new Template(List.copyOf(keys), List.copyOf(counts), recipe, process));
-            }
-        }
     }
 
     @Override

@@ -1,5 +1,7 @@
 package dev.rylex.nep.compat.create;
 
+import static dev.rylex.nep.compat.create.CreateFixtures.itemHandler;
+
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.ManualCraftFixtures;
@@ -16,7 +18,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -41,8 +42,7 @@ public final class SequencedAssemblyMatrixGameTest {
     }
 
     private static int comparator(GameTestHelper helper) {
-        BlockPos absolute = helper.absolutePos(MATRIX);
-        return helper.getLevel().getBlockState(absolute).getAnalogOutputSignal(helper.getLevel(), absolute);
+        return CreateFixtures.comparator(helper, MATRIX);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
@@ -73,9 +73,7 @@ public final class SequencedAssemblyMatrixGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void hoppersAndPipesCannotStageIngredientsForNoJob(GameTestHelper helper) {
         SequencedAssemblyMatrixBlockEntity matrix = place(helper);
-        IItemHandler handler =
-                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(MATRIX), null);
-        helper.assertTrue(handler != null, "the matrix exposed no item handler");
+        IItemHandler handler = itemHandler(helper, MATRIX, "the matrix exposed no item handler");
 
         int inputSlots = matrix.getInputBuffer().getSlots();
         for (int slot = 0; slot < inputSlots; slot++) {
@@ -99,9 +97,7 @@ public final class SequencedAssemblyMatrixGameTest {
         SequencedAssemblyMatrixBlockEntity matrix = place(helper);
         matrix.getInputBuffer().insertItem(0, new ItemStack(Items.OBSIDIAN, 4), false);
 
-        IItemHandler handler =
-                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(MATRIX), null);
-        helper.assertTrue(handler != null, "the matrix exposed no item handler");
+        IItemHandler handler = itemHandler(helper, MATRIX, "the matrix exposed no item handler");
 
         for (int slot = 0; slot < handler.getSlots(); slot++) {
             helper.assertTrue(
@@ -115,9 +111,7 @@ public final class SequencedAssemblyMatrixGameTest {
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void resultSlotsRefuseInserts(GameTestHelper helper) {
         SequencedAssemblyMatrixBlockEntity matrix = place(helper);
-        IItemHandler handler =
-                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(MATRIX), null);
-        helper.assertTrue(handler != null, "the matrix exposed no item handler");
+        IItemHandler handler = itemHandler(helper, MATRIX, "the matrix exposed no item handler");
 
         int inputSlots = matrix.getInputBuffer().getSlots();
         for (int slot = inputSlots; slot < handler.getSlots(); slot++) {
@@ -137,9 +131,7 @@ public final class SequencedAssemblyMatrixGameTest {
         SequencedAssemblyMatrixBlockEntity matrix = place(helper);
         matrix.getOutputBuffer().insertItem(0, new ItemStack(Items.DIAMOND, 3), false);
 
-        IItemHandler handler =
-                helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(MATRIX), null);
-        helper.assertTrue(handler != null, "the matrix exposed no item handler");
+        IItemHandler handler = itemHandler(helper, MATRIX, "the matrix exposed no item handler");
 
         boolean found = false;
         for (int slot = 0; slot < handler.getSlots(); slot++) {

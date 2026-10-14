@@ -16,6 +16,7 @@ public abstract class MatrixScreen<T extends AbstractContainerMenu> extends Abst
 
     protected static final int READOUT_X = 12;
     protected static final int LINE_ONE_Y = 22;
+    protected static final int READOUT_HEIGHT = 32;
     protected static final int LINE_TWO_Y = 32;
     protected static final int LINE_THREE_Y = 42;
     protected static final int BAR_X = 12;

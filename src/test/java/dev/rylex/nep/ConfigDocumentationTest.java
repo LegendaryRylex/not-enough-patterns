@@ -104,9 +104,9 @@ class ConfigDocumentationTest {
 
     @Test
     void theUpgradeCoresSubcategoryCarriesItsWholeSetOfSettings() {
-        List<String> upgrades = new ArrayList<>(settings().keySet().stream()
+        List<String> upgrades = settings().keySet().stream()
                 .filter(path -> path.startsWith(UPGRADES + "."))
-                .toList());
+                .toList();
 
         assertEquals(
                 List.of(
@@ -124,9 +124,10 @@ class ConfigDocumentationTest {
 
     @Test
     void theTierCeilingsStayInsideWhatAnFeCableCanRead() {
+        Map<String, ModConfigSpec.ValueSpec> settings = settings();
         for (String path :
                 List.of(UPGRADES + ".wyvernCapacity", UPGRADES + ".draconicCapacity", UPGRADES + ".chaoticCapacity")) {
-            ModConfigSpec.Range<?> range = settings().get(path).getRange();
+            ModConfigSpec.Range<?> range = settings.get(path).getRange();
             assertEquals(
                     (long) Integer.MAX_VALUE,
                     ((Number) range.getMax()).longValue(),
@@ -239,6 +240,23 @@ class ConfigDocumentationTest {
         fallbacks.put(
                 "modules.mysticalagriculture.infusedAwakeningMatrix.meNetworkChannels",
                 NepConfig.mysticalInfusedAwakeningMatrixChannels());
+        fallbacks.put(
+                "modules.occultism.boundSpiritMatrix.spiritFireCraftTicks", NepConfig.occultismMatrixSpiritFireTicks());
+        fallbacks.put(
+                "modules.occultism.boundSpiritMatrix.craftTimePercent", NepConfig.occultismMatrixCraftTimePercent());
+        fallbacks.put("modules.occultism.boundSpiritMatrix.meNetworkDrain", NepConfig.occultismMatrixMeDrain());
+        fallbacks.put("modules.occultism.boundSpiritMatrix.idleMeNetworkDrain", NepConfig.occultismMatrixIdleMeDrain());
+        fallbacks.put("modules.occultism.boundSpiritMatrix.meNetworkChannels", NepConfig.occultismMatrixChannels());
+        fallbacks.put("modules.occultism.ritualController.bowlRange", NepConfig.occultismRitualControllerBowlRange());
+        fallbacks.put(
+                "modules.occultism.ritualController.tierSpeedPercent", NepConfig.occultismRitualControllerTierSpeed());
+        fallbacks.put(
+                "modules.occultism.ritualController.meNetworkDrain", NepConfig.occultismRitualControllerMeDrain());
+        fallbacks.put(
+                "modules.occultism.ritualController.idleMeNetworkDrain",
+                NepConfig.occultismRitualControllerIdleMeDrain());
+        fallbacks.put(
+                "modules.occultism.ritualController.meNetworkChannels", NepConfig.occultismRitualControllerChannels());
 
         List<String> drift = new ArrayList<>();
         fallbacks.forEach((path, fallback) -> {

@@ -88,10 +88,6 @@ public class AtomicEmpoweringMatrixMenu extends MachineMenu implements ManualCra
         return pos;
     }
 
-    BlockPos matrixPos() {
-        return pos;
-    }
-
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (matrix == null) {

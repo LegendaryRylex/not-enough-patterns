@@ -1,0 +1,55 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "occultism"
+    }
+  ],
+  "type": "occultism:ritual",
+  "activation_item": {
+    "item": "occultism:book_of_binding_bound_marid"
+  },
+  "duration": 240,
+  "ingredients": [
+    {
+      "tag": "c:storage_blocks/diamond"
+    },
+    {
+      "tag": "c:storage_blocks/iesnium"
+    },
+    {
+      "tag": "c:storage_blocks/emerald"
+    },
+    {
+      "tag": "c:storage_blocks/netherite"
+    },
+    {
+      "item": "minecraft:ghast_tear"
+    },
+    {
+      "item": "occultism:book_of_binding_empty"
+    }
+  ],
+  "pentacle_id": "occultism:craft_marid",
+  "result": {
+    "count": 1,
+    "id": "nep:spirit_infused_book",
+    "components": {
+      "nep:bound_spirit": {
+        "tier": "marid",
+        "work": "crusher"
+      }
+    }
+  },
+  "ritual_dummy": {
+    "count": 1,
+    "id": "nep:spirit_infused_book",
+    "components": {
+      "nep:bound_spirit": {
+        "tier": "marid",
+        "work": "crusher"
+      }
+    }
+  },
+  "ritual_type": "occultism:craft"
+}

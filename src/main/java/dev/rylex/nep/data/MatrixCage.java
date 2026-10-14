@@ -14,7 +14,7 @@ final class MatrixCage {
 
     private static final float CENTRE = SIZE / 2.0F;
 
-    /** Column 0 is the tone of a face looking straight at the core and the last interior column one that only grazes it, while rows are the animation frames. */
+    /** Column 0 is the tone of a face looking straight at the core, the last interior column one that only grazes it. */
     private static final int RAMP_COLUMNS = SIZE;
 
     private static final int INTERIOR_COLUMNS = RAMP_COLUMNS / 2;
@@ -22,7 +22,7 @@ final class MatrixCage {
     /** The outward half of a skin, a spread of grain tones a box picks from by hash. */
     private static final int GRAIN_COLUMNS = RAMP_COLUMNS - INTERIOR_COLUMNS;
 
-    /** Block light a face looking straight at the core is held at, scaled down by the same cosine the ramp column comes from. */
+    /** Block light of a face looking straight at the core, scaled by the same cosine as its ramp column. */
     private static final int GLOW_LIGHT = 15;
 
     /** Matches the opaque ring width of every {@code matrix/<set>/border.png}, so surface faces land on it exactly. */
@@ -35,10 +35,10 @@ final class MatrixCage {
 
     private static final int STRUT_NEAR = BAR - STRUT;
 
-    /** Depth of the voxel cut out of the very corner of each corner cube, leaving the seven that remain to be tiled by three boxes. */
+    /** Depth of the voxel cut from each corner cube, leaving seven to be tiled by three boxes. */
     private static final int NOTCH = 1;
 
-    /** Length of the band at the middle of every edge, skinned as a bar so the pulse carries through it rather than dying at it. */
+    /** Length of the band at the middle of every edge, skinned as a bar so the pulse carries through it. */
     private static final int COLLAR = 2;
 
     private static final int COLLAR_MIN = (SIZE - COLLAR) / 2;
@@ -47,7 +47,7 @@ final class MatrixCage {
     private static final int FIELD_MIN = BAR;
     private static final int FIELD_MAX = SIZE - BAR - 1;
 
-    /** One arm of the pattern, in cells of the twelve by twelve field inside the frame, turned three times about the face centre. */
+    /** One arm of the pattern in cells of the twelve by twelve field, turned three times about the face centre. */
     private static final int[][] ARM = {{3, 0}, {4, 0}, {2, 1}, {1, 2}, {0, 3}, {0, 4}};
 
     private static final int CORE_MIN = 5;
@@ -213,11 +213,7 @@ final class MatrixCage {
         notched(boxes, low, high, lateral, sides, Part.STRUT);
     }
 
-    /**
-     * Tiles what is left of a box once the outermost voxel is cut away where the given axes meet, as one shell per
-     * axis; a face the later shells cover only in part is emitted whole and buried behind them, so no two faces ever
-     * land on the same plane.
-     */
+    /** A face the later shells cover only in part is emitted whole and buried behind them, so no two faces share a plane. */
     private static void notched(List<Box> boxes, int[] low, int[] high, Direction.Axis[] cut, int[] sides, Part part) {
         int seed = Box.seed(low[0], low[1], low[2], high[0], high[1], high[2]);
         Set<Direction> covered = EnumSet.noneOf(Direction.class);
@@ -421,7 +417,7 @@ final class MatrixCage {
             this(x1, y1, z1, x2, y2, z2, part, hidden, seed(x1, y1, z1, x2, y2, z2));
         }
 
-        /** Shared by every shell {@link #notched} cuts a node into, so a corner or a divider takes one grain tone instead of one per shell. */
+        /** Shared by every shell {@link #notched} cuts a node into, so a corner takes one grain tone. */
         static int seed(int x1, int y1, int z1, int x2, int y2, int z2) {
             int hash = x1 * 73856093 ^ y1 * 19349663 ^ z1 * 83492791;
             hash = hash * 31 + (x2 * 6151 ^ y2 * 12289 ^ z2 * 24593);

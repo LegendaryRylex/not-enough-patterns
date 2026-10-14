@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 
 public enum MatrixCoreProfile {
     ARCANE_ENCHANTING("arcane_enchanting", 0xC822A8, 0xFFB3EE),
+    BOUND_SPIRIT("bound_spirit", 0x62B31A, 0xE1FFB3),
     EMPOWERING("empowering", 0x7B02EF, 0xDEA6FF),
     FOCUSED_SPIRIT("focused_spirit", 0x005CFA, 0xA2B6FF),
     FUSION("fusion", 0xE95508, 0xFFCEA8),

@@ -4,11 +4,9 @@ import appeng.menu.me.items.PatternEncodingTermMenu;
 import dev.rylex.nep.client.ProcessingEncoding;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.PatternRecipeHolder;
-import java.util.Optional;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
-import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -18,7 +16,7 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
-        implements IRecipeTransferHandler<M, T> {
+        extends RecipeMenuTransferHandler<M, T> {
 
     @FunctionalInterface
     public interface Extractor<T> {
@@ -38,10 +36,6 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
         ResourceLocation id(T recipe, Level level);
     }
 
-    private final Class<M> menuClass;
-    private final MenuType<M> menuType;
-    private final RecipeType<T> recipeType;
-    private final IRecipeTransferHandlerHelper helper;
     private final ViewExtractor<T> extractor;
     private final Identifier<T> identifier;
 
@@ -52,27 +46,9 @@ public final class PatternTransferHandler<M extends PatternEncodingTermMenu, T>
             IRecipeTransferHandlerHelper helper,
             ViewExtractor<T> extractor,
             Identifier<T> identifier) {
-        this.menuClass = menuClass;
-        this.menuType = menuType;
-        this.recipeType = recipeType;
-        this.helper = helper;
+        super(menuClass, menuType, recipeType, helper);
         this.extractor = extractor;
         this.identifier = identifier;
-    }
-
-    @Override
-    public Class<? extends M> getContainerClass() {
-        return menuClass;
-    }
-
-    @Override
-    public Optional<MenuType<M>> getMenuType() {
-        return Optional.of(menuType);
-    }
-
-    @Override
-    public RecipeType<T> getRecipeType() {
-        return recipeType;
     }
 
     @Override

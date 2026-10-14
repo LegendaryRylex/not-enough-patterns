@@ -38,6 +38,12 @@ public final class ImportCardInstallGameTest {
         }
     }
 
+    private static void useOnProvider(GameTestHelper helper, Player player, ItemStack stack) {
+        BlockPos pos = helper.absolutePos(PROVIDER);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false);
+        stack.onItemUseFirst(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+    }
+
     private static Interaction shiftClickProvider(GameTestHelper helper, ItemStack held) {
         helper.setBlock(PROVIDER, AEBlocks.PATTERN_PROVIDER.block());
 
@@ -45,10 +51,7 @@ public final class ImportCardInstallGameTest {
         player.setShiftKeyDown(true);
         player.setItemInHand(InteractionHand.MAIN_HAND, held);
 
-        BlockPos pos = helper.absolutePos(PROVIDER);
-        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false);
-        player.getItemInHand(InteractionHand.MAIN_HAND)
-                .onItemUseFirst(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+        useOnProvider(helper, player, player.getItemInHand(InteractionHand.MAIN_HAND));
 
         PatternProviderBlockEntity be = helper.getBlockEntity(PROVIDER);
         helper.assertTrue(be != null, "the pattern provider block entity was missing");
@@ -89,9 +92,7 @@ public final class ImportCardInstallGameTest {
 
         ItemStack second = new ItemStack(NepItems.IMPORT_CARD.get());
         first.player().setItemInHand(InteractionHand.MAIN_HAND, second);
-        BlockPos pos = helper.absolutePos(PROVIDER);
-        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false);
-        second.onItemUseFirst(new UseOnContext(first.player(), InteractionHand.MAIN_HAND, hit));
+        useOnProvider(helper, first.player(), second);
 
         helper.assertTrue(
                 first.provider().nepImportUpgrades().getInstalledUpgrades(NepItems.IMPORT_CARD.get()) == 1,
@@ -133,10 +134,7 @@ public final class ImportCardInstallGameTest {
         ItemStack card = new ItemStack(NepItems.IMPORT_CARD.get());
         fake.setItemInHand(InteractionHand.MAIN_HAND, card);
 
-        BlockPos pos = helper.absolutePos(PROVIDER);
-        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false);
-        fake.getItemInHand(InteractionHand.MAIN_HAND)
-                .onItemUseFirst(new UseOnContext(fake, InteractionHand.MAIN_HAND, hit));
+        useOnProvider(helper, fake, fake.getItemInHand(InteractionHand.MAIN_HAND));
 
         helper.assertTrue(
                 ((ImportUpgradeHost) be).nepImportUpgrades().getInstalledUpgrades(NepItems.IMPORT_CARD.get()) == 1,

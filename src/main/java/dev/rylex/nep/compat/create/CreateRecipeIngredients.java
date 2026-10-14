@@ -30,7 +30,7 @@ final class CreateRecipeIngredients {
     @Nullable
     static EncodedIngredients mechanicalCrafting(RecipeHolder<CraftingRecipe> holder, Level level) {
         CraftingRecipe recipe = holder.value();
-        GenericStack result = resultOf(recipe.getResultItem(level.registryAccess()));
+        GenericStack result = IngredientMatching.resultOf(recipe.getResultItem(level.registryAccess()));
         if (result == null) {
             return null;
         }
@@ -40,7 +40,7 @@ final class CreateRecipeIngredients {
             if (ingredient.isEmpty()) {
                 continue;
             }
-            List<AEItemKey> options = itemOptions(ingredient);
+            List<AEItemKey> options = IngredientMatching.itemOptions(ingredient);
             if (options.isEmpty()) {
                 return null;
             }
@@ -64,7 +64,7 @@ final class CreateRecipeIngredients {
     @Nullable
     static EncodedIngredients sequencedAssembly(RecipeHolder<SequencedAssemblyRecipe> holder, Level level) {
         SequencedAssemblyRecipe recipe = holder.value();
-        GenericStack result = resultOf(recipe.getResultItem(level.registryAccess()));
+        GenericStack result = IngredientMatching.resultOf(recipe.getResultItem(level.registryAccess()));
         if (result == null) {
             return null;
         }
@@ -74,7 +74,7 @@ final class CreateRecipeIngredients {
 
         for (SequencedAssemblyResolver.ItemDemand item : demand.items()) {
             List<GenericStack> options = new ArrayList<>();
-            for (AEItemKey key : itemOptions(item.ingredient())) {
+            for (AEItemKey key : IngredientMatching.itemOptions(item.ingredient())) {
                 options.add(new GenericStack(key, item.count()));
             }
             if (!options.isEmpty()) {
@@ -112,17 +112,17 @@ final class CreateRecipeIngredients {
         if (recipe.getIngredients().size() < 2) {
             return null;
         }
-        List<AEItemKey> processed = itemOptions(recipe.getProcessedItem());
-        List<AEItemKey> held = itemOptions(recipe.getRequiredHeldItem());
+        List<AEItemKey> processed = IngredientMatching.itemOptions(recipe.getProcessedItem());
+        List<AEItemKey> held = IngredientMatching.itemOptions(recipe.getRequiredHeldItem());
         if (processed.isEmpty() || held.isEmpty()) {
             return null;
         }
 
         DeployerToolFate fate = DeployerToolFate.of(holder.id(), recipe, level);
         List<List<GenericStack>> inputs = new ArrayList<>();
-        inputs.add(options(processed, 1));
-        Set<Integer> toolSlot = Set.of(inputs.size());
-        inputs.add(options(held, 1));
+        inputs.add(IngredientMatching.options(processed, 1));
+        inputs.add(IngredientMatching.options(held, 1));
+        Set<Integer> toolSlot = Set.of(inputs.size() - 1);
         return new EncodedIngredients(
                 List.copyOf(inputs),
                 List.of(result),
@@ -154,7 +154,8 @@ final class CreateRecipeIngredients {
             return null;
         }
 
-        List<AEItemKey> processed = itemOptions(recipe.getIngredients().get(0));
+        List<AEItemKey> processed =
+                IngredientMatching.itemOptions(recipe.getIngredients().get(0));
         if (processed.isEmpty()) {
             return null;
         }
@@ -174,19 +175,8 @@ final class CreateRecipeIngredients {
             return null;
         }
 
-        return new EncodedIngredients(List.of(options(processed, 1), List.copyOf(fluids)), List.of(result));
-    }
-
-    static boolean satisfies(EncodedIngredients expected, List<GenericStack> actualInputs) {
-        return IngredientMatching.satisfies(expected, actualInputs);
-    }
-
-    private static List<GenericStack> options(List<AEItemKey> keys, long amount) {
-        return IngredientMatching.options(keys, amount);
-    }
-
-    private static List<AEItemKey> itemOptions(Ingredient ingredient) {
-        return IngredientMatching.itemOptions(ingredient);
+        return new EncodedIngredients(
+                List.of(IngredientMatching.options(processed, 1), List.copyOf(fluids)), List.of(result));
     }
 
     static boolean matchesSingleResult(List<ProcessingOutput> results, ItemStack expected, long expectedCount) {
@@ -202,20 +192,10 @@ final class CreateRecipeIngredients {
     }
 
     @Nullable
-    static Map<AEItemKey, Long> flattenItemInputs(appeng.api.crafting.IPatternDetails pattern) {
-        return IngredientMatching.flattenItemInputs(pattern);
-    }
-
-    @Nullable
     private static GenericStack singleRollableResult(List<ProcessingOutput> results) {
         if (results.size() != 1 || results.get(0).getChance() < 1f) {
             return null;
         }
-        return resultOf(results.get(0).getStack());
-    }
-
-    @Nullable
-    private static GenericStack resultOf(ItemStack stack) {
-        return IngredientMatching.resultOf(stack);
+        return IngredientMatching.resultOf(results.get(0).getStack());
     }
 }

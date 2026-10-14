@@ -1,5 +1,7 @@
 package dev.rylex.nep;
 
+import appeng.api.crafting.EncodedPatternDecoder;
+import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.upgrades.Upgrades;
 import dev.rylex.nep.pattern.AndesiteCraftingPattern;
@@ -14,6 +16,7 @@ import dev.rylex.nep.pattern.InfusionPattern;
 import dev.rylex.nep.pattern.MechanicalCraftingPattern;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
 import dev.rylex.nep.pattern.ParticleCollisionPattern;
+import dev.rylex.nep.pattern.RitualPattern;
 import dev.rylex.nep.pattern.RuneworkingPattern;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import dev.rylex.nep.pattern.SpiritFocusingPattern;
@@ -27,74 +30,55 @@ public final class NepItems {
 
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Nep.MOD_ID);
 
+    private static <T extends IPatternDetails> DeferredItem<Item> pattern(
+            String name, EncodedPatternDecoder<T> factory) {
+        return ITEMS.register(name, () -> PatternDetailsHelper.encodedPatternItemBuilder(factory)
+                .build());
+    }
+
     public static final DeferredItem<Item> MECHANICAL_CRAFTING_PATTERN =
-            ITEMS.register("mechanical_crafting_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(
-                            MechanicalCraftingPattern::new)
-                    .build());
+            pattern("mechanical_crafting_pattern", MechanicalCraftingPattern::new);
 
     public static final DeferredItem<Item> ANDESITE_CRAFTING_PATTERN =
-            ITEMS.register("andesite_crafting_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(
-                            AndesiteCraftingPattern::new)
-                    .build());
+            pattern("andesite_crafting_pattern", AndesiteCraftingPattern::new);
 
     public static final DeferredItem<Item> SEQUENCED_ASSEMBLY_PATTERN =
-            ITEMS.register("sequenced_assembly_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(
-                            SequencedAssemblyPattern::new)
-                    .build());
+            pattern("sequenced_assembly_pattern", SequencedAssemblyPattern::new);
 
-    public static final DeferredItem<Item> FUSION_CRAFTING_PATTERN = ITEMS.register(
-            "fusion_crafting_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(FusionCraftingPattern::new)
-                    .build());
+    public static final DeferredItem<Item> FUSION_CRAFTING_PATTERN =
+            pattern("fusion_crafting_pattern", FusionCraftingPattern::new);
 
-    public static final DeferredItem<Item> EMPOWERING_PATTERN = ITEMS.register(
-            "empowering_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(EmpoweringPattern::new)
-                    .build());
+    public static final DeferredItem<Item> EMPOWERING_PATTERN = pattern("empowering_pattern", EmpoweringPattern::new);
 
     public static final DeferredItem<Item> ATOMIC_RECONSTRUCTION_PATTERN =
-            ITEMS.register("atomic_reconstruction_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(
-                            AtomicReconstructionPattern::new)
-                    .build());
+            pattern("atomic_reconstruction_pattern", AtomicReconstructionPattern::new);
 
-    public static final DeferredItem<Item> MINIATURIZATION_PATTERN = ITEMS.register(
-            "miniaturization_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(MiniaturizationPattern::new)
-                    .build());
+    public static final DeferredItem<Item> MINIATURIZATION_PATTERN =
+            pattern("miniaturization_pattern", MiniaturizationPattern::new);
 
-    public static final DeferredItem<Item> INFUSION_PATTERN = ITEMS.register(
-            "infusion_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(InfusionPattern::new)
-                    .build());
+    public static final DeferredItem<Item> INFUSION_PATTERN = pattern("infusion_pattern", InfusionPattern::new);
 
-    public static final DeferredItem<Item> AWAKENING_PATTERN = ITEMS.register(
-            "awakening_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(AwakeningPattern::new)
-                    .build());
+    public static final DeferredItem<Item> AWAKENING_PATTERN = pattern("awakening_pattern", AwakeningPattern::new);
 
-    public static final DeferredItem<Item> SPIRIT_INFUSION_PATTERN = ITEMS.register(
-            "spirit_infusion_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(SpiritInfusionPattern::new)
-                    .build());
+    public static final DeferredItem<Item> SPIRIT_INFUSION_PATTERN =
+            pattern("spirit_infusion_pattern", SpiritInfusionPattern::new);
 
-    public static final DeferredItem<Item> SPIRIT_FOCUSING_PATTERN = ITEMS.register(
-            "spirit_focusing_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(SpiritFocusingPattern::new)
-                    .build());
+    public static final DeferredItem<Item> SPIRIT_FOCUSING_PATTERN =
+            pattern("spirit_focusing_pattern", SpiritFocusingPattern::new);
 
-    public static final DeferredItem<Item> RUNEWORKING_PATTERN = ITEMS.register(
-            "runeworking_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(RuneworkingPattern::new)
-                    .build());
+    public static final DeferredItem<Item> RUNEWORKING_PATTERN =
+            pattern("runeworking_pattern", RuneworkingPattern::new);
 
-    public static final DeferredItem<Item> APPARATUS_PATTERN = ITEMS.register(
-            "apparatus_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(ApparatusPattern::new)
-                    .build());
+    public static final DeferredItem<Item> APPARATUS_PATTERN = pattern("apparatus_pattern", ApparatusPattern::new);
 
-    public static final DeferredItem<Item> IMBUEMENT_PATTERN = ITEMS.register(
-            "imbuement_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(ImbuementPattern::new)
-                    .build());
+    public static final DeferredItem<Item> IMBUEMENT_PATTERN = pattern("imbuement_pattern", ImbuementPattern::new);
 
-    public static final DeferredItem<Item> ENCHANTING_PATTERN = ITEMS.register(
-            "enchanting_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(EnchantingPattern::new)
-                    .build());
+    public static final DeferredItem<Item> ENCHANTING_PATTERN = pattern("enchanting_pattern", EnchantingPattern::new);
 
     public static final DeferredItem<Item> PARTICLE_COLLISION_PATTERN =
-            ITEMS.register("particle_collision_pattern", () -> PatternDetailsHelper.encodedPatternItemBuilder(
-                            ParticleCollisionPattern::new)
-                    .build());
+            pattern("particle_collision_pattern", ParticleCollisionPattern::new);
+
+    public static final DeferredItem<Item> RITUAL_PATTERN = pattern("ritual_pattern", RitualPattern::new);
 
     public static final DeferredItem<Item> IMPORT_CARD =
             ITEMS.registerItem("import_card", Upgrades::createUpgradeCardItem, new Item.Properties());

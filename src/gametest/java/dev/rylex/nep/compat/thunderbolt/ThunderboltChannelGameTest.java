@@ -8,8 +8,10 @@ import appeng.api.parts.IPartItem;
 import appeng.api.util.AEColor;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEParts;
+import dev.rylex.nep.ConfigOverrides;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
+import dev.rylex.nep.hub.HubConfigFields;
 import dev.rylex.nep.hub.NepContent;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -26,6 +28,10 @@ public final class ThunderboltChannelGameTest {
 
     private static final String TEMPLATE = "empty_9x6x9";
     private static final String BATCH = "nep_thunderbolt_channels";
+    private static final String CONTENTION_BATCH = "nep_thunderbolt_contention";
+
+    /** Fits a plain cable's 8 channels once but not twice. */
+    private static final int CONTENDED_DEMAND = 6;
 
     private static final BlockPos HUB = new BlockPos(4, 1, 4);
     private static final BlockPos SECOND_HUB = new BlockPos(3, 1, 5);
@@ -98,25 +104,30 @@ public final class ThunderboltChannelGameTest {
         assertHoldsWholeDemand(helper, "down a dense cable");
     }
 
-    @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 200)
+    @GameTest(template = TEMPLATE, batch = CONTENTION_BATCH, timeoutTicks = 200)
     public static void aHubThatCannotBeFullyFedGivesItsChannelsBack(GameTestHelper helper) {
+        ConfigOverrides.Restore restore = ConfigOverrides.override(HubConfigFields.CHANNELS, CONTENDED_DEMAND);
         List<BlockPos> hubs = List.of(HUB, SECOND_HUB);
-        for (BlockPos pos : hubs) {
-            placeHub(helper, pos);
-        }
-        placeCable(helper, AEParts.SMART_CABLE.item(AEColor.TRANSPARENT));
-        placeController(helper, CONTROLLER);
+        HubConfigFields.guardedRun(restore, () -> {
+            for (BlockPos pos : hubs) {
+                placeHub(helper, pos);
+            }
+            placeCable(helper, AEParts.SMART_CABLE.item(AEColor.TRANSPARENT));
+            placeController(helper, CONTROLLER);
+        });
 
         helper.startSequence()
                 .thenIdle(60)
                 .thenExecute(() -> {
+                    restore.undo();
                     int online = 0;
                     for (BlockPos pos : hubs) {
                         IGridNode node = node(helper, pos);
                         int held = node.getUsedChannels();
                         if (node.isActive()) {
                             online++;
-                            helper.assertValueEqual(held, demand(), "channels the online hub at " + pos + " holds");
+                            helper.assertValueEqual(
+                                    held, CONTENDED_DEMAND, "channels the online hub at " + pos + " holds");
                         } else {
                             helper.assertValueEqual(
                                     held,
@@ -127,7 +138,7 @@ public final class ThunderboltChannelGameTest {
                         }
                     }
                     helper.assertValueEqual(
-                            online, 1, "hubs online behind a plain cable carrying " + 8 + ", each wanting " + demand());
+                            online, 1, "hubs online behind a plain cable carrying 8, each wanting " + CONTENDED_DEMAND);
                 })
                 .thenSucceed();
     }

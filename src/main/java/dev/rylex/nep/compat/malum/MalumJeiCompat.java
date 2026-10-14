@@ -20,6 +20,7 @@ import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -60,7 +61,7 @@ public final class MalumJeiCompat {
                 MalumJeiCompat::runeworkingRecipeId);
     }
 
-    private static <T> void addManualTransfer(
+    private static <T extends Recipe<?>> void addManualTransfer(
             IRecipeTransferRegistration registration,
             IRecipeTransferHandlerHelper helper,
             RecipeType<T> recipeType,
@@ -141,12 +142,7 @@ public final class MalumJeiCompat {
 
     @Nullable
     private static ResourceLocation focusingRecipeId(SpiritFocusingRecipe recipe, Level level) {
-        for (RecipeHolder<SpiritFocusingRecipe> holder : SpiritFocusingResolver.candidates(level)) {
-            if (holder.value() == recipe) {
-                return holder.id();
-            }
-        }
-        return null;
+        return idOf(SpiritFocusingResolver.candidates(level), recipe);
     }
 
     @Nullable
@@ -156,12 +152,7 @@ public final class MalumJeiCompat {
 
     @Nullable
     private static ResourceLocation runeworkingRecipeId(RuneworkingRecipe recipe, Level level) {
-        for (RecipeHolder<RuneworkingRecipe> holder : RuneworkingResolver.candidates(level)) {
-            if (holder.value() == recipe) {
-                return holder.id();
-            }
-        }
-        return null;
+        return idOf(RuneworkingResolver.candidates(level), recipe);
     }
 
     @Nullable
@@ -171,7 +162,12 @@ public final class MalumJeiCompat {
 
     @Nullable
     private static ResourceLocation recipeId(SpiritInfusionRecipe recipe, Level level) {
-        for (RecipeHolder<SpiritInfusionRecipe> holder : SpiritInfusionResolver.candidates(level)) {
+        return idOf(SpiritInfusionResolver.candidates(level), recipe);
+    }
+
+    @Nullable
+    private static <T extends Recipe<?>> ResourceLocation idOf(List<RecipeHolder<T>> candidates, T recipe) {
+        for (RecipeHolder<T> holder : candidates) {
             if (holder.value() == recipe) {
                 return holder.id();
             }

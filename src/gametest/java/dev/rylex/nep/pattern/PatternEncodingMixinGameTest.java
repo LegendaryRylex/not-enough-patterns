@@ -1,9 +1,8 @@
 package dev.rylex.nep.pattern;
 
-import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.GenericStack;
-import appeng.helpers.IPatternTerminalLogicHost;
+import static dev.rylex.nep.pattern.TerminalFixture.obsidianToDiamond;
+import static dev.rylex.nep.pattern.TerminalFixture.stack;
+
 import appeng.menu.me.items.PatternEncodingTermMenu;
 import appeng.parts.encoding.PatternEncodingLogic;
 import appeng.util.ConfigInventory;
@@ -16,10 +15,8 @@ import java.util.Arrays;
 import java.util.List;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -31,10 +28,6 @@ public final class PatternEncodingMixinGameTest {
     private static final String BATCH = "nep_pattern_encoding";
 
     private PatternEncodingMixinGameTest() {}
-
-    private static GenericStack stack(Item item, long amount) {
-        return new GenericStack(AEItemKey.of(item), amount);
-    }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void theEncodingLogicCarriesARecipeId(GameTestHelper helper) {
@@ -62,13 +55,12 @@ public final class PatternEncodingMixinGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void thePatternATerminalJustEncodedLeavesTheGridAlone(GameTestHelper helper) {
-        PatternEncodingLogic logic = new Terminal(helper.getLevel()).getLogic();
+        PatternEncodingLogic logic = new TerminalFixture(helper.getLevel()).getLogic();
         ConfigInventory inputs = logic.getEncodedInputInv();
         inputs.setStack(0, stack(Items.OBSIDIAN, 1));
         inputs.setStack(4, stack(Items.OBSIDIAN, 1));
 
-        ItemStack encoded = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(stack(Items.OBSIDIAN, 2)), List.of(stack(Items.DIAMOND, 1)));
+        ItemStack encoded = obsidianToDiamond(2);
         ((PatternEncodeGuard) logic).nep$expectEncoded(encoded);
         logic.getEncodedPatternInv().setItemDirect(0, encoded);
 
@@ -81,10 +73,9 @@ public final class PatternEncodingMixinGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aPatternCarryingItsGridRestoresTheSlotsItWasEncodedFrom(GameTestHelper helper) {
-        PatternEncodingLogic logic = new Terminal(helper.getLevel()).getLogic();
+        PatternEncodingLogic logic = new TerminalFixture(helper.getLevel()).getLogic();
 
-        ItemStack encoded = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(stack(Items.OBSIDIAN, 2)), List.of(stack(Items.DIAMOND, 1)));
+        ItemStack encoded = obsidianToDiamond(2);
         encoded.set(
                 NepComponents.PATTERN_GRID.get(),
                 new PatternGrid(
@@ -107,10 +98,9 @@ public final class PatternEncodingMixinGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aPatternWithoutAGridStillLoadsTheWayAe2LoadsIt(GameTestHelper helper) {
-        PatternEncodingLogic logic = new Terminal(helper.getLevel()).getLogic();
+        PatternEncodingLogic logic = new TerminalFixture(helper.getLevel()).getLogic();
 
-        ItemStack encoded = PatternDetailsHelper.encodeProcessingPattern(
-                List.of(stack(Items.OBSIDIAN, 2)), List.of(stack(Items.DIAMOND, 1)));
+        ItemStack encoded = obsidianToDiamond(2);
         logic.getEncodedPatternInv().setItemDirect(0, encoded);
 
         helper.assertValueEqual(
@@ -118,29 +108,5 @@ public final class PatternEncodingMixinGameTest {
                 stack(Items.OBSIDIAN, 2),
                 "the first ingredient slot of a pattern encoded before grids were recorded");
         helper.succeed();
-    }
-
-    private static final class Terminal implements IPatternTerminalLogicHost {
-
-        private final Level level;
-        private final PatternEncodingLogic logic;
-
-        private Terminal(Level level) {
-            this.level = level;
-            this.logic = new PatternEncodingLogic(this);
-        }
-
-        @Override
-        public PatternEncodingLogic getLogic() {
-            return logic;
-        }
-
-        @Override
-        public Level getLevel() {
-            return level;
-        }
-
-        @Override
-        public void markForSave() {}
     }
 }

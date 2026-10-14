@@ -15,12 +15,13 @@ import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.util.RecipeCache;
 import dev.rylex.nep.util.Uniqueness;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
@@ -90,11 +91,18 @@ final class ArsRecipeResolver {
 
     @Nullable
     static RecipeHolder<EnchantingApparatusRecipe> apparatusById(Level level, ResourceLocation recipe) {
-        RecipeHolder<?> holder = level.getRecipeManager().byKey(recipe).orElse(null);
-        if (holder == null || !(holder.value() instanceof EnchantingApparatusRecipe)) {
+        return byId(level, recipe, EnchantingApparatusRecipe.class, ArsRecipeResolver::runsOnApparatus);
+    }
+
+    @Nullable
+    @SuppressWarnings("unchecked")
+    private static <T extends Recipe<?>> RecipeHolder<T> byId(
+            Level level, ResourceLocation id, Class<T> recipeClass, Predicate<RecipeType<?>> accepts) {
+        RecipeHolder<?> holder = level.getRecipeManager().byKey(id).orElse(null);
+        if (holder == null || !recipeClass.isInstance(holder.value())) {
             return null;
         }
-        return runsOnApparatus(holder.value().getType()) ? cast(holder) : null;
+        return accepts.test(holder.value().getType()) ? (RecipeHolder<T>) holder : null;
     }
 
     @Nullable
@@ -133,7 +141,7 @@ final class ArsRecipeResolver {
             List<GenericStack> inputs,
             GenericStack result) {
         if (opensReagent(holder.value().getType())) {
-            Map<AEItemKey, Long> items = expectedItems(inputs);
+            Map<AEItemKey, Long> items = PatternStacks.expectedItems(inputs);
             return items == null ? null : openPlan(holder, level, items, result, null);
         }
         EncodedIngredients expected = ArsRecipeIngredients.apparatus(holder.value(), level);
@@ -148,7 +156,7 @@ final class ArsRecipeResolver {
             return null;
         }
 
-        Map<AEItemKey, Long> expectedItems = expectedItems(inputs);
+        Map<AEItemKey, Long> expectedItems = PatternStacks.expectedItems(inputs);
         if (expectedItems == null) {
             return null;
         }
@@ -235,11 +243,7 @@ final class ArsRecipeResolver {
 
     @Nullable
     static RecipeHolder<ImbuementRecipe> imbuementById(Level level, ResourceLocation recipe) {
-        RecipeHolder<?> holder = level.getRecipeManager().byKey(recipe).orElse(null);
-        if (holder == null || !(holder.value() instanceof ImbuementRecipe)) {
-            return null;
-        }
-        return holder.value().getType() == imbuementType() ? castImbuement(holder) : null;
+        return byId(level, recipe, ImbuementRecipe.class, type -> type == imbuementType());
     }
 
     @Nullable
@@ -276,7 +280,7 @@ final class ArsRecipeResolver {
             return null;
         }
 
-        Map<AEItemKey, Long> expectedItems = expectedItems(inputs);
+        Map<AEItemKey, Long> expectedItems = PatternStacks.expectedItems(inputs);
         if (expectedItems == null) {
             return null;
         }
@@ -329,25 +333,8 @@ final class ArsRecipeResolver {
         return key.toStack((int) stack.amount());
     }
 
-    @Nullable
-    private static Map<AEItemKey, Long> expectedItems(List<GenericStack> inputs) {
-        Map<AEItemKey, Long> expected = new LinkedHashMap<>();
-        for (GenericStack stack : inputs) {
-            if (!(stack.what() instanceof AEItemKey key)) {
-                return null;
-            }
-            expected.merge(key, stack.amount(), Long::sum);
-        }
-        return Map.copyOf(expected);
-    }
-
     @SuppressWarnings("unchecked")
     private static RecipeHolder<EnchantingApparatusRecipe> cast(RecipeHolder<?> holder) {
         return (RecipeHolder<EnchantingApparatusRecipe>) holder;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static RecipeHolder<ImbuementRecipe> castImbuement(RecipeHolder<?> holder) {
-        return (RecipeHolder<ImbuementRecipe>) holder;
     }
 }

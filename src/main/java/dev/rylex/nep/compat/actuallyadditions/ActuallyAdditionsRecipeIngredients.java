@@ -76,7 +76,7 @@ final class ActuallyAdditionsRecipeIngredients {
         return requirementsOf(laserDemand(recipe));
     }
 
-    private static List<ManualRequirement> requirementsOf(List<Demand> demands) {
+    static List<ManualRequirement> requirementsOf(List<Demand> demands) {
         List<ManualRequirement> requirements = new ArrayList<>(demands.size());
         for (Demand demand : demands) {
             requirements.add(new ManualRequirement(demand.ingredient(), demand.count(), true));

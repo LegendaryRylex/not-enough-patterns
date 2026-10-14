@@ -40,7 +40,8 @@ public final class MatrixCoreMesh {
         double[][] points = vertexTable();
         List<int[]> triples = facesByEdgeLength(points);
         if (triples.size() != FACES) {
-            throw new IllegalStateException("icosahedron vertex table yielded " + triples.size() + " faces, not 20");
+            throw new IllegalStateException(
+                    "icosahedron vertex table yielded " + triples.size() + " faces, not " + FACES);
         }
         double radius = length(points[0]);
         List<double[][]> faces = new ArrayList<>(triples.size());
@@ -86,20 +87,7 @@ public final class MatrixCoreMesh {
         List<double[][]> patches = new ArrayList<>();
         patches.add(new double[][] {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}});
         for (int pass = 0; pass < SUBDIVISIONS; pass++) {
-            List<double[][]> split = new ArrayList<>(patches.size() * 4);
-            for (double[][] patch : patches) {
-                double[] a = patch[0];
-                double[] b = patch[1];
-                double[] c = patch[2];
-                double[] ab = mean(a, b);
-                double[] bc = mean(b, c);
-                double[] ca = mean(c, a);
-                split.add(new double[][] {a, ab, ca});
-                split.add(new double[][] {ab, b, bc});
-                split.add(new double[][] {ca, bc, c});
-                split.add(new double[][] {ab, bc, ca});
-            }
-            patches = split;
+            patches = TriangleSplit.once(patches, MatrixCoreMesh::mean);
         }
         return patches;
     }
@@ -122,7 +110,7 @@ public final class MatrixCoreMesh {
         return vertex(data, cursor, corner[2], uv[2]);
     }
 
-    /** Shifts trailing longitudes onto the anchor's turn so a seam-straddling triangle interpolates across its own width, and gives a pole corner its triangle's mean longitude in place of the arbitrary one {@code atan2} returns on the axis. */
+    /** Gives a pole corner its triangle's mean longitude, since {@code atan2} returns an arbitrary one on the axis. */
     private static float[][] unwrapped(double[][] corner) {
         float[][] uv = new float[corner.length][];
         for (int i = 0; i < corner.length; i++) {

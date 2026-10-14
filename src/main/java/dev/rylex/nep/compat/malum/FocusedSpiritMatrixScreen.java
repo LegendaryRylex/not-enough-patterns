@@ -9,6 +9,8 @@ import dev.rylex.nep.client.ReadoutButton;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Tooltip;
@@ -24,6 +26,8 @@ public class FocusedSpiritMatrixScreen extends MatrixScreen<FocusedSpiritMatrixM
 
     private static final ResourceLocation TEXTURE = Nep.id("textures/gui/focused_spirit_matrix.png");
 
+    private static final String OUTPUT_FULL_HINT = "gui.nep.focused_spirit_matrix.stall.output_full.hint";
+    private static final int REFERENCE_FOCUSING_TIME = 900;
     private static final int TITLE_ON_PANEL = 0x1C2740;
     private static final int READOUT_TEXT = 0xDCE6F7;
     private static final int READOUT_DIM = 0x8FA6CE;
@@ -287,70 +291,79 @@ public class FocusedSpiritMatrixScreen extends MatrixScreen<FocusedSpiritMatrixM
 
     private static Component faultLine(
             FocusedSpiritMatrixBlockEntity.Stall stall, FocusedSpiritMatrixBlockEntity.Refusal refusal) {
-        String key =
-                switch (stall) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.focused_spirit_matrix.stall.ingredients";
-                    case NO_IMPETUS -> "gui.nep.focused_spirit_matrix.stall.no_impetus";
-                    case OUTPUT_FULL -> "gui.nep.focused_spirit_matrix.output_blocked";
-                    case NO_RECIPE -> "gui.nep.focused_spirit_matrix.stall.no_recipe";
-                    case FOCUSING_DISABLED -> "gui.nep.focused_spirit_matrix.stall.focusing_disabled";
-                    case RUNEWORKING_DISABLED -> "gui.nep.focused_spirit_matrix.stall.runeworking_disabled";
-                };
+        String key = stallKey(stall);
         if (key != null) {
             return Component.translatable(key);
         }
-        String refused =
-                switch (refusal) {
-                    case NONE -> null;
-                    case WRONG_PATTERN -> "gui.nep.focused_spirit_matrix.refused.wrong_pattern";
-                    case NO_IMPETUS -> "gui.nep.focused_spirit_matrix.refused.no_impetus";
-                    case FOCUSING_DISABLED -> "gui.nep.focused_spirit_matrix.refused.focusing_disabled";
-                    case RUNEWORKING_DISABLED -> "gui.nep.focused_spirit_matrix.refused.runeworking_disabled";
-                    case NO_ITEM_OUTPUT -> "gui.nep.focused_spirit_matrix.refused.no_item_output";
-                    case UNKNOWN_RECIPE -> "gui.nep.focused_spirit_matrix.refused.unknown_recipe";
-                    case MISMATCHED_INPUTS -> "gui.nep.focused_spirit_matrix.refused.mismatched_inputs";
-                    case MIXED_RECIPES -> "gui.nep.focused_spirit_matrix.refused.mixed_recipes";
-                    case ITEMS_ONLY -> "gui.nep.focused_spirit_matrix.refused.items_only";
-                    case TOO_MANY_INPUTS -> "gui.nep.focused_spirit_matrix.refused.too_many_inputs";
-                    case BUFFER_FULL -> "gui.nep.focused_spirit_matrix.refused.buffer_full";
-                };
+        String refused = refusalKey(refusal);
         return refused == null
                 ? Component.translatable("gui.nep.focused_spirit_matrix.idle")
                 : Component.translatable(refused);
     }
 
+    @Nullable
+    private static String stallKey(FocusedSpiritMatrixBlockEntity.Stall stall) {
+        return switch (stall) {
+            case NONE -> null;
+            case INGREDIENTS -> "gui.nep.focused_spirit_matrix.stall.ingredients";
+            case NO_IMPETUS -> "gui.nep.focused_spirit_matrix.stall.no_impetus";
+            case OUTPUT_FULL -> "gui.nep.focused_spirit_matrix.output_blocked";
+            case NO_RECIPE -> "gui.nep.focused_spirit_matrix.stall.no_recipe";
+            case FOCUSING_DISABLED -> "gui.nep.focused_spirit_matrix.stall.focusing_disabled";
+            case RUNEWORKING_DISABLED -> "gui.nep.focused_spirit_matrix.stall.runeworking_disabled";
+        };
+    }
+
+    @Nullable
+    private static String stallHintKey(FocusedSpiritMatrixBlockEntity.Stall stall) {
+        if (stall == FocusedSpiritMatrixBlockEntity.Stall.OUTPUT_FULL) {
+            return OUTPUT_FULL_HINT;
+        }
+        String key = stallKey(stall);
+        return key == null ? null : key + ".hint";
+    }
+
+    @Nullable
+    private static String refusalKey(FocusedSpiritMatrixBlockEntity.Refusal refusal) {
+        return switch (refusal) {
+            case NONE -> null;
+            case WRONG_PATTERN -> "gui.nep.focused_spirit_matrix.refused.wrong_pattern";
+            case NO_IMPETUS -> "gui.nep.focused_spirit_matrix.refused.no_impetus";
+            case FOCUSING_DISABLED -> "gui.nep.focused_spirit_matrix.refused.focusing_disabled";
+            case RUNEWORKING_DISABLED -> "gui.nep.focused_spirit_matrix.refused.runeworking_disabled";
+            case NO_ITEM_OUTPUT -> "gui.nep.focused_spirit_matrix.refused.no_item_output";
+            case UNKNOWN_RECIPE -> "gui.nep.focused_spirit_matrix.refused.unknown_recipe";
+            case MISMATCHED_INPUTS -> "gui.nep.focused_spirit_matrix.refused.mismatched_inputs";
+            case MIXED_RECIPES -> "gui.nep.focused_spirit_matrix.refused.mixed_recipes";
+            case ITEMS_ONLY -> "gui.nep.focused_spirit_matrix.refused.items_only";
+            case TOO_MANY_INPUTS -> "gui.nep.focused_spirit_matrix.refused.too_many_inputs";
+            case BUFFER_FULL -> "gui.nep.focused_spirit_matrix.refused.buffer_full";
+        };
+    }
+
     private static List<Component> statusHint(FocusedSpiritMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return List.of(Component.translatable("gui.nep.focused_spirit_matrix.no_network_channels.hint")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         if (matrix.hasPowerFault()) {
             return List.of(Component.translatable("gui.nep.focused_spirit_matrix.stall.no_me_power.hint")
                     .withStyle(ChatFormatting.GRAY));
         }
-        String key =
-                switch (matrix.stall()) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.focused_spirit_matrix.stall.ingredients.hint";
-                    case NO_IMPETUS -> "gui.nep.focused_spirit_matrix.stall.no_impetus.hint";
-                    case OUTPUT_FULL -> "gui.nep.focused_spirit_matrix.stall.output_full.hint";
-                    case NO_RECIPE -> "gui.nep.focused_spirit_matrix.stall.no_recipe.hint";
-                    case FOCUSING_DISABLED -> "gui.nep.focused_spirit_matrix.stall.focusing_disabled.hint";
-                    case RUNEWORKING_DISABLED -> "gui.nep.focused_spirit_matrix.stall.runeworking_disabled.hint";
-                };
+        String key = stallHintKey(matrix.stall());
         if (key == null && matrix.refusal() != FocusedSpiritMatrixBlockEntity.Refusal.NONE) {
             key = refusalHint(matrix.refusal());
         }
         if (key == null && matrix.isOutputBlocked()) {
-            key = "gui.nep.focused_spirit_matrix.stall.output_full.hint";
+            key = OUTPUT_FULL_HINT;
         }
         return key == null ? List.of() : List.of(Component.translatable(key).withStyle(ChatFormatting.GRAY));
     }
 
     private static String refusalHint(FocusedSpiritMatrixBlockEntity.Refusal refusal) {
         return switch (refusal) {
-            case BUFFER_FULL -> "gui.nep.focused_spirit_matrix.refused.buffer_full.hint";
-            case TOO_MANY_INPUTS -> "gui.nep.focused_spirit_matrix.refused.too_many_inputs.hint";
-            case NO_IMPETUS -> "gui.nep.focused_spirit_matrix.refused.no_impetus.hint";
-            case FOCUSING_DISABLED -> "gui.nep.focused_spirit_matrix.refused.focusing_disabled.hint";
-            case RUNEWORKING_DISABLED -> "gui.nep.focused_spirit_matrix.refused.runeworking_disabled.hint";
+            case BUFFER_FULL, TOO_MANY_INPUTS, NO_IMPETUS, FOCUSING_DISABLED, RUNEWORKING_DISABLED ->
+                refusalKey(refusal) + ".hint";
             default -> "gui.nep.focused_spirit_matrix.refused.hint";
         };
     }
@@ -386,6 +399,7 @@ public class FocusedSpiritMatrixScreen extends MatrixScreen<FocusedSpiritMatrixM
                 || matrix.refusal() != FocusedSpiritMatrixBlockEntity.Refusal.NONE
                 || matrix.isOutputBlocked()
                 || matrix.hasPowerFault()
+                || matrix.hasChannelFault()
                 || !matrix.missingInputs().isEmpty();
     }
 
@@ -402,35 +416,18 @@ public class FocusedSpiritMatrixScreen extends MatrixScreen<FocusedSpiritMatrixM
         if (matrix == null) {
             return;
         }
-        if (menu.upgradeSlotEmpty()
-                && within(
-                        mouseX, mouseY, FocusedSpiritMatrixMenu.UPGRADE_X, FocusedSpiritMatrixMenu.UPGRADE_Y, 16, 16)) {
-            graphics.renderComponentTooltip(font, emptyUpgradeTooltip(), mouseX, mouseY);
-            return;
-        }
-        if (menu.catalyzerSlotEmpty()
-                && within(
-                        mouseX,
-                        mouseY,
-                        FocusedSpiritMatrixMenu.CATALYZER_X,
-                        FocusedSpiritMatrixMenu.CATALYZER_Y,
-                        16,
-                        16)) {
-            graphics.renderComponentTooltip(font, emptyCatalyzerTooltip(), mouseX, mouseY);
-            return;
-        }
-        if (menu.impetusSlotEmpty()
-                && within(
-                        mouseX, mouseY, FocusedSpiritMatrixMenu.IMPETUS_X, FocusedSpiritMatrixMenu.IMPETUS_Y, 16, 16)) {
-            graphics.renderComponentTooltip(font, emptyImpetusTooltip(), mouseX, mouseY);
-            return;
+        for (EmptySlotTip tip : emptySlotTips()) {
+            if (tip.empty().getAsBoolean() && within(mouseX, mouseY, tip.x(), tip.y(), 16, 16)) {
+                graphics.renderComponentTooltip(font, tip.lines().get(), mouseX, mouseY);
+                return;
+            }
         }
         int emptySpirit = hoveredEmptySpiritSlot(mouseX, mouseY);
         if (emptySpirit >= 0) {
             graphics.renderComponentTooltip(font, emptySpiritTooltip(emptySpirit), mouseX, mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, 32)) {
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, BAR_WIDTH, READOUT_HEIGHT)) {
             return;
         }
         List<Component> lines = new ArrayList<>();
@@ -454,6 +451,27 @@ public class FocusedSpiritMatrixScreen extends MatrixScreen<FocusedSpiritMatrixM
             }
         }
         graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
+    }
+
+    private record EmptySlotTip(int x, int y, BooleanSupplier empty, Supplier<List<Component>> lines) {}
+
+    private List<EmptySlotTip> emptySlotTips() {
+        return List.of(
+                new EmptySlotTip(
+                        FocusedSpiritMatrixMenu.UPGRADE_X,
+                        FocusedSpiritMatrixMenu.UPGRADE_Y,
+                        menu::upgradeSlotEmpty,
+                        FocusedSpiritMatrixScreen::emptyUpgradeTooltip),
+                new EmptySlotTip(
+                        FocusedSpiritMatrixMenu.CATALYZER_X,
+                        FocusedSpiritMatrixMenu.CATALYZER_Y,
+                        menu::catalyzerSlotEmpty,
+                        FocusedSpiritMatrixScreen::emptyCatalyzerTooltip),
+                new EmptySlotTip(
+                        FocusedSpiritMatrixMenu.IMPETUS_X,
+                        FocusedSpiritMatrixMenu.IMPETUS_Y,
+                        menu::impetusSlotEmpty,
+                        FocusedSpiritMatrixScreen::emptyImpetusTooltip));
     }
 
     private static List<Component> emptySpiritTooltip(int slot) {
@@ -522,7 +540,7 @@ public class FocusedSpiritMatrixScreen extends MatrixScreen<FocusedSpiritMatrixM
                 .withStyle(ChatFormatting.GRAY));
         lines.add(Component.translatable(
                         "gui.nep.focused_spirit_matrix.upgrade_catalyzer.speed",
-                        FocusedSpiritMatrixUpgrades.focusingTimeReductionPercent(900, max))
+                        FocusedSpiritMatrixUpgrades.focusingTimeReductionPercent(REFERENCE_FOCUSING_TIME, max))
                 .withStyle(ChatFormatting.GRAY));
         addCatalyzerStats(lines, max);
         return lines;
@@ -561,7 +579,8 @@ public class FocusedSpiritMatrixScreen extends MatrixScreen<FocusedSpiritMatrixM
                     .withStyle(ChatFormatting.AQUA));
             lines.add(Component.translatable(
                             "gui.nep.focused_spirit_matrix.catalyzer_craft_time",
-                            FocusedSpiritMatrixUpgrades.focusingTimeReductionPercent(900, catalyzers))
+                            FocusedSpiritMatrixUpgrades.focusingTimeReductionPercent(
+                                    REFERENCE_FOCUSING_TIME, catalyzers))
                     .withStyle(ChatFormatting.GRAY));
             addCatalyzerStats(lines, catalyzers);
             return lines;

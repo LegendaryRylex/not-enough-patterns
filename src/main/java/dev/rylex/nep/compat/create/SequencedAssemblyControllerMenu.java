@@ -57,39 +57,33 @@ public class SequencedAssemblyControllerMenu extends MachineMenu implements Manu
 
         IItemHandler input = controller != null ? controller.getBuffer() : new ItemStackHandler(INPUT_END);
         IItemHandler output = controller != null ? controller.getOutputBuffer() : new ItemStackHandler(9);
-        addInputGrid(input, INGREDIENT_COLUMNS, INGREDIENT_ROWS, INGREDIENT_X, INGREDIENT_Y);
-        addTakeOnlyGrid(output, 9, 1, OUTPUT_X, OUTPUT_Y);
+        addGrid(input, INGREDIENT_COLUMNS, INGREDIENT_ROWS, INGREDIENT_X, INGREDIENT_Y, false);
+        addGrid(output, 9, 1, OUTPUT_X, OUTPUT_Y, true);
 
         addPlayerInventory(playerInv, INV_X, INV_Y);
     }
 
-    private void addInputGrid(IItemHandler handler, int cols, int rows, int x, int y) {
+    private void addGrid(IItemHandler handler, int cols, int rows, int x, int y, boolean takeOnly) {
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
-                addSlot(new MachineSlot(handler, row * cols + col, x + col * 18, y + row * 18));
-            }
-        }
-    }
-
-    private void addTakeOnlyGrid(IItemHandler handler, int cols, int rows, int x, int y) {
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                addSlot(new MachineSlot(handler, row * cols + col, x + col * 18, y + row * 18) {
-                    @Override
-                    public boolean mayPlace(ItemStack stack) {
-                        return false;
-                    }
-                });
+                int slotX = x + col * 18;
+                int slotY = y + row * 18;
+                int index = row * cols + col;
+                addSlot(
+                        takeOnly
+                                ? new MachineSlot(handler, index, slotX, slotY) {
+                                    @Override
+                                    public boolean mayPlace(ItemStack stack) {
+                                        return false;
+                                    }
+                                }
+                                : new MachineSlot(handler, index, slotX, slotY));
             }
         }
     }
 
     @Override
     public BlockPos machinePos() {
-        return pos;
-    }
-
-    BlockPos controllerPos() {
         return pos;
     }
 

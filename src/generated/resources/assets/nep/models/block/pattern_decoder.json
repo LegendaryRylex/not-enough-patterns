@@ -431,6 +431,38 @@
         {
             "faces": {
                 "down": {
+                    "texture": "#module9"
+                },
+                "east": {
+                    "texture": "#module9"
+                },
+                "north": {
+                    "texture": "#module9"
+                },
+                "south": {
+                    "texture": "#module9"
+                },
+                "up": {
+                    "texture": "#module9"
+                },
+                "west": {
+                    "texture": "#module9"
+                }
+            },
+            "from": [
+                0.5,
+                3,
+                6
+            ],
+            "to": [
+                1,
+                4.2,
+                13
+            ]
+        },
+        {
+            "faces": {
+                "down": {
                     "texture": "#frame"
                 },
                 "east": {
@@ -1233,6 +1265,7 @@
         "module6": "nep:block/machine/nep/module/malum_encoding_module",
         "module7": "nep:block/machine/nep/module/mystical_agriculture_encoding_module",
         "module8": "nep:block/machine/nep/module/oritech_encoding_module",
+        "module9": "nep:block/machine/nep/module/occultism_encoding_module",
         "particle": "nep:block/machine/nep/plate",
         "plate": "nep:block/machine/nep/plate",
         "rim": "nep:block/machine/nep/rim"

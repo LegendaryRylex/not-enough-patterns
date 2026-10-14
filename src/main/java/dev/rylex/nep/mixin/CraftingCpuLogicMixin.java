@@ -12,6 +12,7 @@ import appeng.me.cluster.implementations.CraftingCPUCluster;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.rylex.nep.machine.CraftedOutputs;
+import dev.rylex.nep.machine.IncidentalComponents;
 import dev.rylex.nep.machine.PushingCpuContext;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -56,7 +57,11 @@ public abstract class CraftingCpuLogicMixin {
             return direct;
         }
         AEKey declared = CraftedOutputs.declaredFor(what);
-        return declared == null ? 0L : original.call(waitingFor, declared, amount, mode);
+        if (declared != null) {
+            return original.call(waitingFor, declared, amount, mode);
+        }
+        AEKey equivalent = IncidentalComponents.match(waitingFor.findFuzzyTemplates(what), what);
+        return equivalent == null ? 0L : original.call(waitingFor, equivalent, amount, mode);
     }
 
     @WrapOperation(
@@ -67,6 +72,9 @@ public abstract class CraftingCpuLogicMixin {
             return true;
         }
         AEKey declared = CraftedOutputs.declaredFor(what);
-        return declared != null && original.call(declared, finalOutput);
+        if (declared != null && original.call(declared, finalOutput)) {
+            return true;
+        }
+        return IncidentalComponents.carries(what) && IncidentalComponents.equivalent(what, finalOutput.what());
     }
 }

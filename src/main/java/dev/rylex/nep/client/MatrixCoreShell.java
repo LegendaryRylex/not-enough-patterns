@@ -2,7 +2,6 @@ package dev.rylex.nep.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import java.util.ArrayList;
 import java.util.List;
 import org.joml.Vector3f;
 
@@ -18,6 +17,8 @@ public final class MatrixCoreShell {
             this.offset = offset;
         }
     }
+
+    public record Pass(int tint, float strength, float tiling, float uScroll, float vScroll) {}
 
     public static final MatrixCoreShell SPHERE = sphere();
 
@@ -35,17 +36,12 @@ public final class MatrixCoreShell {
      * Additive blending scales by alpha alone, so {@code strength} is faded per vertex by how squarely it
      * faces the camera, which lets the glow trail off instead of ending on the shell's polygon silhouette.
      */
-    public void emit(
-            PoseStack.Pose pose,
-            VertexConsumer buffer,
-            Layer layer,
-            int tint,
-            float strength,
-            float tiling,
-            float uScroll,
-            float vScroll,
-            int light,
-            int overlay) {
+    public void emit(PoseStack.Pose pose, VertexConsumer buffer, Layer layer, Pass pass, int light, int overlay) {
+        int tint = pass.tint();
+        float strength = pass.strength();
+        float tiling = pass.tiling();
+        float uScroll = pass.uScroll();
+        float vScroll = pass.vScroll();
         float red = ((tint >> 16) & 0xFF) / 255.0F;
         float green = ((tint >> 8) & 0xFF) / 255.0F;
         float blue = (tint & 0xFF) / 255.0F;
@@ -65,7 +61,7 @@ public final class MatrixCoreShell {
     private static MatrixCoreShell sphere() {
         List<double[][]> faces = MatrixCoreMesh.unitFaces();
         for (int pass = 0; pass < SUBDIVISIONS; pass++) {
-            faces = subdivide(faces);
+            faces = TriangleSplit.once(faces, MatrixCoreShell::midpoint);
         }
         float[] data = new float[faces.size() * 4 * STRIDE];
         int cursor = 0;
@@ -73,23 +69,6 @@ public final class MatrixCoreShell {
             cursor = facet(data, cursor, triangle[0], triangle[1], triangle[2]);
         }
         return new MatrixCoreShell(data);
-    }
-
-    private static List<double[][]> subdivide(List<double[][]> faces) {
-        List<double[][]> out = new ArrayList<>(faces.size() * 4);
-        for (double[][] triangle : faces) {
-            double[] a = triangle[0];
-            double[] b = triangle[1];
-            double[] c = triangle[2];
-            double[] ab = midpoint(a, b);
-            double[] bc = midpoint(b, c);
-            double[] ca = midpoint(c, a);
-            out.add(new double[][] {a, ab, ca});
-            out.add(new double[][] {ab, b, bc});
-            out.add(new double[][] {ca, bc, c});
-            out.add(new double[][] {ab, bc, ca});
-        }
-        return out;
     }
 
     private static double[] midpoint(double[] a, double[] b) {

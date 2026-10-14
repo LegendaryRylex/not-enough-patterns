@@ -1,31 +1,27 @@
 package dev.rylex.nep.compat.compactcrafting;
 
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.compactcrafting.MiniaturizationFixtures.patternFor;
+
 import appeng.api.AECapabilities;
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
-import appeng.core.definitions.AEBlocks;
 import dev.compactmods.crafting.api.field.IMiniaturizationField;
 import dev.compactmods.crafting.api.field.MiniaturizationFieldSize;
 import dev.compactmods.crafting.core.CCBlocks;
 import dev.compactmods.crafting.projector.FieldProjectorBlock;
 import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.ManualCraftFixtures;
 import dev.rylex.nep.machine.ManualCraftOutcome;
 import dev.rylex.nep.machine.ManualCraftResult;
-import dev.rylex.nep.machine.ManualRequirement;
-import dev.rylex.nep.pattern.MiniaturizationPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.Blocks;
@@ -35,7 +31,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import net.neoforged.neoforge.items.IItemHandler;
 
 @GameTestHolder(Nep.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -91,50 +86,16 @@ public final class MiniaturizationControllerGameTest {
     }
 
     private static void powerUp(GameTestHelper helper) {
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+        GameTestFixtures.powerUp(helper, ME_CONTROLLER, ENERGY_CELL);
     }
 
     private static RecipeHolder<MiniaturizationRecipe> smallFieldRecipe(GameTestHelper helper) {
-        RecipeHolder<MiniaturizationRecipe> best = null;
-        for (RecipeHolder<MiniaturizationRecipe> candidate :
-                MiniaturizationRecipeResolver.candidates(helper.getLevel())) {
-            if (!candidate.value().fitsInFieldSize(MiniaturizationFieldSize.SMALL)
-                    || MiniaturizationRecipeIngredients.miniaturization(candidate, helper.getLevel()) == null
-                    || MiniaturizationLayout.plan(candidate.value(), BlockPos.ZERO) == null) {
-                continue;
-            }
-            if (best == null
-                    || candidate.value().getCraftingTime() < best.value().getCraftingTime()) {
-                best = candidate;
-            }
-        }
+        RecipeHolder<MiniaturizationRecipe> best = MiniaturizationFixtures.shortestRecipe(
+                helper,
+                recipe -> recipe.fitsInFieldSize(MiniaturizationFieldSize.SMALL)
+                        && MiniaturizationLayout.plan(recipe, BlockPos.ZERO) != null);
         helper.assertTrue(best != null, "no miniaturization recipe fits a small field, so this test proves nothing");
         return best;
-    }
-
-    private static IPatternDetails patternFor(GameTestHelper helper, RecipeHolder<MiniaturizationRecipe> holder) {
-        EncodedIngredients expected = MiniaturizationRecipeIngredients.miniaturization(holder, helper.getLevel());
-        helper.assertTrue(expected != null, "the recipe produced no ingredient list");
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> slot : expected.inputs()) {
-            inputs.add(slot.get(0));
-        }
-        ItemStack encoded = MiniaturizationPattern.encode(
-                holder.id(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the miniaturization pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
     }
 
     private static List<MiniaturizationLayout.Placement> layoutFor(
@@ -152,17 +113,6 @@ public final class MiniaturizationControllerGameTest {
         for (BlockPos pos : MiniaturizationLayout.blocksIn(field.getBounds())) {
             if (!helper.getLevel().isEmptyBlock(pos)) {
                 total++;
-            }
-        }
-        return total;
-    }
-
-    private static int countIn(IItemHandler handler, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack held = handler.getStackInSlot(slot);
-            if (held.is(item)) {
-                total += held.getCount();
             }
         }
         return total;
@@ -369,9 +319,8 @@ public final class MiniaturizationControllerGameTest {
         powerUp(helper);
         formField(helper);
         RecipeHolder<MiniaturizationRecipe> holder = smallFieldRecipe(helper);
-        List<ManualRequirement> requirements = MiniaturizationRecipeIngredients.manualRequirements(holder.value());
-        helper.assertTrue(requirements != null, "the recipe cannot be expressed as manual requirements");
-        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+        Player player = MiniaturizationFixtures.manualCraftPlayer(
+                helper, holder, "the recipe cannot be expressed as manual requirements");
 
         ManualCraftOutcome outcome = controller.startManualCraft(player, holder.id(), 1);
 
@@ -386,9 +335,8 @@ public final class MiniaturizationControllerGameTest {
         MiniaturizationControllerBlockEntity controller = place(helper);
         powerUp(helper);
         RecipeHolder<MiniaturizationRecipe> holder = smallFieldRecipe(helper);
-        List<ManualRequirement> requirements = MiniaturizationRecipeIngredients.manualRequirements(holder.value());
-        helper.assertTrue(requirements != null, "the recipe cannot be expressed as manual requirements");
-        Player player = ManualCraftFixtures.playerWith(helper, requirements);
+        Player player = MiniaturizationFixtures.manualCraftPlayer(
+                helper, holder, "the recipe cannot be expressed as manual requirements");
 
         ManualCraftOutcome outcome = controller.startManualCraft(player, holder.id(), 1);
 

@@ -7,7 +7,6 @@ import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
 
 class SpiritBankStorage implements MEStorage {
 
@@ -46,9 +45,5 @@ class SpiritBankStorage implements MEStorage {
     @Override
     public void getAvailableStacks(KeyCounter out) {
         matrix.forEachFreeSpirit(out::add);
-    }
-
-    static ItemStack stackOf(AEItemKey key, int count) {
-        return key.toStack(count);
     }
 }

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.InteractionHand;
@@ -44,11 +45,7 @@ public class SequencedAssemblyLinkerItem extends Item {
         if (clicked instanceof SequencedAssemblyControllerBlockEntity controller) {
             if (sneaking) {
                 controller.clearLinks();
-                message(
-                        player,
-                        Component.translatable("chat.nep.linker.cleared_controller")
-                                .withStyle(ChatFormatting.YELLOW),
-                        false);
+                chat(player, ChatFormatting.YELLOW, "chat.nep.linker.cleared_controller");
             } else {
                 syncTo(player, stack, controller);
             }
@@ -65,22 +62,9 @@ public class SequencedAssemblyLinkerItem extends Item {
         }
 
         switch (mode(stack)) {
-            case INPUT -> {
-                stack.set(NepCreateContent.LINKER_INPUT.get(), pos);
-                message(
-                        player,
-                        Component.translatable("chat.nep.linker.input_set", format(pos))
-                                .withStyle(ChatFormatting.GREEN),
-                        false);
-            }
-            case OUTPUT -> {
-                stack.set(NepCreateContent.LINKER_OUTPUT.get(), pos);
-                message(
-                        player,
-                        Component.translatable("chat.nep.linker.output_set", format(pos))
-                                .withStyle(ChatFormatting.GREEN),
-                        false);
-            }
+            case INPUT -> setLink(player, stack, NepCreateContent.LINKER_INPUT.get(), "chat.nep.linker.input_set", pos);
+            case OUTPUT ->
+                setLink(player, stack, NepCreateContent.LINKER_OUTPUT.get(), "chat.nep.linker.output_set", pos);
             case MACHINE -> {
                 List<BlockPos> updated = new ArrayList<>(machines(stack));
                 updated.add(pos);
@@ -123,10 +107,7 @@ public class SequencedAssemblyLinkerItem extends Item {
             stack.remove(NepCreateContent.LINKER_INPUT.get());
             stack.remove(NepCreateContent.LINKER_OUTPUT.get());
             stack.remove(NepCreateContent.LINKER_MACHINES.get());
-            message(
-                    player,
-                    Component.translatable("chat.nep.linker.cleared_plan").withStyle(ChatFormatting.YELLOW),
-                    false);
+            chat(player, ChatFormatting.YELLOW, "chat.nep.linker.cleared_plan");
         } else {
             cycleMode(player, stack);
         }
@@ -161,46 +142,28 @@ public class SequencedAssemblyLinkerItem extends Item {
         List<Component> elsewhere =
                 targets(in, out, machines, target -> target != null && !SubLevels.sameSubLevel(level, origin, target));
         if (!elsewhere.isEmpty()) {
-            message(
-                    player,
-                    Component.translatable("chat.nep.linker.different_sub_level", join(elsewhere))
-                            .withStyle(ChatFormatting.RED),
-                    false);
+            chat(player, ChatFormatting.RED, "chat.nep.linker.different_sub_level", join(elsewhere));
             return;
         }
 
         int range = NepConfig.createSequencedAssemblyLinkRange();
         List<Component> tooFar = targets(in, out, machines, target -> outOfRange(origin, target, range));
         if (!tooFar.isEmpty()) {
-            message(
-                    player,
-                    Component.translatable("chat.nep.linker.too_far", range, join(tooFar))
-                            .withStyle(ChatFormatting.RED),
-                    false);
+            chat(player, ChatFormatting.RED, "chat.nep.linker.too_far", range, join(tooFar));
             return;
         }
         controller.applyPlan(in, out, machines);
-        message(player, Component.translatable("chat.nep.linker.synced").withStyle(ChatFormatting.GREEN), false);
+        chat(player, ChatFormatting.GREEN, "chat.nep.linker.synced");
         controller.sendStatus(player);
     }
 
     private static boolean unlink(Player player, ItemStack stack, BlockPos pos) {
         if (pos.equals(input(stack))) {
-            stack.remove(NepCreateContent.LINKER_INPUT.get());
-            message(
-                    player,
-                    Component.translatable("chat.nep.linker.input_unlinked", format(pos))
-                            .withStyle(ChatFormatting.YELLOW),
-                    false);
+            clearLink(player, stack, NepCreateContent.LINKER_INPUT.get(), "chat.nep.linker.input_unlinked", pos);
             return true;
         }
         if (pos.equals(output(stack))) {
-            stack.remove(NepCreateContent.LINKER_OUTPUT.get());
-            message(
-                    player,
-                    Component.translatable("chat.nep.linker.output_unlinked", format(pos))
-                            .withStyle(ChatFormatting.YELLOW),
-                    false);
+            clearLink(player, stack, NepCreateContent.LINKER_OUTPUT.get(), "chat.nep.linker.output_unlinked", pos);
             return true;
         }
         List<BlockPos> machines = machines(stack);
@@ -215,11 +178,7 @@ public class SequencedAssemblyLinkerItem extends Item {
         } else {
             stack.set(NepCreateContent.LINKER_MACHINES.get(), List.copyOf(updated));
         }
-        message(
-                player,
-                Component.translatable("chat.nep.linker.machine_unlinked", format(pos), updated.size())
-                        .withStyle(ChatFormatting.YELLOW),
-                false);
+        chat(player, ChatFormatting.YELLOW, "chat.nep.linker.machine_unlinked", format(pos), updated.size());
         return true;
     }
 
@@ -258,6 +217,22 @@ public class SequencedAssemblyLinkerItem extends Item {
 
     private static Component unset() {
         return Component.translatable("chat.nep.sequenced_assembly.unset").withStyle(ChatFormatting.DARK_GRAY);
+    }
+
+    private static void setLink(
+            Player player, ItemStack stack, DataComponentType<BlockPos> type, String key, BlockPos pos) {
+        stack.set(type, pos);
+        chat(player, ChatFormatting.GREEN, key, format(pos));
+    }
+
+    private static void clearLink(
+            Player player, ItemStack stack, DataComponentType<BlockPos> type, String key, BlockPos pos) {
+        stack.remove(type);
+        chat(player, ChatFormatting.YELLOW, key, format(pos));
+    }
+
+    private static void chat(Player player, ChatFormatting color, String key, Object... args) {
+        message(player, Component.translatable(key, args).withStyle(color), false);
     }
 
     private static void message(Player player, Component text, boolean actionBar) {

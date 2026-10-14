@@ -96,19 +96,15 @@ final class FusionRecipeResolver {
 
     @Nullable
     static Plan resolve(IPatternDetails pattern, Level level) {
-        List<GenericStack> inputs = condensedInputs(pattern);
-        GenericStack result = singleResult(pattern);
+        List<GenericStack> inputs = PatternStacks.condensedInputs(pattern);
+        GenericStack result = PatternStacks.singleResult(pattern);
         if (inputs == null || result == null) {
             return null;
         }
 
         if (pattern instanceof FusionCraftingPattern fusion) {
-            RecipeHolder<?> holder =
-                    level.getRecipeManager().byKey(fusion.recipe()).orElse(null);
-            if (holder == null || !(holder.value() instanceof IFusionRecipe)) {
-                return null;
-            }
-            return plan(cast(holder), level, inputs, result);
+            RecipeHolder<IFusionRecipe> holder = resolveById(level, fusion.recipe());
+            return holder == null ? null : plan(holder, level, inputs, result);
         }
 
         Plan only = null;
@@ -128,10 +124,10 @@ final class FusionRecipeResolver {
     private static Plan plan(
             RecipeHolder<IFusionRecipe> holder, Level level, List<GenericStack> inputs, GenericStack result) {
         EncodedIngredients expected = DraconicRecipeIngredients.fusion(holder, level, true);
-        GenericStack[] chosen = match(expected, inputs, result);
+        GenericStack[] chosen = IngredientMatching.matchAssign(expected, inputs, result);
         if (chosen == null) {
             expected = DraconicRecipeIngredients.fusion(holder, level, false);
-            chosen = match(expected, inputs, result);
+            chosen = IngredientMatching.matchAssign(expected, inputs, result);
         }
         if (chosen == null) {
             return null;
@@ -236,23 +232,8 @@ final class FusionRecipeResolver {
         return null;
     }
 
-    private static GenericStack @Nullable [] match(
-            @Nullable EncodedIngredients expected, List<GenericStack> inputs, GenericStack result) {
-        return IngredientMatching.matchAssign(expected, inputs, result);
-    }
-
     @SuppressWarnings("unchecked")
     private static RecipeHolder<IFusionRecipe> cast(RecipeHolder<?> holder) {
         return (RecipeHolder<IFusionRecipe>) holder;
-    }
-
-    @Nullable
-    static GenericStack singleResult(IPatternDetails pattern) {
-        return PatternStacks.singleResult(pattern);
-    }
-
-    @Nullable
-    static List<GenericStack> condensedInputs(IPatternDetails pattern) {
-        return PatternStacks.condensedInputs(pattern);
     }
 }

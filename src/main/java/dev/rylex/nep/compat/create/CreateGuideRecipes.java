@@ -76,12 +76,7 @@ public final class CreateGuideRecipes {
         ProcessingRecipe<?, ?> recipe = holder.value();
 
         List<Ingredient> inputs = new ArrayList<>(recipe.getIngredients());
-        for (SizedFluidIngredient fluid : recipe.getFluidIngredients()) {
-            Ingredient asBucket = bucketOf(fluid);
-            if (asBucket != null) {
-                inputs.add(asBucket);
-            }
-        }
+        addBuckets(inputs, recipe.getFluidIngredients());
 
         List<ItemStack> outputs = new ArrayList<>();
         for (ProcessingOutput output : recipe.getRollableResults()) {
@@ -146,12 +141,7 @@ public final class CreateGuideRecipes {
                 row.add(Ingredient.of(station));
             }
             step.getAsAssemblyRecipe().addAssemblyIngredients(row);
-            for (SizedFluidIngredient fluid : fluidsOf(step)) {
-                Ingredient asBucket = bucketOf(fluid);
-                if (asBucket != null) {
-                    row.add(asBucket);
-                }
-            }
+            addBuckets(row, fluidsOf(step));
             if (!row.isEmpty()) {
                 steps.append(LytSlotGrid.column(row, false));
             }
@@ -196,6 +186,15 @@ public final class CreateGuideRecipes {
         return new ItemStack(fallback).getHoverName().getString();
     }
 
+    private static void addBuckets(List<Ingredient> target, Iterable<SizedFluidIngredient> fluids) {
+        for (SizedFluidIngredient fluid : fluids) {
+            Ingredient asBucket = bucketOf(fluid);
+            if (asBucket != null) {
+                target.add(asBucket);
+            }
+        }
+    }
+
     @Nullable
     private static Ingredient bucketOf(SizedFluidIngredient fluid) {
         FluidStack[] stacks = fluid.getFluids();
@@ -203,6 +202,6 @@ public final class CreateGuideRecipes {
             return null;
         }
         Item bucket = stacks[0].getFluid().getBucket();
-        return bucket == null || bucket == Items.AIR ? null : Ingredient.of(bucket);
+        return bucket == Items.AIR ? null : Ingredient.of(bucket);
     }
 }

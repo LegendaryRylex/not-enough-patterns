@@ -17,21 +17,24 @@ public class ParticleCollisionMatrixMenu extends MachineMenu implements ManualCr
     static final int BUTTON_CLEAR_BUFFER = 3;
 
     static final int WIDTH = 176;
-    static final int HEIGHT = 256;
+    static final int HEIGHT = 282;
 
     static final int INPUT_X = 8;
-    static final int INPUT_Y = 72;
+    static final int INPUT_Y = 98;
     static final int INPUT_COLUMNS = 7;
     static final int INPUT_ROWS = 3;
     static final int OUTPUT_X = 8;
-    static final int OUTPUT_Y = 137;
+    static final int OUTPUT_Y = 163;
     static final int INV_X = 8;
-    static final int INV_Y = 172;
+    static final int INV_Y = 198;
+    static final int CORE_X = 11;
+    static final int CORE_Y = 65;
 
     @Nullable
     private final ParticleCollisionMatrixBlockEntity matrix;
 
     private final BlockPos pos;
+    private int coreSlotIndex;
 
     public ParticleCollisionMatrixMenu(int windowId, Inventory playerInv, BlockPos pos) {
         super(NepOritechContent.MATRIX_MENU.get(), windowId);
@@ -75,6 +78,19 @@ public class ParticleCollisionMatrixMenu extends MachineMenu implements ManualCr
             });
         }
 
+        coreSlotIndex = slots.size();
+        addSlot(new MachineSlot(matrix != null ? matrix.coreSlot() : new ItemStackHandler(1), 0, CORE_X, CORE_Y) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return MatrixAddons.isCore(stack);
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
+        });
+
         addPlayerInventory(playerInv, INV_X, INV_Y);
     }
 
@@ -85,10 +101,6 @@ public class ParticleCollisionMatrixMenu extends MachineMenu implements ManualCr
 
     @Override
     public BlockPos machinePos() {
-        return pos;
-    }
-
-    BlockPos matrixPos() {
         return pos;
     }
 
@@ -110,7 +122,13 @@ public class ParticleCollisionMatrixMenu extends MachineMenu implements ManualCr
 
     @Override
     protected boolean movePlayerStackIntoMachine(ItemStack stack) {
-        return matrix != null && moveItemStackTo(stack, 0, ParticleCollisionMatrixBlockEntity.INPUT_SLOTS, false);
+        if (matrix == null) {
+            return false;
+        }
+        if (MatrixAddons.isCore(stack) && moveItemStackTo(stack, coreSlotIndex, coreSlotIndex + 1, false)) {
+            return true;
+        }
+        return moveItemStackTo(stack, 0, ParticleCollisionMatrixBlockEntity.INPUT_SLOTS, false);
     }
 
     @Override

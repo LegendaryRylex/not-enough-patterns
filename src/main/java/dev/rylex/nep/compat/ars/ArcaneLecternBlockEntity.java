@@ -12,8 +12,7 @@ import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.storage.MEStorage;
 import dev.rylex.nep.NepConfig;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -195,23 +194,27 @@ public class ArcaneLecternBlockEntity extends BlockEntity implements IInWorldGri
         }
 
         int cap = NepConfig.arsArcaneLecternMaxTypes();
-        List<AEItemKey> foundKeys = new ArrayList<>();
-        List<Long> foundAmounts = new ArrayList<>();
+        AEItemKey[] foundKeys = new AEItemKey[Math.max(1, Math.min(cap, 16))];
+        long[] foundAmounts = new long[foundKeys.length];
+        int count = 0;
         for (var entry : storage.getAvailableStacks()) {
             if (entry.getKey() instanceof AEItemKey key && entry.getLongValue() > 0) {
-                foundKeys.add(key);
-                foundAmounts.add(entry.getLongValue());
-                if (foundKeys.size() >= cap) {
+                if (count == foundKeys.length) {
+                    int grown = count * 2;
+                    foundKeys = Arrays.copyOf(foundKeys, grown);
+                    foundAmounts = Arrays.copyOf(foundAmounts, grown);
+                }
+                foundKeys[count] = key;
+                foundAmounts[count] = entry.getLongValue();
+                count++;
+                if (count >= cap) {
                     break;
                 }
             }
         }
 
-        keys = foundKeys.toArray(new AEItemKey[0]);
-        amounts = new long[foundAmounts.size()];
-        for (int i = 0; i < amounts.length; i++) {
-            amounts[i] = foundAmounts.get(i);
-        }
+        keys = Arrays.copyOf(foundKeys, count);
+        amounts = Arrays.copyOf(foundAmounts, count);
     }
 
     @Nullable

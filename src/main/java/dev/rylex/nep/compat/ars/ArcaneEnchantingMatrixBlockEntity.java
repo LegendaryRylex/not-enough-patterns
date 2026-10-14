@@ -13,6 +13,7 @@ import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.ars.arseng.ArsEngSource;
 import dev.rylex.nep.machine.BufferedMatrixBlockEntity;
 import dev.rylex.nep.machine.CraftedOutputs;
+import dev.rylex.nep.machine.DemandTally;
 import dev.rylex.nep.machine.MachineItemView;
 import dev.rylex.nep.machine.ManualCraftHost;
 import dev.rylex.nep.machine.ManualCraftOutcome;
@@ -21,12 +22,13 @@ import dev.rylex.nep.machine.ManualRequirement;
 import dev.rylex.nep.machine.ManualStaging;
 import dev.rylex.nep.machine.MatrixGridNode;
 import dev.rylex.nep.machine.MatrixStatus;
+import dev.rylex.nep.machine.StackColumns;
 import dev.rylex.nep.pattern.ApparatusPattern;
 import dev.rylex.nep.pattern.ImbuementPattern;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
+import dev.rylex.nep.util.EnumNames;
 import dev.rylex.nep.util.ItemCounts;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -57,7 +59,6 @@ import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
 import net.neoforged.neoforge.items.ItemStackHandler;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity implements ManualCraftHost {
@@ -183,12 +184,50 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
     }
 
     private record Template(
-            Kind kind,
-            ResourceLocation recipe,
-            List<AEKey> keys,
-            List<Long> counts,
-            ItemStack result,
-            int sourceCost) {}
+            Kind kind, ResourceLocation recipe, List<AEKey> keys, List<Long> counts, ItemStack result, int sourceCost) {
+
+        static ListTag save(Map<AEItemKey, Template> templates, HolderLookup.Provider registries) {
+            ListTag list = new ListTag();
+            for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
+                Template template = entry.getValue();
+                CompoundTag tag = new CompoundTag();
+                ItemCounts.putKey(tag, entry.getKey(), registries);
+                tag.putString("Kind", template.kind().name());
+                tag.putString("Recipe", template.recipe().toString());
+                tag.put("Result", template.result().save(registries));
+                tag.putInt("SourceCost", template.sourceCost());
+                tag.put("Stacks", new StackColumns(template.keys(), template.counts()).write(registries));
+                list.add(tag);
+            }
+            return list;
+        }
+
+        static void load(Map<AEItemKey, Template> templates, ListTag list, HolderLookup.Provider registries) {
+            templates.clear();
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag tag = list.getCompound(i);
+                AEItemKey item = ItemCounts.key(tag, ItemCounts.LEGACY_ID_TAG, registries);
+                ResourceLocation recipe = ResourceLocation.tryParse(tag.getString("Recipe"));
+                ItemStack result =
+                        ItemStack.parse(registries, tag.getCompound("Result")).orElse(ItemStack.EMPTY);
+                if (item == null || recipe == null || result.isEmpty()) {
+                    continue;
+                }
+                StackColumns columns = StackColumns.read(tag, "Stacks", registries);
+                if (!columns.keys().isEmpty()) {
+                    templates.put(
+                            item,
+                            new Template(
+                                    EnumNames.byName(Kind.values(), tag.getString("Kind"), Kind.APPARATUS),
+                                    recipe,
+                                    columns.keys(),
+                                    columns.counts(),
+                                    result,
+                                    tag.getInt("SourceCost")));
+                }
+            }
+        }
+    }
 
     public ArcaneEnchantingMatrixBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(
@@ -218,9 +257,7 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
         flushOutput(level);
         if (!NepConfig.arsMatrix()) {
             setPowerFault(false);
-            refreshComparator(level);
-            refreshVisualState(level);
-            syncIfChanged(level);
+            refreshReadout(level);
             return;
         }
         power.create(level, getBlockPos());
@@ -263,6 +300,10 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         setPowerFault(!power.hasUsablePower());
 
+        refreshReadout(level);
+    }
+
+    private void refreshReadout(Level level) {
         refreshComparator(level);
         refreshVisualState(level);
         syncIfChanged(level);
@@ -412,6 +453,16 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
             return Stall.SOURCE;
         }
 
+        return commitStart(template, result, takes, shelving, catalystTakes, cost);
+    }
+
+    private Stall commitStart(
+            Template template,
+            ItemStack result,
+            List<int[]> takes,
+            boolean shelving,
+            List<int[]> catalystTakes,
+            int cost) {
         if (shelving) {
             List<ItemStack> set = new ArrayList<>(catalystTakes.size());
             for (int[] take : catalystTakes) {
@@ -724,24 +775,7 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
             return ManualCraftOutcome.failed(staged.status());
         }
 
-        Template template;
-        if (apparatus != null) {
-            ArsRecipeResolver.ApparatusPlan plan = ArsRecipeResolver.planFromItems(apparatus, level, staged.perCraft());
-            template = plan == null
-                    ? null
-                    : templateOf(Kind.APPARATUS, recipe, staged.perCraft(), plan.result(), plan.sourceCost());
-        } else {
-            ItemStack output = imbuement.value().getResultItem(level.registryAccess());
-            GenericStack result = IngredientMatching.resultOf(output);
-            template = result == null
-                    ? null
-                    : templateOf(
-                            Kind.IMBUEMENT,
-                            recipe,
-                            staged.perCraft(),
-                            result,
-                            imbuement.value().getSource());
-        }
+        Template template = manualTemplate(level, recipe, apparatus, imbuement, staged.perCraft());
         AEItemKey produced = template == null ? null : AEItemKey.of(template.result());
         if (produced == null) {
             return ManualCraftOutcome.failed(ManualCraftResult.UNSUPPORTED);
@@ -769,37 +803,54 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
         return ManualCraftOutcome.started(staged.batches(), template.result());
     }
 
+    @Nullable
+    private Template manualTemplate(
+            Level level,
+            ResourceLocation recipe,
+            @Nullable RecipeHolder<EnchantingApparatusRecipe> apparatus,
+            @Nullable RecipeHolder<ImbuementRecipe> imbuement,
+            Map<AEItemKey, Long> perCraft) {
+        if (apparatus != null) {
+            ArsRecipeResolver.ApparatusPlan plan = ArsRecipeResolver.planFromItems(apparatus, level, perCraft);
+            return plan == null ? null : templateOf(Kind.APPARATUS, recipe, perCraft, plan.result(), plan.sourceCost());
+        }
+        ItemStack output = imbuement.value().getResultItem(level.registryAccess());
+        GenericStack result = IngredientMatching.resultOf(output);
+        return result == null
+                ? null
+                : templateOf(
+                        Kind.IMBUEMENT,
+                        recipe,
+                        perCraft,
+                        result,
+                        imbuement.value().getSource());
+    }
+
     private void autoRequest(Level level) {
         if (!NepConfig.arsMatrixAutoRequest()) {
             setMissingInputs(List.of());
             return;
         }
-        Map<AEKey, Long> targets = new LinkedHashMap<>();
+        DemandTally tally = new DemandTally();
         for (Map.Entry<AEItemKey, Long> entry : owed.entrySet()) {
             Template template = templates.get(entry.getKey());
             if (template == null || isManualJob(entry.getKey())) {
                 continue;
             }
             for (int i = 0; i < template.keys().size(); i++) {
-                targets.merge(template.keys().get(i), template.counts().get(i) * entry.getValue(), Long::sum);
+                tally.add(template.keys().get(i), template.counts().get(i) * entry.getValue());
             }
         }
-        catalystDemand(level).forEach((key, count) -> targets.merge(key, count, Long::sum));
-        if (targets.isEmpty()) {
+        catalystDemand(level).forEach(tally::add);
+        if (tally.isEmpty()) {
             setMissingInputs(List.of());
             return;
         }
-        List<AEKey> keys = new ArrayList<>(targets.keySet());
-        keys.sort(Comparator.comparing(AEKey::toString));
-        List<Long> counts = new ArrayList<>(keys.size());
-        for (AEKey key : keys) {
-            counts.add(targets.get(key));
-        }
-        setMissingInputs(power.restock(level, keys, counts));
+        setMissingInputs(tally.restock(level, power));
     }
 
-    private Map<AEItemKey, Long> catalystDemand(Level level) {
-        Map<AEItemKey, Long> demand = new LinkedHashMap<>();
+    private List<Ingredient> unshelvedCatalystNeeds(Level level) {
+        List<Ingredient> unshelved = new ArrayList<>();
         Set<ResourceLocation> counted = new HashSet<>();
         for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
             Template template = entry.getValue();
@@ -810,14 +861,19 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
                 continue;
             }
             List<Ingredient> needs = catalystNeeds(level, template);
-            if (needs == null) {
-                continue;
+            if (needs != null) {
+                unshelved.addAll(needs);
             }
-            for (Ingredient need : needs) {
-                AEItemKey choice = catalystChoice(need);
-                if (choice != null) {
-                    demand.merge(choice, 1L, Long::sum);
-                }
+        }
+        return unshelved;
+    }
+
+    private Map<AEItemKey, Long> catalystDemand(Level level) {
+        Map<AEItemKey, Long> demand = new LinkedHashMap<>();
+        for (Ingredient need : unshelvedCatalystNeeds(level)) {
+            AEItemKey choice = catalystChoice(need);
+            if (choice != null) {
+                demand.merge(choice, 1L, Long::sum);
             }
         }
         return demand;
@@ -867,22 +923,9 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
 
     private int catalystNeedsMatching(Level level, ItemStack stack) {
         int matching = 0;
-        Set<ResourceLocation> counted = new HashSet<>();
-        for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
-            Template template = entry.getValue();
-            if (template.kind() != Kind.IMBUEMENT
-                    || owed.getOrDefault(entry.getKey(), 0L) <= 0
-                    || catalysts.holds(template.recipe())
-                    || !counted.add(template.recipe())) {
-                continue;
-            }
-            List<Ingredient> needs = catalystNeeds(level, template);
-            if (needs != null) {
-                for (Ingredient need : needs) {
-                    if (need.test(stack)) {
-                        matching++;
-                    }
-                }
+        for (Ingredient need : unshelvedCatalystNeeds(level)) {
+            if (need.test(stack)) {
+                matching++;
             }
         }
         return matching;
@@ -971,14 +1014,6 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
             }
         }
         return 0;
-    }
-
-    long pendingJobs() {
-        long total = 0;
-        for (long count : owed.values()) {
-            total += count;
-        }
-        return total;
     }
 
     Stall stall() {
@@ -1082,7 +1117,7 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
         tag.put(OWED_KEY, ItemCounts.save(owed, registries));
         tag.put(RETURN_KEY, ItemCounts.save(toReturn, registries));
         tag.put(RETURN_DIRS_KEY, returnDirections.save(registries));
-        tag.put(TEMPLATE_KEY, saveTemplates(registries));
+        tag.put(TEMPLATE_KEY, Template.save(templates, registries));
         if (!activeResult.isEmpty()) {
             tag.put(ACTIVE_KEY, activeResult.save(registries));
         }
@@ -1127,13 +1162,13 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
         ItemCounts.load(owed, tag, OWED_KEY, registries);
         ItemCounts.load(toReturn, tag, RETURN_KEY, registries);
         returnDirections.load(tag, RETURN_DIRS_KEY, "ReturnDir", toReturn.keySet(), registries);
-        loadTemplates(tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND), registries);
+        Template.load(templates, tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND), registries);
         activeResult = tag.contains(ACTIVE_KEY)
                 ? ItemStack.parse(registries, tag.getCompound(ACTIVE_KEY)).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
         activeRecipe =
                 tag.contains(ACTIVE_RECIPE_KEY) ? ResourceLocation.tryParse(tag.getString(ACTIVE_RECIPE_KEY)) : null;
-        activeKind = byName(Kind.values(), tag.getString(ACTIVE_KIND_KEY), Kind.APPARATUS);
+        activeKind = EnumNames.byName(Kind.values(), tag.getString(ACTIVE_KIND_KEY), Kind.APPARATUS);
         activeTicks = tag.getInt(ACTIVE_TICKS_KEY);
         claimedItems.clear();
         ListTag claimed = tag.getList(CLAIMED_KEY, Tag.TAG_COMPOUND);
@@ -1153,79 +1188,12 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
         pushingCpus.load(tag);
         power.load(tag.getCompound(NODE_KEY));
-        stall = byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
-        refusal = byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
+        stall = EnumNames.byName(Stall.values(), tag.getString(STALL_KEY), Stall.NONE);
+        refusal = EnumNames.byName(Refusal.values(), tag.getString(REFUSAL_KEY), Refusal.NONE);
         refusalTicks = refusal == Refusal.NONE
                 ? 0
                 : Math.max(1, Math.min(REFUSAL_MEMORY_TICKS, tag.getInt(REFUSAL_TICKS_KEY)));
         markScanNeeded();
-    }
-
-    private static <E extends Enum<E>> E byName(E[] values, String name, E fallback) {
-        for (E value : values) {
-            if (value.name().equals(name)) {
-                return value;
-            }
-        }
-        return fallback;
-    }
-
-    private ListTag saveTemplates(HolderLookup.Provider registries) {
-        ListTag list = new ListTag();
-        for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
-            Template template = entry.getValue();
-            CompoundTag tag = new CompoundTag();
-            ItemCounts.putKey(tag, entry.getKey(), registries);
-            tag.putString("Kind", template.kind().name());
-            tag.putString("Recipe", template.recipe().toString());
-            tag.put("Result", template.result().save(registries));
-            tag.putInt("SourceCost", template.sourceCost());
-            ListTag stacks = new ListTag();
-            for (int i = 0; i < template.keys().size(); i++) {
-                stacks.add(GenericStack.writeTag(
-                        registries,
-                        new GenericStack(
-                                template.keys().get(i), template.counts().get(i))));
-            }
-            tag.put("Stacks", stacks);
-            list.add(tag);
-        }
-        return list;
-    }
-
-    private void loadTemplates(ListTag list, HolderLookup.Provider registries) {
-        templates.clear();
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag tag = list.getCompound(i);
-            AEItemKey item = ItemCounts.key(tag, registries);
-            ResourceLocation recipe = ResourceLocation.tryParse(tag.getString("Recipe"));
-            ItemStack result =
-                    ItemStack.parse(registries, tag.getCompound("Result")).orElse(ItemStack.EMPTY);
-            if (item == null || recipe == null || result.isEmpty()) {
-                continue;
-            }
-            ListTag stacks = tag.getList("Stacks", Tag.TAG_COMPOUND);
-            List<AEKey> keys = new ArrayList<>();
-            List<Long> counts = new ArrayList<>();
-            for (int s = 0; s < stacks.size(); s++) {
-                GenericStack stack = GenericStack.readTag(registries, stacks.getCompound(s));
-                if (stack != null) {
-                    keys.add(stack.what());
-                    counts.add(stack.amount());
-                }
-            }
-            if (!keys.isEmpty()) {
-                templates.put(
-                        item,
-                        new Template(
-                                byName(Kind.values(), tag.getString("Kind"), Kind.APPARATUS),
-                                recipe,
-                                List.copyOf(keys),
-                                List.copyOf(counts),
-                                result,
-                                tag.getInt("SourceCost")));
-            }
-        }
     }
 
     @Override
@@ -1246,17 +1214,17 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
 
         @Override
-        public @NotNull ItemStack getStackInSlot(int slot) {
+        public ItemStack getStackInSlot(int slot) {
             return outputBuffer.getStackInSlot(slot);
         }
 
         @Override
-        public @NotNull ItemStack insertItem(int slot, @NotNull ItemStack stack, boolean simulate) {
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             return stack;
         }
 
         @Override
-        public @NotNull ItemStack extractItem(int slot, int amount, boolean simulate) {
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
             ItemStack stack = outputBuffer.getStackInSlot(slot);
             AEItemKey key = AEItemKey.of(stack);
             if (key == null || toReturn.getOrDefault(key, 0L) > 0) {
@@ -1271,7 +1239,7 @@ public class ArcaneEnchantingMatrixBlockEntity extends BufferedMatrixBlockEntity
         }
 
         @Override
-        public boolean isItemValid(int slot, @NotNull ItemStack stack) {
+        public boolean isItemValid(int slot, ItemStack stack) {
             return false;
         }
     }

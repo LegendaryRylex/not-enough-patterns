@@ -43,7 +43,7 @@ public record RitualConductorState(
                 buffer.writeBoolean(value.powered());
             },
             buffer -> new RitualConductorState(
-                    ConductorState.values()[buffer.readByte()],
+                    ConductorState.byOrdinal(buffer.readByte()),
                     ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC).decode(buffer),
                     ByteBufCodecs.optional(BlockPos.STREAM_CODEC).decode(buffer),
                     ItemStack.OPTIONAL_LIST_STREAM_CODEC.decode(buffer),

@@ -41,6 +41,9 @@ config="${mod_id}.ae2lt.mixins.json"
 [[mixins]]
 config="${mod_id}.provider.mixins.json"
 
+[[mixins]]
+config="${mod_id}.occultism.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId="ae2"
 type="required"
@@ -94,6 +97,13 @@ side="BOTH"
 modId="malum"
 type="optional"
 versionRange="${malum_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="occultism"
+type="optional"
+versionRange="${occultism_version_range}"
 ordering="AFTER"
 side="BOTH"
 
@@ -204,7 +214,7 @@ side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="gmrecipes"
-type="required"
+type="optional"
 versionRange="${gmrecipes_version_range}"
 ordering="NONE"
 side="CLIENT"

@@ -37,10 +37,10 @@ final class FusionMatrixUpgrades {
         if (tier == null || cores <= 0) {
             return base;
         }
+        long peak = capacityTarget(tier);
         return switch (tier) {
-            case WYVERN -> additive(base, target(NepConfig.draconicFusionMatrixWyvernCapacity(), base), cores);
-            case DRACONIC -> compound(base, target(NepConfig.draconicFusionMatrixDraconicCapacity(), base), cores);
-            case CHAOTIC -> compound(base, target(NepConfig.draconicFusionMatrixChaoticCapacity(), base), cores);
+            case WYVERN -> additive(base, peak, cores);
+            case DRACONIC, CHAOTIC -> compound(base, peak, cores);
             default -> base;
         };
     }

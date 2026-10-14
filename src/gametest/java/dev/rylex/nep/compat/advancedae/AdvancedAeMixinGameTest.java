@@ -31,13 +31,23 @@ public final class AdvancedAeMixinGameTest {
         helper.succeed();
     }
 
+    private static void assertInitialises(GameTestHelper helper, Class<?> type, String failure) {
+        try {
+            Class.forName(type.getName(), true, type.getClassLoader());
+        } catch (ClassNotFoundException | Error e) {
+            helper.fail(failure + ": " + e);
+        }
+    }
+
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void theMenuClassesLoadWithTheSlotMixinApplied(GameTestHelper helper) {
-        helper.assertTrue(
-                AdvPatternProviderMenu.class.getName() != null,
+        assertInitialises(
+                helper,
+                AdvPatternProviderMenu.class,
                 "the Advanced AE provider menu failed to load with the import card slot mixin");
-        helper.assertTrue(
-                SmallAdvPatternProviderMenu.class.getName() != null,
+        assertInitialises(
+                helper,
+                SmallAdvPatternProviderMenu.class,
                 "the small Advanced AE provider menu failed to load with the import card slot mixin");
         helper.succeed();
     }

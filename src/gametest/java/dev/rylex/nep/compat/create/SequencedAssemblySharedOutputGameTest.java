@@ -1,14 +1,13 @@
 package dev.rylex.nep.compat.create;
 
-import appeng.api.AECapabilities;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import java.util.List;
@@ -77,18 +76,12 @@ public final class SequencedAssemblySharedOutputGameTest {
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
         helper.assertTrue(details != null, "the shared-output pattern did not decode");
 
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(CONTROLLER), null);
-        helper.assertTrue(machine != null, "the controller exposed no crafting machine capability");
+        ICraftingMachine machine = GameTestFixtures.craftingMachine(
+                helper, CONTROLLER, "the controller exposed no crafting machine capability");
 
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
         helper.assertTrue(
-                machine.pushPattern(details, inputs, Direction.UP), "the controller refused the pattern for " + recipe);
+                machine.pushPattern(details, GameTestFixtures.inputsOf(details), Direction.UP),
+                "the controller refused the pattern for " + recipe);
     }
 
     private static boolean fedWith(GameTestHelper helper, Item base) {

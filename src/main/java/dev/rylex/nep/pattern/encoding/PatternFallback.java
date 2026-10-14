@@ -14,6 +14,12 @@ public interface PatternFallback {
 
     record Result(@Nullable ItemStack stack, @Nullable Component feedback) {
 
+        public Result {
+            if ((stack == null) == (feedback == null)) {
+                throw new IllegalArgumentException("A fallback result carries exactly one of a stack or feedback");
+            }
+        }
+
         public static Result of(ItemStack stack) {
             return new Result(stack, null);
         }

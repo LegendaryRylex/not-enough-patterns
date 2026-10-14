@@ -1,11 +1,15 @@
 package dev.rylex.nep.compat.draconic;
 
+import static dev.rylex.nep.GameTestFixtures.countIn;
+import static dev.rylex.nep.compat.draconic.DraconicFixtures.keepCharged;
+import static dev.rylex.nep.compat.draconic.DraconicFixtures.placeMatrix;
+import static dev.rylex.nep.compat.draconic.DraconicFixtures.powerUp;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
-import appeng.core.definitions.AEBlocks;
 import com.brandon3055.draconicevolution.api.crafting.IFusionRecipe;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.ManualCraftOutcome;
@@ -15,7 +19,6 @@ import dev.rylex.nep.pattern.encoding.PatternConverters;
 import dev.rylex.nep.pattern.encoding.PatternOrigin;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -26,10 +29,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import net.neoforged.neoforge.items.IItemHandler;
 
 @GameTestHolder(Nep.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -38,32 +39,10 @@ public final class FusionMatrixManualCraftGameTest {
     private static final String TEMPLATE = "empty_5x5x5";
     private static final String BATCH = "nep_fusion_matrix_manual";
 
-    private static final BlockPos MATRIX = new BlockPos(2, 1, 2);
-    private static final BlockPos ME_CONTROLLER = new BlockPos(2, 1, 3);
-    private static final BlockPos ENERGY_CELL = ME_CONTROLLER.above();
-
     private static final ResourceLocation RECIPE =
             ResourceLocation.fromNamespaceAndPath("test", "kept_ingredient_matrix");
 
     private FusionMatrixManualCraftGameTest() {}
-
-    private static FusionMatrixBlockEntity place(GameTestHelper helper) {
-        helper.setBlock(MATRIX, NepDraconicContent.MATRIX.get().defaultBlockState());
-        BlockEntity be = helper.getBlockEntity(MATRIX);
-        helper.assertTrue(be instanceof FusionMatrixBlockEntity, "the matrix did not create its block entity");
-        return (FusionMatrixBlockEntity) be;
-    }
-
-    private static void powerUp(GameTestHelper helper) {
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY_CELL, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-    }
-
-    private static void keepCharged(GameTestHelper helper, FusionMatrixBlockEntity matrix, int ticks) {
-        for (int tick = 0; tick <= ticks; tick++) {
-            helper.runAtTickTime(tick, () -> matrix.energyStorage().modify(matrix.energyCapacity()));
-        }
-    }
 
     private static RecipeHolder<IFusionRecipe> recipe(GameTestHelper helper) {
         RecipeHolder<IFusionRecipe> holder = FusionRecipeResolver.resolveById(helper.getLevel(), RECIPE);
@@ -75,17 +54,6 @@ public final class FusionMatrixManualCraftGameTest {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.getInventory().add(new ItemStack(item, count));
         return player;
-    }
-
-    private static int countIn(IItemHandler handler, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack held = handler.getStackInSlot(slot);
-            if (held.is(item)) {
-                total += held.getCount();
-            }
-        }
-        return total;
     }
 
     private static int carried(Player player, Item item) {
@@ -100,7 +68,7 @@ public final class FusionMatrixManualCraftGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aManualCraftTakesOneKeptItemAndOneCatalystPerBatch(GameTestHelper helper) {
-        FusionMatrixBlockEntity matrix = place(helper);
+        FusionMatrixBlockEntity matrix = placeMatrix(helper);
         recipe(helper);
         Player player = playerHolding(helper, Items.IRON_INGOT, 8);
 
@@ -123,7 +91,7 @@ public final class FusionMatrixManualCraftGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aManualCraftTheInventoryCannotPayForMovesNothing(GameTestHelper helper) {
-        FusionMatrixBlockEntity matrix = place(helper);
+        FusionMatrixBlockEntity matrix = placeMatrix(helper);
         recipe(helper);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
 
@@ -140,7 +108,7 @@ public final class FusionMatrixManualCraftGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void onlyTheBatchesTheInventoryCoversAreQueued(GameTestHelper helper) {
-        FusionMatrixBlockEntity matrix = place(helper);
+        FusionMatrixBlockEntity matrix = placeMatrix(helper);
         recipe(helper);
         Player player = playerHolding(helper, Items.IRON_INGOT, 4);
 
@@ -158,7 +126,7 @@ public final class FusionMatrixManualCraftGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
     public static void aManualCraftLeavesItsResultInTheOutputBuffer(GameTestHelper helper) {
-        FusionMatrixBlockEntity matrix = place(helper);
+        FusionMatrixBlockEntity matrix = placeMatrix(helper);
         powerUp(helper);
         recipe(helper);
         Player player = playerHolding(helper, Items.IRON_INGOT, 8);
@@ -183,7 +151,7 @@ public final class FusionMatrixManualCraftGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aPatternForAManuallyQueuedResultIsRefused(GameTestHelper helper) {
-        FusionMatrixBlockEntity matrix = place(helper);
+        FusionMatrixBlockEntity matrix = placeMatrix(helper);
         RecipeHolder<IFusionRecipe> holder = recipe(helper);
         Player player = playerHolding(helper, Items.IRON_INGOT, 8);
 
@@ -201,7 +169,7 @@ public final class FusionMatrixManualCraftGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aManualCraftForAResultAPatternOwnsIsRefused(GameTestHelper helper) {
-        FusionMatrixBlockEntity matrix = place(helper);
+        FusionMatrixBlockEntity matrix = placeMatrix(helper);
         RecipeHolder<IFusionRecipe> holder = recipe(helper);
         IPatternDetails details = patternFor(helper, holder);
 

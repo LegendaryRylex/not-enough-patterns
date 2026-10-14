@@ -1,15 +1,16 @@
 package dev.rylex.nep.compat.actuallyadditions;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import de.ellpeck.actuallyadditions.mod.blocks.ActuallyBlocks;
 import de.ellpeck.actuallyadditions.mod.crafting.EmpowererRecipe;
 import de.ellpeck.actuallyadditions.mod.tile.TileEntityDisplayStand;
 import de.ellpeck.actuallyadditions.mod.tile.TileEntityEmpowerer;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.pattern.EmpoweringPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
@@ -39,6 +40,8 @@ public final class EmpowererCraftingMachineGameTest {
     private EmpowererCraftingMachineGameTest() {}
 
     private static TileEntityEmpowerer placeEmpowerer(GameTestHelper helper) {
+        EmpowererCraftingMachine.clearCache();
+        ActuallyAdditionsRecipeResolver.clearCache();
         helper.setBlock(EMPOWERER, ActuallyBlocks.EMPOWERER.get().defaultBlockState());
         return (TileEntityEmpowerer) helper.getBlockEntity(EMPOWERER);
     }
@@ -54,10 +57,8 @@ public final class EmpowererCraftingMachineGameTest {
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(EMPOWERER), null);
-        helper.assertTrue(machine != null, "the Empowerer exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(
+                helper, EMPOWERER, "the Empowerer exposed no crafting machine capability");
     }
 
     private static RecipeHolder<EmpowererRecipe> quickestRecipe(GameTestHelper helper) {
@@ -93,16 +94,6 @@ public final class EmpowererCraftingMachineGameTest {
         return details;
     }
 
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
-    }
-
     private static void charge(List<TileEntityDisplayStand> stands) {
         for (TileEntityDisplayStand stand : stands) {
             for (int i = 0; i < 100; i++) {
@@ -111,8 +102,12 @@ public final class EmpowererCraftingMachineGameTest {
         }
     }
 
-    private static void assertNothingStranded(GameTestHelper helper, TileEntityEmpowerer empowerer) {
+    private static void assertEmpowererEmpty(GameTestHelper helper, TileEntityEmpowerer empowerer) {
         helper.assertTrue(empowerer.inv.getStackInSlot(0).isEmpty(), "a refused push left an item in the Empowerer");
+    }
+
+    private static void assertNothingStranded(GameTestHelper helper, TileEntityEmpowerer empowerer) {
+        assertEmpowererEmpty(helper, empowerer);
         for (int index = 0; index < 4; index++) {
             BlockPos pos = EMPOWERER.relative(Direction.from2DDataValue(index), 3);
             if (helper.getLevel().getBlockEntity(helper.absolutePos(pos)) instanceof TileEntityDisplayStand stand) {
@@ -123,9 +118,6 @@ public final class EmpowererCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aFullStandArrayStagesTheBaseAndEveryModifier(GameTestHelper helper) {
-        EmpowererCraftingMachine.clearCache();
-        ActuallyAdditionsRecipeResolver.clearCache();
-
         TileEntityEmpowerer empowerer = placeEmpowerer(helper);
         List<TileEntityDisplayStand> stands = placeStands(helper, 4);
         charge(stands);
@@ -145,9 +137,6 @@ public final class EmpowererCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aMissingStandIsRefusedWithoutStrandingItems(GameTestHelper helper) {
-        EmpowererCraftingMachine.clearCache();
-        ActuallyAdditionsRecipeResolver.clearCache();
-
         TileEntityEmpowerer empowerer = placeEmpowerer(helper);
         charge(placeStands(helper, 3));
 
@@ -161,9 +150,6 @@ public final class EmpowererCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void anOccupiedStandIsRefusedWithoutStrandingItems(GameTestHelper helper) {
-        EmpowererCraftingMachine.clearCache();
-        ActuallyAdditionsRecipeResolver.clearCache();
-
         TileEntityEmpowerer empowerer = placeEmpowerer(helper);
         List<TileEntityDisplayStand> stands = placeStands(helper, 4);
         charge(stands);
@@ -173,15 +159,12 @@ public final class EmpowererCraftingMachineGameTest {
         helper.assertTrue(
                 !machine(helper).pushPattern(details, inputsOf(details), Direction.UP),
                 "an Empowerer with an occupied Display Stand accepted a pattern");
-        helper.assertTrue(empowerer.inv.getStackInSlot(0).isEmpty(), "a refused push left an item in the Empowerer");
+        assertEmpowererEmpty(helper, empowerer);
         helper.succeed();
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aMultipliedPatternIsRefusedBecauseEverySlotHoldsOneItem(GameTestHelper helper) {
-        EmpowererCraftingMachine.clearCache();
-        ActuallyAdditionsRecipeResolver.clearCache();
-
         TileEntityEmpowerer empowerer = placeEmpowerer(helper);
         charge(placeStands(helper, 4));
 
@@ -201,9 +184,6 @@ public final class EmpowererCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
     public static void aStagedCraftCompletesAndOnlyTheResultCanBePulledBack(GameTestHelper helper) {
-        EmpowererCraftingMachine.clearCache();
-        ActuallyAdditionsRecipeResolver.clearCache();
-
         TileEntityEmpowerer empowerer = placeEmpowerer(helper);
         List<TileEntityDisplayStand> stands = placeStands(helper, 4);
         charge(stands);

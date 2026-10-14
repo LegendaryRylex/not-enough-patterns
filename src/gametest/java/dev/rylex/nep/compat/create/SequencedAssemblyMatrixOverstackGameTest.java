@@ -1,17 +1,13 @@
 package dev.rylex.nep.compat.create;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
-import appeng.core.definitions.AEBlocks;
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
-import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
-import com.simibubi.create.content.kinetics.motor.CreativeMotorBlockEntity;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.pattern.SequencedAssemblyPattern;
 import java.util.List;
@@ -21,11 +17,9 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -51,35 +45,11 @@ public final class SequencedAssemblyMatrixOverstackGameTest {
     private SequencedAssemblyMatrixOverstackGameTest() {}
 
     private static SequencedAssemblyMatrixBlockEntity powered(GameTestHelper helper) {
-        helper.setBlock(
-                MATRIX,
-                NepCreateContent.MATRIX
-                        .get()
-                        .defaultBlockState()
-                        .setValue(RotatedPillarKineticBlock.AXIS, Direction.Axis.Z));
-        BlockEntity be = helper.getBlockEntity(MATRIX);
-        helper.assertTrue(
-                be instanceof SequencedAssemblyMatrixBlockEntity, "the matrix did not create its block entity");
-
-        helper.setBlock(
-                MOTOR,
-                AllBlocks.CREATIVE_MOTOR.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.SOUTH));
-        BlockEntity motor = helper.getBlockEntity(MOTOR);
-        helper.assertTrue(
-                motor instanceof CreativeMotorBlockEntity, "the creative motor did not create its block entity");
-        ((CreativeMotorBlockEntity) motor)
-                .generatedSpeed.setValue(Math.round(SequencedAssemblyMatrixBlockEntity.peakSpeed()));
-
-        helper.setBlock(ME_CONTROLLER, AEBlocks.CONTROLLER.block());
-        helper.setBlock(ENERGY, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
-        return (SequencedAssemblyMatrixBlockEntity) be;
+        return CreateFixtures.poweredMatrix(helper, MATRIX, MOTOR, ME_CONTROLLER, ENERGY);
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(MATRIX), null);
-        helper.assertTrue(machine != null, "the matrix exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(helper, MATRIX, "the matrix exposed no crafting machine capability");
     }
 
     private static IPatternDetails assemblyPattern(GameTestHelper helper) {
@@ -92,38 +62,6 @@ public final class SequencedAssemblyMatrixOverstackGameTest {
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
         helper.assertTrue(details != null, "the test pattern did not decode");
         return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
-    }
-
-    private static int countIn(SequencedAssemblyMatrixBlockEntity matrix, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < matrix.getInputBuffer().getSlots(); slot++) {
-            ItemStack stack = matrix.getInputBuffer().getStackInSlot(slot);
-            if (stack.is(item)) {
-                total += stack.getCount();
-            }
-        }
-        return total;
-    }
-
-    private static int outputCount(SequencedAssemblyMatrixBlockEntity matrix, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < matrix.getOutputBuffer().getSlots(); slot++) {
-            ItemStack stack = matrix.getOutputBuffer().getStackInSlot(slot);
-            if (stack.is(item)) {
-                total += stack.getCount();
-            }
-        }
-        return total;
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 400)
@@ -147,8 +85,11 @@ public final class SequencedAssemblyMatrixOverstackGameTest {
 
         helper.succeedWhen(() -> {
             helper.assertTrue(
-                    outputCount(matrix, Items.NETHERITE_SCRAP) == 1, "the matrix never finished the assembly");
-            helper.assertTrue(countIn(matrix, Items.SADDLE) == 0, "the matrix left consumed saddles staged");
+                    GameTestFixtures.countIn(matrix.getOutputBuffer(), Items.NETHERITE_SCRAP) == 1,
+                    "the matrix never finished the assembly");
+            helper.assertTrue(
+                    GameTestFixtures.countIn(matrix.getInputBuffer(), Items.SADDLE) == 0,
+                    "the matrix left consumed saddles staged");
         });
     }
 
@@ -163,7 +104,9 @@ public final class SequencedAssemblyMatrixOverstackGameTest {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         matrix.clearBufferTo(player);
 
-        helper.assertTrue(countIn(matrix, Items.SADDLE) == 0, "Empty Buffers left saddles behind");
+        helper.assertTrue(
+                GameTestFixtures.countIn(matrix.getInputBuffer(), Items.SADDLE) == 0,
+                "Empty Buffers left saddles behind");
         helper.assertTrue(
                 player.getInventory().countItem(Items.SADDLE) == SADDLES_STAGED_BY_HAND,
                 "Empty Buffers returned only part of an overstacked slot");

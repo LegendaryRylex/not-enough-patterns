@@ -7,7 +7,7 @@ import dev.rylex.nep.pattern.GridPos;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.Optional;
 import net.createmod.catnip.math.Pointing;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -21,23 +21,26 @@ final class CrafterChains {
             Map<MechanicalCrafterBlockEntity, Integer> depths,
             MechanicalCrafterBlockEntity output) {}
 
-    private record CachedChain(long tick, @Nullable Chain chain) {}
-
-    private static final Map<MechanicalCrafterBlockEntity, CachedChain> CACHE = new WeakHashMap<>();
+    private static final Map<MechanicalCrafterBlockEntity, Optional<Chain>> CACHE = new HashMap<>();
+    private static long cacheTick = Long.MIN_VALUE;
 
     @Nullable
-    static Chain of(MechanicalCrafterBlockEntity start) {
+    static synchronized Chain of(MechanicalCrafterBlockEntity start) {
         Level level = start.getLevel();
         if (level == null) {
             return compute(start);
         }
         long now = level.getGameTime();
-        CachedChain cached = CACHE.get(start);
-        if (cached != null && cached.tick() == now) {
-            return cached.chain();
+        if (now != cacheTick) {
+            CACHE.clear();
+            cacheTick = now;
+        }
+        Optional<Chain> cached = CACHE.get(start);
+        if (cached != null) {
+            return cached.orElse(null);
         }
         Chain chain = compute(start);
-        CACHE.put(start, new CachedChain(now, chain));
+        CACHE.put(start, Optional.ofNullable(chain));
         return chain;
     }
 

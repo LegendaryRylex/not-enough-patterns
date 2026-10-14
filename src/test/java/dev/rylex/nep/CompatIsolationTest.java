@@ -42,6 +42,7 @@ class CompatIsolationTest {
                     List.of("com.sammy.malum", "team.lodestar.lodestone")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ars"), List.of("com.hollingsworth.arsnouveau")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "ars", "arseng"), List.of("gripe._90.arseng")),
+            new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "occultism"), List.of("com.klikli_dev")),
             new ForeignRule(Paths.get("dev", "rylex", "nep", "compat", "oritech"), List.of("rearth.oritech")),
             new ForeignRule(
                     Paths.get("dev", "rylex", "nep", "compat", "oritech", "oritechthings"),
@@ -67,6 +68,7 @@ class CompatIsolationTest {
             "dev.rylex.nep.compat.mysticalagriculture.MysticalAgricultureCompat",
             "dev.rylex.nep.compat.malum.MalumCompat",
             "dev.rylex.nep.compat.ars.ArsCompat",
+            "dev.rylex.nep.compat.occultism.OccultismCompat",
             "dev.rylex.nep.compat.oritech.OritechCompat",
             "dev.rylex.nep.compat.extendedae.ExtendedAeCompat",
             "dev.rylex.nep.compat.sable.SableSubLevels");
@@ -122,16 +124,8 @@ class CompatIsolationTest {
         try (Stream<Path> files = Files.walk(SOURCE_ROOT)) {
             files.filter(p -> p.toString().endsWith(".java")).forEach(file -> {
                 Path relative = SOURCE_ROOT.relativize(file);
-                visitor.visit(relative, read(file));
+                visitor.visit(relative, ProjectFiles.read(file));
             });
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static String read(Path file) {
-        try {
-            return Files.readString(file);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

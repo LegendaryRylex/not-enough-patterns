@@ -88,10 +88,6 @@ public class MiniaturizationMatrixMenu extends MachineMenu implements ManualCraf
         return pos;
     }
 
-    BlockPos matrixPos() {
-        return pos;
-    }
-
     boolean isInputSlot(@Nullable Slot slot) {
         return slot != null && slot.index >= 0 && slot.index < MiniaturizationMatrixBlockEntity.INPUT_SLOTS;
     }

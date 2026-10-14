@@ -51,6 +51,12 @@ public final class NepConfigValues {
         values.put("matrixImpetusDurability", NepConfig::malumFocusedSpiritMatrixImpetusDurability);
         values.put("arcaneLecternScribesRange", NepConfig::arsArcaneLecternScribesRange);
         values.put("arcaneEnchantingMatrixChannels", NepConfig::arsMatrixChannels);
+        values.put("boundSpiritMatrixChannels", NepConfig::occultismMatrixChannels);
+        values.put("boundSpiritMatrixSpiritFireTicks", NepConfig::occultismMatrixSpiritFireTicks);
+        values.put("spiritProviderQueueLimit", NepConfig::occultismSpiritProviderQueue);
+        values.put("ritualControllerChannels", NepConfig::occultismRitualControllerChannels);
+        values.put("ritualControllerBowlRange", NepConfig::occultismRitualControllerBowlRange);
+        values.put("ritualControllerTierSpeed", NepConfig::occultismRitualControllerTierSpeed);
         values.put("arcaneEnchantingMatrixSourceJarRange", NepConfig::arsMatrixSourceJarRange);
         values.put("arcaneEnchantingMatrixApparatusCraftTicks", NepConfig::arsMatrixApparatusCraftTicks);
         values.put("arcaneEnchantingMatrixImbuementCraftTicks", NepConfig::arsMatrixImbuementCraftTicks);

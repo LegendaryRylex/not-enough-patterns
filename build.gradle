@@ -32,9 +32,25 @@ sourceSets {
 
 repositories {
     mavenCentral()
-    maven { url = 'https://maven.createmod.net' }
-    maven { url = 'https://maven.ithundxr.dev/snapshots' }
-    maven { url = 'https://maven.blamejared.com/' }
+    maven {
+        url = 'https://maven.createmod.net'
+        content {
+            includeGroup 'com.simibubi.create'
+            includeGroup 'net.createmod.ponder'
+            includeGroup 'dev.engine-room.flywheel'
+        }
+    }
+    maven {
+        url = 'https://maven.ithundxr.dev/snapshots'
+        content { includeGroup 'com.tterrag.registrate' }
+    }
+    maven {
+        url = 'https://maven.blamejared.com/'
+        content {
+            includeGroup 'mezz.jei'
+            includeGroup 'net.mezzdev.config'
+        }
+    }
     maven {
         url = 'https://maven.shadowsoffire.dev/releases'
         content { includeGroup 'dev.shadowsoffire' }
@@ -79,6 +95,10 @@ var skippableRuntimeMods = [
         ars    : [[group: 'curse.maven', module: 'ars-nouveau-401955'],
                   [group: 'curse.maven', module: 'curios-309927']],
         arseng : [[group: 'curse.maven', module: 'ars-energistique-905641']],
+        occ    : [[group: 'curse.maven', module: 'occultism-361026'],
+                  [group: 'curse.maven', module: 'modonomicon-538392'],
+                  [group: 'curse.maven', module: 'smartbrainlib-661293'],
+                  [group: 'curse.maven', module: 'curios-309927']],
         sable  : [[group: 'curse.maven', module: 'sable-1312371'],
                   [group: 'curse.maven', module: 'create-aeronautics-676721']],
         aae    : [[group: 'curse.maven', module: 'advancedae-1084104'],
@@ -152,6 +172,7 @@ var guidePageOwners = [
         malum  : 'malum',
         ars    : 'ars_nouveau',
         oritech: 'oritech',
+        occ    : 'occultism',
 ]
 var guideFilterMods = (file('src/main/resources/guide_filters').listFiles() ?: [])
         .findAll { it.directory && it.name.startsWith('no_') }
@@ -211,7 +232,7 @@ neoForge {
 
         data {
             data()
-            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath(), '--existing-mod', 'create'
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath(), '--existing-mod', 'create', '--existing-mod', 'occultism'
         }
 
         configureEach {
@@ -275,6 +296,11 @@ var extractCompactCraftingApi = tasks.register('extractCompactCraftingApi', Sync
 }
 
 dependencies {
+    def optionalMod = { coord ->
+        compileOnly coord
+        localRuntime coord
+    }
+
     implementation "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     compileOnly "org.appliedenergistics:guideme:${guideme_version}"
     localRuntime "curse.maven:guideme-recipe-compat-1722328:${gmrecipes_file}"
@@ -285,79 +311,56 @@ dependencies {
     runtimeOnly "dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}"
     implementation "com.tterrag.registrate:Registrate:${registrate_version}"
 
-    compileOnly "curse.maven:create-new-age-905861:${create_new_age_file}"
-    localRuntime "curse.maven:create-new-age-905861:${create_new_age_file}"
+    optionalMod "curse.maven:create-new-age-905861:${create_new_age_file}"
 
-    compileOnly "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
-    localRuntime "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
+    optionalMod "curse.maven:ae2wtlib-459929:${ae2wtlib_file}"
 
-    compileOnly "curse.maven:thunderbolt-1631756:${thunderbolt_file}"
-    localRuntime "curse.maven:thunderbolt-1631756:${thunderbolt_file}"
+    optionalMod "curse.maven:thunderbolt-1631756:${thunderbolt_file}"
 
-    compileOnly "curse.maven:ae2-lightning-tech-1527395:${ae2lt_file}"
-    localRuntime "curse.maven:ae2-lightning-tech-1527395:${ae2lt_file}"
+    optionalMod "curse.maven:ae2-lightning-tech-1527395:${ae2lt_file}"
 
-    compileOnly "curse.maven:advancedae-1084104:${advanced_ae_file}"
-    localRuntime "curse.maven:advancedae-1084104:${advanced_ae_file}"
-    localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
+    optionalMod "curse.maven:advancedae-1084104:${advanced_ae_file}"
     localRuntime "curse.maven:ae2addonlib-1366135:${ae2addonlib_file}"
 
-    compileOnly "curse.maven:ae2-draconic-fusion-autocrafter-1521464:${ae2_draconic_fusion_autocrafter_file}"
-    localRuntime "curse.maven:ae2-draconic-fusion-autocrafter-1521464:${ae2_draconic_fusion_autocrafter_file}"
-    compileOnly "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
-    localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
+    optionalMod "curse.maven:ae2-draconic-fusion-autocrafter-1521464:${ae2_draconic_fusion_autocrafter_file}"
+    optionalMod "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
     localRuntime "curse.maven:glodium-957920:${glodium_file}"
     localRuntime "curse.maven:applied-flux-965012:${appliedflux_file}"
     localRuntime "curse.maven:expanded-ae-1213351:${expandedae_file}"
     localRuntime "curse.maven:mega-cells-622112:${megacells_file}"
-    compileOnly "curse.maven:applied-create-1474758:${appliedcreate_file}"
-    localRuntime "curse.maven:applied-create-1474758:${appliedcreate_file}"
+    optionalMod "curse.maven:applied-create-1474758:${appliedcreate_file}"
     localRuntime "curse.maven:kotlin-for-forge-351264:${kotlinforforge_file}"
 
-    compileOnly "curse.maven:draconic-evolution-223565:${draconic_evolution_file}"
-    compileOnly "curse.maven:brandons-core-231382:${brandonscore_file}"
-    compileOnly "curse.maven:codechicken-lib-1-8-242818:${codechickenlib_file}"
-    localRuntime "curse.maven:draconic-evolution-223565:${draconic_evolution_file}"
-    localRuntime "curse.maven:brandons-core-231382:${brandonscore_file}"
-    localRuntime "curse.maven:codechicken-lib-1-8-242818:${codechickenlib_file}"
+    optionalMod "curse.maven:draconic-evolution-223565:${draconic_evolution_file}"
+    optionalMod "curse.maven:brandons-core-231382:${brandonscore_file}"
+    optionalMod "curse.maven:codechicken-lib-1-8-242818:${codechickenlib_file}"
 
-    compileOnly "curse.maven:compact-crafting-updated-1355698:${compact_crafting_file}"
-    localRuntime "curse.maven:compact-crafting-updated-1355698:${compact_crafting_file}"
+    optionalMod "curse.maven:compact-crafting-updated-1355698:${compact_crafting_file}"
     compactCraftingJar "curse.maven:compact-crafting-updated-1355698:${compact_crafting_file}"
     compileOnly fileTree(dir: compactCraftingApiDir, include: '*.jar').builtBy(extractCompactCraftingApi)
 
-    compileOnly "curse.maven:actually-additions-228404:${actually_additions_file}"
-    compileOnly "curse.maven:actually-additions-tiers-1549640:${actually_additions_tiers_file}"
-    localRuntime "curse.maven:actually-additions-228404:${actually_additions_file}"
-    localRuntime "curse.maven:actually-additions-tiers-1549640:${actually_additions_tiers_file}"
+    optionalMod "curse.maven:actually-additions-228404:${actually_additions_file}"
+    optionalMod "curse.maven:actually-additions-tiers-1549640:${actually_additions_tiers_file}"
 
-    compileOnly "curse.maven:ars-nouveau-401955:${ars_nouveau_file}"
-    compileOnly "curse.maven:curios-309927:${curios_file}"
-    compileOnly "curse.maven:geckolib-388172:${geckolib_file}"
-    localRuntime "curse.maven:ars-nouveau-401955:${ars_nouveau_file}"
-    localRuntime "curse.maven:curios-309927:${curios_file}"
-    localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
-    compileOnly "curse.maven:ars-energistique-905641:${arseng_file}"
-    localRuntime "curse.maven:ars-energistique-905641:${arseng_file}"
+    optionalMod "curse.maven:ars-nouveau-401955:${ars_nouveau_file}"
+    optionalMod "curse.maven:curios-309927:${curios_file}"
+    optionalMod "curse.maven:geckolib-388172:${geckolib_file}"
+    optionalMod "curse.maven:ars-energistique-905641:${arseng_file}"
 
-    compileOnly "curse.maven:oritech-1030830:${oritech_file}"
-    localRuntime "curse.maven:oritech-1030830:${oritech_file}"
-    compileOnly "curse.maven:oritech-things-1166849:${oritechthings_file}"
-    localRuntime "curse.maven:oritech-things-1166849:${oritechthings_file}"
-    compileOnly "curse.maven:architectury-api-419699:8492726"
-    gametestCompileOnly "curse.maven:architectury-api-419699:8492726"
+    optionalMod "curse.maven:occultism-361026:${occultism_file}"
+    optionalMod "curse.maven:modonomicon-538392:${modonomicon_file}"
+    optionalMod "curse.maven:smartbrainlib-661293:${smartbrainlib_file}"
+
+    optionalMod "curse.maven:oritech-1030830:${oritech_file}"
+    optionalMod "curse.maven:oritech-things-1166849:${oritechthings_file}"
+    optionalMod "curse.maven:architectury-api-419699:${architectury_file}"
     localRuntime "curse.maven:athena-841890:${athena_file}"
 
-    compileOnly "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
-    compileOnly "curse.maven:cucumber-272335:${cucumber_file}"
-    localRuntime "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
-    localRuntime "curse.maven:cucumber-272335:${cucumber_file}"
+    optionalMod "curse.maven:mystical-agriculture-246640:${mysticalagriculture_file}"
+    optionalMod "curse.maven:cucumber-272335:${cucumber_file}"
 
-    compileOnly "curse.maven:malum-484064:${malum_file}"
-    compileOnly "curse.maven:lodestone-616457:${lodestone_file}"
-    localRuntime "curse.maven:malum-484064:${malum_file}"
-    localRuntime "curse.maven:lodestone-616457:${lodestone_file}"
-    localRuntime "curse.maven:curios-309927:${curios_file}"
+    optionalMod "curse.maven:malum-484064:${malum_file}"
+    optionalMod "curse.maven:lodestone-616457:${lodestone_file}"
 
     // transitive = false: their poms pull in Curios from a maven we do not carry
     compileOnly("dev.shadowsoffire:ApothicEnchanting:${minecraft_version}-${apothic_enchanting_version}") { transitive = false }
@@ -367,9 +370,8 @@ dependencies {
     localRuntime("dev.shadowsoffire:ApothicAttributes:${minecraft_version}-${apothic_attributes_version}") { transitive = false }
     localRuntime("dev.shadowsoffire:Placebo:${minecraft_version}-${placebo_version}") { transitive = false }
 
-    localRuntime "curse.maven:ae2-jei-integration-1074338:7727898"
-    localRuntime "curse.maven:architectury-api-419699:8492726"
-    localRuntime "curse.maven:tool-kit-324888:8216546"
+    localRuntime "curse.maven:ae2-jei-integration-1074338:${ae2_jei_integration_file}"
+    localRuntime "curse.maven:tool-kit-324888:${tool_kit_file}"
 
     localRuntime "curse.maven:functional-storage-556861:${functionalstorage_file}"
     localRuntime "curse.maven:titanium-287342:${titanium_file}"
@@ -378,19 +380,16 @@ dependencies {
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
     runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
-    compileOnly "curse.maven:emi-580555:${emi_file}"
-    localRuntime "curse.maven:emi-580555:${emi_file}"
+    optionalMod "curse.maven:emi-580555:${emi_file}"
 
-    compileOnly "curse.maven:jade-324717:8591319"
-    localRuntime "curse.maven:jade-324717:8591319"
+    optionalMod "curse.maven:jade-324717:${jade_file}"
 
-    compileOnly "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}"
-    localRuntime "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}"
+    optionalMod "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}"
 
     localRuntime "curse.maven:sable-1312371:${sable_file}"
     localRuntime "curse.maven:create-aeronautics-676721:${aeronautics_file}"
 
-    testImplementation platform('org.junit:junit-bom:5.14.4')
+    testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -412,36 +411,10 @@ spotless {
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
-    var replaceProperties = [
+    var versionRanges = project.properties.findAll { it.key.endsWith('_version_range') }
+    var replaceProperties = versionRanges + [
             minecraft_version      : minecraft_version,
-            minecraft_version_range: minecraft_version_range,
             neo_version            : neo_version,
-            neo_version_range      : neo_version_range,
-            loader_version_range   : loader_version_range,
-            ae2_version_range      : ae2_version_range,
-            gmrecipes_version_range: gmrecipes_version_range,
-            create_version_range   : create_version_range,
-            create_new_age_version_range: create_new_age_version_range,
-            jei_version_range      : jei_version_range,
-            emi_version_range      : emi_version_range,
-            ae2wtlib_version_range : ae2wtlib_version_range,
-            advanced_ae_version_range: advanced_ae_version_range,
-            extendedae_version_range: extendedae_version_range,
-            expandedae_version_range: expandedae_version_range,
-            megacells_version_range: megacells_version_range,
-            ae2lt_version_range     : ae2lt_version_range,
-            draconic_evolution_version_range: draconic_evolution_version_range,
-            compact_crafting_version_range: compact_crafting_version_range,
-            actually_additions_version_range: actually_additions_version_range,
-            mysticalagriculture_version_range: mysticalagriculture_version_range,
-            malum_version_range    : malum_version_range,
-            ars_nouveau_version_range: ars_nouveau_version_range,
-            arseng_version_range: arseng_version_range,
-            oritech_version_range: oritech_version_range,
-            oritechthings_version_range: oritechthings_version_range,
-            jade_version_range     : jade_version_range,
-            sable_version_range    : sable_version_range,
-            apothic_enchanting_version_range: apothic_enchanting_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,

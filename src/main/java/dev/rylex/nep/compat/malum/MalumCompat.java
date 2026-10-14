@@ -4,6 +4,7 @@ import appeng.api.AECapabilities;
 import com.sammy.malum.registry.common.block.MalumBlockEntities;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.guide.NepModules;
+import dev.rylex.nep.machine.MatrixCraftingMachine;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -56,7 +57,11 @@ public final class MalumCompat {
         event.registerBlockEntity(
                 AECapabilities.CRAFTING_MACHINE,
                 NepMalumContent.MATRIX_BLOCK_ENTITY.get(),
-                (be, side) -> new FocusedSpiritMatrixCraftingMachine(be));
+                (be, side) -> new MatrixCraftingMachine(
+                        be::readyForPatterns,
+                        be::pushMatrixPattern,
+                        NepMalumContent.MATRIX_ITEM,
+                        NepMalumContent.MATRIX));
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 NepMalumContent.MATRIX_BLOCK_ENTITY.get(),

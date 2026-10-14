@@ -116,7 +116,7 @@ final class AssemblyLinkVisualizer {
     private static SequencedAssemblyControllerBlockEntity selectController(
             Minecraft mc, Level level, @Nullable ItemStack linker) {
         if (mc.screen instanceof SequencedAssemblyControllerScreen screen) {
-            return controllerAt(level, screen.getMenu().controllerPos());
+            return controllerAt(level, screen.getMenu().machinePos());
         }
         if (linker != null) {
             return null;
@@ -146,7 +146,7 @@ final class AssemblyLinkVisualizer {
             beam(pose, lines, center, Vec3.atCenterOf(input), INPUT, BEAM_ALPHA);
         }
         for (BlockPos machine : controller.linkedMachines()) {
-            float[] color = Stations.detect(level.getBlockState(machine)).recognized() ? MACHINE_OK : MACHINE_BAD;
+            float[] color = machineColor(level, machine);
             box(pose, lines, machine, 0.02F, color, BOX_ALPHA);
             beam(pose, lines, center, Vec3.atCenterOf(machine), color, BEAM_ALPHA);
         }
@@ -161,7 +161,6 @@ final class AssemblyLinkVisualizer {
         BlockPos input = linker.get(NepCreateContent.LINKER_INPUT.get());
         BlockPos output = linker.get(NepCreateContent.LINKER_OUTPUT.get());
         List<BlockPos> machines = linker.getOrDefault(NepCreateContent.LINKER_MACHINES.get(), List.of());
-        LinkerMode mode = linker.getOrDefault(NepCreateContent.LINKER_MODE.get(), LinkerMode.INPUT);
 
         List<BlockPos> chain = new ArrayList<>();
         if (input != null) {
@@ -169,7 +168,7 @@ final class AssemblyLinkVisualizer {
             chain.add(input);
         }
         for (BlockPos machine : machines) {
-            float[] color = Stations.detect(level.getBlockState(machine)).recognized() ? MACHINE_OK : MACHINE_BAD;
+            float[] color = machineColor(level, machine);
             box(pose, lines, machine, 0.02F, color, BOX_ALPHA);
             chain.add(machine);
         }
@@ -216,6 +215,10 @@ final class AssemblyLinkVisualizer {
     private static float pulse(Level level) {
         float phase = (level.getGameTime() % (long) PULSE_TICKS) / PULSE_TICKS;
         return 0.55F + 0.35F * (float) Math.sin(phase * 2.0F * Math.PI);
+    }
+
+    private static float[] machineColor(Level level, BlockPos machine) {
+        return Stations.detect(level.getBlockState(machine)).recognized() ? MACHINE_OK : MACHINE_BAD;
     }
 
     private static float[] modeColor(LinkerMode mode) {

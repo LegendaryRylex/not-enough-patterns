@@ -7,10 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
+import dev.rylex.nep.NepComponents;
+import dev.rylex.nep.NepItems;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.junit.jupiter.api.Test;
 
@@ -70,9 +73,8 @@ class EncodedMechanicalPatternTest {
     }
 
     private static void decode(EncodedMechanicalPattern encoded) {
-        net.minecraft.world.item.ItemStack stack =
-                new net.minecraft.world.item.ItemStack(dev.rylex.nep.NepItems.MECHANICAL_CRAFTING_PATTERN.get());
-        stack.set(dev.rylex.nep.NepComponents.ENCODED_MECHANICAL_PATTERN.get(), encoded);
+        ItemStack stack = new ItemStack(NepItems.MECHANICAL_CRAFTING_PATTERN.get());
+        stack.set(NepComponents.ENCODED_MECHANICAL_PATTERN.get(), encoded);
         new MechanicalCraftingPattern(AEItemKey.of(stack), null);
     }
 }

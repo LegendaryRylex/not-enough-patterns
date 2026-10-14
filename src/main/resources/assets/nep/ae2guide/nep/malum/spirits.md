@@ -36,8 +36,6 @@ A Pure Spirit is what is left when something dies with nothing owed. It cannot b
 
 Being untouched is also its weakness. Drop one down a Weeping Well and the void takes it whole, handing back an Umbral Spirit.
 
-<Recipe id="nep:pure_spirit_to_umbral"/>
-
 <ItemImage id="minecraft:air" scale="0.5"/>
 
 ***
@@ -54,12 +52,8 @@ Being untouched is also its weakness. Drop one down a Weeping Well and the void 
 
 A Radiant Spirit holds all eight arcana at once without any of them winning, which is why its colour never settles. Binding one takes a Stellar Mechanism, an Impurity Stabilizer to keep the mixture from collapsing, four Paracausal Flames, a heavy pour of all eight spirits, and the Pure Spirits that give it something to bind to.
 
-<Recipe id="nep:radiant_spirit"/>
-
 <ItemImage id="minecraft:air" scale="0.25"/>
 
 It is the last ingredient in a Matrix Catalyzer, which is where a Focused Spirit Matrix picks up chain focusing and its fortune roll.
-
-<Recipe id="nep:matrix_catalyzer"/>
 
 <ItemImage id="minecraft:air" scale="0.5"/>

@@ -15,7 +15,7 @@ public class ModuleSlots extends ItemStackHandler {
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
         return stack.getItem() instanceof EncodingModuleItem module
-                && module.module().ordinal() == slot;
+                && module.module().slot() == slot;
     }
 
     @Override
@@ -31,8 +31,8 @@ public class ModuleSlots extends ItemStackHandler {
         for (int slot = 0; slot < saved.getSlots(); slot++) {
             ItemStack stack = saved.getStackInSlot(slot);
             if (stack.getItem() instanceof EncodingModuleItem module
-                    && stacks.get(module.module().ordinal()).isEmpty()) {
-                stacks.set(module.module().ordinal(), stack.copyWithCount(1));
+                    && stacks.get(module.module().slot()).isEmpty()) {
+                stacks.set(module.module().slot(), stack.copyWithCount(1));
             }
         }
         onLoad();

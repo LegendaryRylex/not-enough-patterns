@@ -7,12 +7,15 @@ import com.simibubi.create.content.kinetics.deployer.ManualApplicationRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import dev.rylex.nep.compat.jei.JeiTransferSource;
 import dev.rylex.nep.compat.jei.ManualTransferHandler;
+import dev.rylex.nep.menu.ManualCraftMenu;
 import java.util.List;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -24,19 +27,26 @@ public final class CreateJeiCompat {
             IRecipeTransferRegistration registration, IRecipeTransferHandlerHelper helper) {
         RecipeType<RecipeHolder<SequencedAssemblyRecipe>> type =
                 RecipeType.createRecipeHolderType(CreatePatternSources.SEQUENCED_ASSEMBLY);
+        addManualTransfer(
+                registration, helper, type, SequencedAssemblyMatrixMenu.class, NepCreateContent.MATRIX_MENU.get());
+        addManualTransfer(
+                registration,
+                helper,
+                type,
+                SequencedAssemblyControllerMenu.class,
+                NepCreateContent.CONTROLLER_MENU.get());
+    }
+
+    private static <M extends AbstractContainerMenu & ManualCraftMenu> void addManualTransfer(
+            IRecipeTransferRegistration registration,
+            IRecipeTransferHandlerHelper helper,
+            RecipeType<RecipeHolder<SequencedAssemblyRecipe>> type,
+            Class<M> menuClass,
+            MenuType<M> menuType) {
         registration.addRecipeTransferHandler(
                 new ManualTransferHandler<>(
-                        SequencedAssemblyMatrixMenu.class,
-                        NepCreateContent.MATRIX_MENU.get(),
-                        type,
-                        helper,
-                        (holder, level) -> SequencedAssemblyResolver.manualRequirements(holder.value()),
-                        (holder, level) -> holder.id()),
-                type);
-        registration.addRecipeTransferHandler(
-                new ManualTransferHandler<>(
-                        SequencedAssemblyControllerMenu.class,
-                        NepCreateContent.CONTROLLER_MENU.get(),
+                        menuClass,
+                        menuType,
                         type,
                         helper,
                         (holder, level) -> SequencedAssemblyResolver.manualRequirements(holder.value()),

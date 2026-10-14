@@ -111,26 +111,20 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
 
     private final List<StationKind> stationKinds = new ArrayList<>();
 
-    private final ItemStackHandler buffer = new ItemStackHandler(BUFFER_SLOTS) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final ItemStackHandler buffer = changeTracked(BUFFER_SLOTS);
 
-    private final ItemStackHandler outputBuffer = new ItemStackHandler(RESULT_SLOTS) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final ItemStackHandler outputBuffer = changeTracked(RESULT_SLOTS);
 
-    private final ItemStackHandler byproductBuffer = new ItemStackHandler(RESULT_SLOTS) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final ItemStackHandler byproductBuffer = changeTracked(RESULT_SLOTS);
+
+    private ItemStackHandler changeTracked(int slots) {
+        return new ItemStackHandler(slots) {
+            @Override
+            protected void onContentsChanged(int slot) {
+                setChanged();
+            }
+        };
+    }
 
     private final AssemblyFluidBuffer fluids =
             new AssemblyFluidBuffer(NepConfig::createSequencedAssemblyTankCapacity, this::setChanged);
@@ -265,7 +259,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
         return order;
     }
 
-    private record Template(List<AEKey> keys, List<Long> counts) {}
+    record Template(List<AEKey> keys, List<Long> counts) {}
 
     public SequencedAssemblyControllerBlockEntity(BlockPos pos, BlockState state) {
         super(NepCreateContent.CONTROLLER_BLOCK_ENTITY.get(), pos, state);
@@ -337,10 +331,10 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
         if (halted || outputBlocked) {
             return ControllerStatus.HALTED;
         }
-        return switch (statusCode()) {
-            case 1 -> ControllerStatus.ON;
-            case 2 -> ControllerStatus.HALTED;
-            default -> ControllerStatus.OFF;
+        return switch (lineStatus()) {
+            case READY -> ControllerStatus.ON;
+            case PROBLEM -> ControllerStatus.HALTED;
+            case NONE -> ControllerStatus.OFF;
         };
     }
 
@@ -852,8 +846,8 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
             return false;
         }
 
-        boolean pending = pending() > 0 || inFlightTotal() > 0;
-        boolean reclaiming = !pending && reclaiming(level);
+        boolean lineBusy = pending() > 0 || inFlightTotal() > 0;
+        boolean reclaiming = !lineBusy && reclaiming(level);
         Set<Item> transitionals = new HashSet<>();
         Set<AEItemKey> primaries = new HashSet<>();
         for (SequencedAssemblyRecipe recipe : recipes) {
@@ -874,7 +868,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
                 continue;
             }
             if (transitionals.contains(onDepot.getItem())) {
-                if (pending) {
+                if (lineBusy) {
                     holdTransitional(out, slot, onDepot);
                 } else if (reclaiming) {
                     reclaimFromDepot(level, out, slot, onDepot);
@@ -894,7 +888,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
                 if (reclaimFromDepot(level, out, slot, onDepot) <= 0) {
                     return true;
                 }
-            } else if (pending) {
+            } else if (lineBusy) {
                 AEItemKey attributed = primaries.contains(item) ? item : attributeJunk(level, recipes, item);
                 boolean manual = attributed != null && isManualJob(attributed);
                 int captured = capture(out, slot, onDepot, manual ? outputBuffer : byproductBuffer, onDepot.getCount());
@@ -1314,7 +1308,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
         for (Map.Entry<AEItemKey, Long> entry : items.entrySet()) {
             long count = entry.getValue();
             while (count > 0) {
-                int chunk = (int) Math.min(count, 64);
+                int chunk = (int) Math.min(count, entry.getKey().toStack(1).getMaxStackSize());
                 stacks.add(entry.getKey().toStack(chunk));
                 count -= chunk;
             }
@@ -1433,7 +1427,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
             if (firstTool(layout.get(index)) == null) {
                 continue;
             }
-            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, deployers.get(index), null);
+            IItemHandler handler = machineItemHandler(level, deployers.get(index));
             if (handler == null || handler.getSlots() == 0) {
                 continue;
             }
@@ -1445,7 +1439,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
             if (Stations.detect(level.getBlockState(machine)) != StationKind.SPOUT) {
                 continue;
             }
-            IFluidHandler tank = level.getCapability(Capabilities.FluidHandler.BLOCK, machine, Direction.UP);
+            IFluidHandler tank = machineFluidHandler(level, machine);
             if (tank == null || tank.getTanks() == 0) {
                 continue;
             }
@@ -1589,6 +1583,11 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), held);
         }
         recirc.clear();
+        dumpFluidsToNetwork();
+        clearContent();
+    }
+
+    private void dumpFluidsToNetwork() {
         for (int tank = 0; tank < AssemblyFluidBuffer.TANKS; tank++) {
             FluidStack held = fluids.getFluidInTank(tank);
             if (held.isEmpty()) {
@@ -1599,7 +1598,6 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
                 fluids.takeFrom(tank, (int) dumped);
             }
         }
-        clearContent();
     }
 
     @Override
@@ -1610,6 +1608,9 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
         fluids.clear();
         recirc.clear();
         owed.clear();
+        manualOwed.clear();
+        inFlight.clear();
+        queue.clear();
         toReturn.clear();
     }
 
@@ -1698,16 +1699,8 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
                 BlockPos machine = machines.get(slot);
                 BlockState state = level.getBlockState(machine);
                 StationKind kind = Stations.detect(state);
-                SequencedAssemblyState.Issue issue;
-                if (!kind.recognized()) {
-                    issue = SequencedAssemblyState.Issue.UNRECOGNIZED;
-                } else if (kind == StationKind.DEPLOYER && !Stations.deployerFacesDown(state)) {
-                    issue = SequencedAssemblyState.Issue.WRONG_FACING;
-                } else if (Stations.isUnpowered(level, machine, kind)) {
-                    issue = SequencedAssemblyState.Issue.UNPOWERED;
-                } else {
-                    issue = SequencedAssemblyState.Issue.OK;
-                }
+                SequencedAssemblyState.Issue issue =
+                        SequencedAssemblyControllerReadout.issueOf(level, machine, kind, state);
                 StationKind hint = StationKind.UNKNOWN;
                 if (issue == SequencedAssemblyState.Issue.UNRECOGNIZED) {
                     hint = rememberedStation(slot);
@@ -1729,7 +1722,14 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
         makingList.sort((a, b) -> Long.compare(b.count(), a.count()));
         List<GenericStack> missing = halted && level != null ? collectMissing(level) : List.of();
         return new SequencedAssemblyState(
-                statusCode(), halted, outputBlocked, stationList, makingList, missing, stagedFluids());
+                lineStatus().ordinal(),
+                halted,
+                outputBlocked,
+                requester.network(),
+                stationList,
+                makingList,
+                missing,
+                stagedFluids());
     }
 
     private List<SequencedAssemblyRecipe> queuedRecipes(Level level) {
@@ -1803,7 +1803,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
             if (Stations.detect(level.getBlockState(machine)) != StationKind.SPOUT) {
                 continue;
             }
-            IFluidHandler tank = level.getCapability(Capabilities.FluidHandler.BLOCK, machine, Direction.UP);
+            IFluidHandler tank = machineFluidHandler(level, machine);
             if (tank == null) {
                 continue;
             }
@@ -1828,7 +1828,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
     }
 
     private boolean deployerEmpty(Level level, BlockPos deployer) {
-        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, deployer, null);
+        IItemHandler handler = machineItemHandler(level, deployer);
         return handler != null
                 && handler.getSlots() > 0
                 && handler.getStackInSlot(handler.getSlots() - 1).isEmpty();
@@ -1850,16 +1850,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
             player.getInventory().placeItemBackInInventory(held);
         }
         recirc.clear();
-        for (int tank = 0; tank < AssemblyFluidBuffer.TANKS; tank++) {
-            FluidStack held = fluids.getFluidInTank(tank);
-            if (held.isEmpty()) {
-                continue;
-            }
-            long dumped = requester.dumpToNetwork(AEFluidKey.of(held), held.getAmount());
-            if (dumped > 0) {
-                fluids.takeFrom(tank, (int) dumped);
-            }
-        }
+        dumpFluidsToNetwork();
         Level level = getLevel();
         if (onTheLine && level != null) {
             startReclaim(level);
@@ -1876,12 +1867,14 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
         }
     }
 
-    private int statusCode() {
+    private SequencedAssemblyState.LineStatus lineStatus() {
         Level level = getLevel();
         if (level == null || input == null || output == null) {
-            return 0;
+            return SequencedAssemblyState.LineStatus.NONE;
         }
-        return SequencedAssemblyResolver.lineHealthy(level, input, output, machines) ? 1 : 2;
+        return SequencedAssemblyResolver.lineHealthy(level, input, output, machines)
+                ? SequencedAssemblyState.LineStatus.READY
+                : SequencedAssemblyState.LineStatus.PROBLEM;
     }
 
     @Override
@@ -1897,35 +1890,7 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
 
     void sendStatus(Player player) {
         Level level = getLevel();
-        player.displayClientMessage(
-                Component.translatable("block.nep.sequenced_assembly_controller")
-                        .withStyle(ChatFormatting.GOLD)
-                        .append(Component.literal(" " + format(getBlockPos())).withStyle(ChatFormatting.GRAY)),
-                false);
-        player.displayClientMessage(endpointLine("chat.nep.sequenced_assembly.input", input), false);
-        player.displayClientMessage(endpointLine("chat.nep.sequenced_assembly.output", output), false);
-        if (machines.isEmpty()) {
-            player.displayClientMessage(
-                    Component.translatable("chat.nep.sequenced_assembly.no_machines")
-                            .withStyle(ChatFormatting.GRAY),
-                    false);
-        } else {
-            for (int i = 0; i < machines.size(); i++) {
-                BlockPos pos = machines.get(i);
-                StationKind kind = level == null ? StationKind.UNKNOWN : Stations.detect(level.getBlockState(pos));
-                player.displayClientMessage(
-                        Component.translatable(
-                                        "chat.nep.sequenced_assembly.step",
-                                        i + 1,
-                                        kind.displayName()
-                                                .copy()
-                                                .withStyle(
-                                                        kind.recognized() ? ChatFormatting.GREEN : ChatFormatting.RED),
-                                        Component.literal(format(pos)).withStyle(ChatFormatting.DARK_GRAY))
-                                .withStyle(ChatFormatting.GRAY),
-                        false);
-            }
-        }
+        SequencedAssemblyControllerReadout.sendLinks(player, level, getBlockPos(), input, output, machines);
         if (level != null) {
             player.displayClientMessage(armStatusLine(level), false);
         }
@@ -1949,17 +1914,6 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
                 ? "chat.nep.sequenced_assembly.line.ready"
                 : "chat.nep.sequenced_assembly.line.ready.plural";
         return Component.translatable(key, matches).withStyle(ChatFormatting.GREEN);
-    }
-
-    private static Component endpointLine(String key, @Nullable BlockPos pos) {
-        Component value = pos == null
-                ? Component.translatable("chat.nep.sequenced_assembly.unset").withStyle(ChatFormatting.RED)
-                : Component.literal(format(pos)).withStyle(ChatFormatting.WHITE);
-        return Component.translatable(key, value).withStyle(ChatFormatting.GRAY);
-    }
-
-    private static String format(BlockPos pos) {
-        return "(" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + ")";
     }
 
     @Override
@@ -1991,37 +1945,15 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
         }
         pushingCpus.save(tag);
         if (!templates.isEmpty()) {
-            ListTag templateList = new ListTag();
-            for (Map.Entry<AEItemKey, Template> entry : templates.entrySet()) {
-                Template template = entry.getValue();
-                ListTag entries = new ListTag();
-                for (int i = 0; i < template.keys().size(); i++) {
-                    CompoundTag keyTag = new CompoundTag();
-                    keyTag.put("Key", template.keys().get(i).toTagGeneric(registries));
-                    keyTag.putLong("Per", template.counts().get(i));
-                    entries.add(keyTag);
-                }
-                CompoundTag templateTag = new CompoundTag();
-                ItemCounts.putKey(templateTag, entry.getKey(), registries);
-                templateTag.put("Entries", entries);
-                templateList.add(templateTag);
-            }
+            ListTag templateList = SequencedAssemblyControllerPersistence.saveTemplates(templates, registries);
             tag.put(TEMPLATE_KEY, templateList);
         }
         if (!queue.isEmpty()) {
-            ListTag queueList = new ListTag();
-            for (AEItemKey output : queue) {
-                CompoundTag entryTag = new CompoundTag();
-                ItemCounts.putKey(entryTag, output, registries);
-                queueList.add(entryTag);
-            }
+            ListTag queueList = SequencedAssemblyControllerPersistence.saveQueue(queue, registries);
             tag.put(QUEUE_KEY, queueList);
         }
         if (!recirc.isEmpty()) {
-            ListTag recircList = new ListTag();
-            for (ItemStack held : recirc) {
-                recircList.add(held.save(registries));
-            }
+            ListTag recircList = SequencedAssemblyControllerPersistence.saveStacks(recirc, registries);
             tag.put(RECIRC_KEY, recircList);
         }
         if (!recipeIds.isEmpty()) {
@@ -2118,45 +2050,18 @@ public class SequencedAssemblyControllerBlockEntity extends BlockEntity
         pushingCpus.load(tag);
         templates.clear();
         if (tag.contains(TEMPLATE_KEY, Tag.TAG_LIST)) {
-            ListTag templateList = tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND);
-            for (int i = 0; i < templateList.size(); i++) {
-                CompoundTag templateTag = templateList.getCompound(i);
-                ListTag entries = templateTag.getList("Entries", Tag.TAG_COMPOUND);
-                List<AEKey> keys = new ArrayList<>(entries.size());
-                List<Long> counts = new ArrayList<>(entries.size());
-                for (int entry = 0; entry < entries.size(); entry++) {
-                    CompoundTag keyTag = entries.getCompound(entry);
-                    AEKey key = AEKey.fromTagGeneric(registries, keyTag.getCompound("Key"));
-                    if (key != null) {
-                        keys.add(key);
-                        counts.add(keyTag.getLong("Per"));
-                    }
-                }
-                AEItemKey outputItem = ItemCounts.key(templateTag, "Output", registries);
-                if (!keys.isEmpty() && outputItem != null) {
-                    templates.put(outputItem, new Template(List.copyOf(keys), List.copyOf(counts)));
-                }
-            }
+            SequencedAssemblyControllerPersistence.loadTemplates(
+                    templates, tag.getList(TEMPLATE_KEY, Tag.TAG_COMPOUND), registries);
         }
         queue.clear();
         if (tag.contains(QUEUE_KEY, Tag.TAG_LIST)) {
-            ListTag queueList = tag.getList(QUEUE_KEY, Tag.TAG_COMPOUND);
-            for (int i = 0; i < queueList.size(); i++) {
-                AEItemKey output = ItemCounts.key(queueList.getCompound(i), registries);
-                if (output != null && !queue.contains(output)) {
-                    queue.add(output);
-                }
-            }
+            SequencedAssemblyControllerPersistence.loadQueue(
+                    queue, tag.getList(QUEUE_KEY, Tag.TAG_COMPOUND), registries);
         }
         recirc.clear();
         if (tag.contains(RECIRC_KEY, Tag.TAG_LIST)) {
-            ListTag recircList = tag.getList(RECIRC_KEY, Tag.TAG_COMPOUND);
-            for (int i = 0; i < recircList.size(); i++) {
-                ItemStack held = ItemStack.parseOptional(registries, recircList.getCompound(i));
-                if (!held.isEmpty()) {
-                    recirc.add(held);
-                }
-            }
+            SequencedAssemblyControllerPersistence.loadStacks(
+                    recirc, tag.getList(RECIRC_KEY, Tag.TAG_COMPOUND), registries);
         }
         ItemRecipeIds.load(recipeIds, tag, RECIPE_IDS_KEY, registries);
         reclaimUntil = tag.contains(RECLAIM_KEY) ? tag.getLong(RECLAIM_KEY) : Long.MIN_VALUE;

@@ -1,6 +1,7 @@
 package dev.rylex.nep.compat.create;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
@@ -9,6 +10,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -35,10 +37,7 @@ public final class DepotCraftingMachineGameTest {
 
     private static ICraftingMachine machine(GameTestHelper helper) {
         helper.setBlock(DEPOT, AllBlocks.DEPOT.getDefaultState());
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(DEPOT), null);
-        helper.assertTrue(machine != null, "the depot exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(helper, DEPOT, "the depot exposed no crafting machine capability");
     }
 
     private static void placeDeployerAbove(GameTestHelper helper) {
@@ -54,16 +53,6 @@ public final class DepotCraftingMachineGameTest {
         IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
         helper.assertTrue(details != null, "the test pattern did not decode");
         return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
     }
 
     @GameTest(template = TEMPLATE, batch = MEMO_BATCH)

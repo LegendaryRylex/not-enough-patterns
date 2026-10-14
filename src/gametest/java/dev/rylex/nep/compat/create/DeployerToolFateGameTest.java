@@ -21,10 +21,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
 
-/**
- * The sibling of sandpaper: an ordinary deploying recipe whose tool a Deployer damages instead of consuming, because
- * {@code keep_held_item} is absent and the held item is damageable.
- */
+/** A Deployer damages a damageable tool instead of consuming it when the recipe lacks {@code keep_held_item}. */
 @GameTestHolder(Nep.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class DeployerToolFateGameTest {

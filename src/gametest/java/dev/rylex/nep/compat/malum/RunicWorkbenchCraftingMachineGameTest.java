@@ -1,19 +1,14 @@
 package dev.rylex.nep.compat.malum;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
-import appeng.api.stacks.GenericStack;
-import appeng.api.stacks.KeyCounter;
 import com.sammy.malum.common.block.curiosities.runic_workbench.RunicWorkbenchBlockEntity;
 import com.sammy.malum.common.recipe.RuneworkingRecipe;
 import com.sammy.malum.registry.common.block.MalumBlocks;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
-import dev.rylex.nep.pattern.RuneworkingPattern;
-import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
@@ -50,50 +45,22 @@ public final class RunicWorkbenchCraftingMachineGameTest {
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(WORKBENCH), null);
-        helper.assertTrue(machine != null, "the Runic Workbench exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(
+                helper, WORKBENCH, "the Runic Workbench exposed no crafting machine capability");
     }
 
     private static RecipeHolder<RuneworkingRecipe> aRecipe(GameTestHelper helper) {
-        RecipeHolder<RuneworkingRecipe> best = null;
-        for (RecipeHolder<RuneworkingRecipe> holder : RuneworkingResolver.candidates(helper.getLevel())) {
-            if (!holder.id().getNamespace().equals("malum")
-                    || MalumRecipeIngredients.runeworking(holder.value()) == null) {
-                continue;
-            }
-            if (best == null || holder.id().compareTo(best.id()) < 0) {
-                best = holder;
-            }
-        }
-        helper.assertTrue(best != null, "no runeworking recipe was loaded");
-        return best;
+        return MalumFixtures.pickBest(
+                helper,
+                RuneworkingResolver.candidates(helper.getLevel()),
+                holder -> holder.id().getNamespace().equals("malum")
+                        && MalumRecipeIngredients.runeworking(holder.value()) != null,
+                MalumFixtures.byId(),
+                "no runeworking recipe was loaded");
     }
 
     private static IPatternDetails patternFor(GameTestHelper helper, RecipeHolder<RuneworkingRecipe> holder) {
-        EncodedIngredients expected = MalumRecipeIngredients.runeworking(holder.value());
-        helper.assertTrue(expected != null, "the runeworking recipe produced no ingredient list");
-
-        List<GenericStack> inputs = new ArrayList<>();
-        for (List<GenericStack> options : expected.inputs()) {
-            inputs.add(options.get(0));
-        }
-        ItemStack encoded = RuneworkingPattern.encode(
-                holder.id(), inputs, expected.outputs().get(0));
-        IPatternDetails details = PatternDetailsHelper.decodePattern(encoded, helper.getLevel());
-        helper.assertTrue(details != null, "the runeworking pattern did not decode");
-        return details;
-    }
-
-    private static KeyCounter[] inputsOf(IPatternDetails details) {
-        KeyCounter[] inputs = new KeyCounter[details.getInputs().length];
-        for (int slot = 0; slot < inputs.length; slot++) {
-            inputs[slot] = new KeyCounter();
-            IPatternDetails.IInput input = details.getInputs()[slot];
-            inputs[slot].add(input.getPossibleInputs()[0].what(), input.getMultiplier());
-        }
-        return inputs;
+        return MalumFixtures.runeworkingPattern(helper, holder);
     }
 
     @GameTest(template = TEMPLATE, batch = BATCH)
@@ -133,15 +100,14 @@ public final class RunicWorkbenchCraftingMachineGameTest {
         RunicWorkbenchBlockEntity workbench = placeWorkbench(helper);
 
         RecipeHolder<RuneworkingRecipe> holder = aRecipe(helper);
+        IPatternDetails details = patternFor(helper, holder);
         helper.assertTrue(
-                machine(helper)
-                        .pushPattern(patternFor(helper, holder), inputsOf(patternFor(helper, holder)), Direction.NORTH),
+                machine(helper).pushPattern(details, inputsOf(details), Direction.NORTH),
                 "the workbench refused the first runeworking pattern");
         helper.assertTrue(((RunicWorkbenchState) workbench).nep$isCrafting(), "the first push never started a craft");
 
         helper.assertTrue(
-                !machine(helper)
-                        .pushPattern(patternFor(helper, holder), inputsOf(patternFor(helper, holder)), Direction.NORTH),
+                !machine(helper).pushPattern(details, inputsOf(details), Direction.NORTH),
                 "a workbench mid-craft accepted a second rune and would have discarded the one in flight");
         helper.succeed();
     }
@@ -162,12 +128,9 @@ public final class RunicWorkbenchCraftingMachineGameTest {
             IItemHandler barrel = helper.getLevel()
                     .getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(RETURN_TARGET), null);
             helper.assertTrue(barrel != null, "the return target exposed no inventory");
-            for (int slot = 0; slot < barrel.getSlots(); slot++) {
-                if (ItemStack.isSameItem(barrel.getStackInSlot(slot), expected)) {
-                    return;
-                }
-            }
-            helper.fail("the finished rune never reached the inventory the pattern was pushed from");
+            helper.assertTrue(
+                    GameTestFixtures.holds(barrel, expected, 1),
+                    "the finished rune never reached the inventory the pattern was pushed from");
         });
     }
 }

@@ -1,6 +1,8 @@
 package dev.rylex.nep.compat.ars;
 
-import appeng.api.AECapabilities;
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.ars.ArsFixtures.resetImbuementCaches;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.implementations.blockentities.ICraftingMachine;
@@ -11,6 +13,7 @@ import com.hollingsworth.arsnouveau.common.block.tile.ImbuementTile;
 import com.hollingsworth.arsnouveau.common.block.tile.SourceJarTile;
 import com.hollingsworth.arsnouveau.common.crafting.recipes.ImbuementRecipe;
 import com.hollingsworth.arsnouveau.setup.registry.BlockRegistry;
+import dev.rylex.nep.GameTestFixtures;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.pattern.ImbuementPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
@@ -111,10 +114,8 @@ public final class ImbuementCraftingMachineGameTest {
     }
 
     private static ICraftingMachine machine(GameTestHelper helper) {
-        ICraftingMachine machine =
-                helper.getLevel().getCapability(AECapabilities.CRAFTING_MACHINE, helper.absolutePos(CHAMBER), null);
-        helper.assertTrue(machine != null, "the imbuement chamber exposed no crafting machine capability");
-        return machine;
+        return GameTestFixtures.craftingMachine(
+                helper, CHAMBER, "the imbuement chamber exposed no crafting machine capability");
     }
 
     private static void assertPedestalsHold(GameTestHelper helper, List<ItemStack> expected) {
@@ -128,13 +129,12 @@ public final class ImbuementCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aReagentOnlyPatternIsAcceptedOverHandPlacedPedestals(GameTestHelper helper) {
-        ImbuementCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetImbuementCaches();
         Fixture fixture = fixture(helper);
         ImbuementTile chamber = placeChamber(helper, fixture, fixture.pedestalStacks());
 
         helper.assertTrue(
-                machine(helper).pushPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                machine(helper).pushPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "the chamber refused a reagent-only pattern over correctly stocked pedestals for "
                         + fixture.holder().id());
         helper.assertTrue(!chamber.getItem(0).isEmpty(), "an accepted push left the chamber empty");
@@ -143,15 +143,14 @@ public final class ImbuementCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 700)
     public static void theImbuementCompletesAndThePedestalItemsRemain(GameTestHelper helper) {
-        ImbuementCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetImbuementCaches();
         Fixture fixture = fixture(helper);
         List<ItemStack> pedestalItems = fixture.pedestalStacks();
         ImbuementTile chamber = placeChamber(helper, fixture, pedestalItems);
         GenericStack result = fixture.expected().outputs().get(0);
 
         helper.assertTrue(
-                machine(helper).pushPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                machine(helper).pushPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "the chamber refused " + fixture.holder().id());
         helper.succeedWhen(() -> {
             helper.assertTrue(
@@ -164,17 +163,17 @@ public final class ImbuementCraftingMachineGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void wrongItemsOnThePedestalsRefuseThePush(GameTestHelper helper) {
-        ImbuementCraftingMachine.clearCache();
-        ArsRecipeResolver.clearCache();
+        resetImbuementCaches();
         Fixture fixture = fixture(helper);
         List<ItemStack> wrong = new ArrayList<>();
-        for (int index = 0; index < fixture.pedestalStacks().size(); index++) {
+        int pedestalCount = fixture.pedestalStacks().size();
+        for (int index = 0; index < pedestalCount; index++) {
             wrong.add(new ItemStack(Items.DIRT));
         }
         ImbuementTile chamber = placeChamber(helper, fixture, wrong);
 
         helper.assertTrue(
-                !machine(helper).pushPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                !machine(helper).pushPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "the chamber accepted a pattern while its pedestals held dirt");
         helper.assertTrue(chamber.getItem(0).isEmpty(), "a refused push left an item in the chamber");
         helper.succeed();

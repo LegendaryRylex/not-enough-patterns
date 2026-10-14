@@ -106,11 +106,11 @@ final class FocusedSpiritMatrixUpgrades {
 
     private static double catalyzerFill(int catalyzers) {
         int max = maxCatalyzers();
-        return max <= 0 ? 0.0 : Math.min(1.0, catalyzers / (double) max);
+        return Math.min(1.0, catalyzers / (double) max);
     }
 
     private static double fill(int obelisks) {
         int max = maxObelisks();
-        return max <= 0 ? 0.0 : Math.min(1.0, obelisks / (double) max);
+        return Math.min(1.0, obelisks / (double) max);
     }
 }

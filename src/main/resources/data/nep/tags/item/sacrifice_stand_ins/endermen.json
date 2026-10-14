@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "occultism:soul_gem",
+      "required": false
+    },
+    {
+      "id": "occultism:fragile_soul_gem",
+      "required": false
+    },
+    "minecraft:enderman_spawn_egg",
+    {
+      "id": "mysticalagriculture:enderman_essence",
+      "required": false
+    }
+  ]
+}

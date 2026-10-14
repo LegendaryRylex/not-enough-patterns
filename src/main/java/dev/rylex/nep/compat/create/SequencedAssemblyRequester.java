@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.machine.ChannelDemand;
+import dev.rylex.nep.machine.MatrixGridNode;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -28,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGridNodeHost, ChannelDemand {
 
-    static final int TRACKER_SIZE = 18;
+    static final int TRACKER_SIZE = MatrixGridNode.TRACKER_SIZE;
 
     private static final double IDLE_ME_DRAIN = 10.0;
 
@@ -76,6 +77,16 @@ final class SequencedAssemblyRequester implements ICraftingRequester, IInWorldGr
     @Nullable
     IGrid grid() {
         return mainNode.getGrid();
+    }
+
+    SequencedAssemblyState.Network network() {
+        IGridNode node = mainNode.getNode();
+        if (node == null || node.getConnections().isEmpty() || node.isActive()) {
+            return SequencedAssemblyState.Network.OK;
+        }
+        return node.meetsChannelRequirements()
+                ? SequencedAssemblyState.Network.NO_POWER
+                : SequencedAssemblyState.Network.NO_CHANNELS;
     }
 
     void save(CompoundTag tag) {

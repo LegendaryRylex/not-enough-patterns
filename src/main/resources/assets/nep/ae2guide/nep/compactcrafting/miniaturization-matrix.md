@@ -7,6 +7,8 @@ navigation:
 item_ids:
   - nep:miniaturization_matrix
   - nep:miniaturization_pattern
+categories:
+  - Matrices
 ---
 # <Color id="gold">Miniaturization Matrix</Color>
 

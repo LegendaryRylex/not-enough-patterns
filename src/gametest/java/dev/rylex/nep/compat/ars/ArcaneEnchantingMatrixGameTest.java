@@ -1,5 +1,9 @@
 package dev.rylex.nep.compat.ars;
 
+import static dev.rylex.nep.GameTestFixtures.inputsOf;
+import static dev.rylex.nep.compat.ars.ArsFixtures.firstOptions;
+import static dev.rylex.nep.compat.ars.ArsFixtures.resolvableApparatus;
+
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEKey;
@@ -14,10 +18,8 @@ import com.hollingsworth.arsnouveau.setup.registry.CapabilityRegistry;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.machine.ManualCraftFixtures;
 import dev.rylex.nep.machine.ManualRequirement;
-import dev.rylex.nep.pattern.ApparatusPattern;
 import dev.rylex.nep.pattern.ImbuementPattern;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -81,15 +83,8 @@ public final class ArcaneEnchantingMatrixGameTest {
             if (expected == null) {
                 continue;
             }
-            List<GenericStack> inputs = new ArrayList<>();
-            for (List<GenericStack> options : expected.inputs()) {
-                inputs.add(options.get(0));
-            }
-            IPatternDetails details = PatternDetailsHelper.decodePattern(
-                    ApparatusPattern.encode(
-                            holder.id(), inputs, expected.outputs().get(0)),
-                    level);
-            if (details != null && ArsRecipeResolver.resolve(details, level) != null) {
+            IPatternDetails details = resolvableApparatus(holder, firstOptions(expected), expected, level);
+            if (details != null) {
                 return new Apparatus(
                         holder,
                         details,
@@ -115,10 +110,7 @@ public final class ArcaneEnchantingMatrixGameTest {
             if (expected == null || expected.inputs().size() < 2) {
                 continue;
             }
-            List<GenericStack> all = new ArrayList<>();
-            for (List<GenericStack> options : expected.inputs()) {
-                all.add(options.get(0));
-            }
+            List<GenericStack> all = firstOptions(expected);
             GenericStack output = expected.outputs().get(0);
             IPatternDetails reagentOnly = PatternDetailsHelper.decodePattern(
                     ImbuementPattern.encode(holder.id(), List.of(all.get(0)), output), level);
@@ -168,13 +160,9 @@ public final class ArcaneEnchantingMatrixGameTest {
         return count;
     }
 
-    private static void clearCaches() {
-        ArsRecipeResolver.clearCache();
-    }
-
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 600)
     public static void anApparatusCraftDrawsExactlyItsCostFromANearbyJar(GameTestHelper helper) {
-        clearCaches();
+        ArsRecipeResolver.clearCache();
         Apparatus fixture = apparatus(helper);
         int cost = fixture.holder().value().sourceCost();
         ArcaneEnchantingMatrixBlockEntity matrix = placeMatrix(helper);
@@ -183,7 +171,7 @@ public final class ArcaneEnchantingMatrixGameTest {
         jar.addSource(cost + JAR_SPARE);
 
         helper.assertTrue(
-                matrix.pushMatrixPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                matrix.pushMatrixPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "the Matrix refused " + fixture.holder().id());
         helper.succeedWhen(() -> {
             helper.assertTrue(
@@ -198,7 +186,7 @@ public final class ArcaneEnchantingMatrixGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 600)
     public static void dampenGlyphsCutTheSourceACraftSpends(GameTestHelper helper) {
-        clearCaches();
+        ArsRecipeResolver.clearCache();
         Apparatus fixture = apparatus(helper);
         int cost = fixture.holder().value().sourceCost();
         ArcaneEnchantingMatrixBlockEntity matrix = placeMatrix(helper);
@@ -212,7 +200,7 @@ public final class ArcaneEnchantingMatrixGameTest {
         helper.assertTrue(spent < cost, "a full stack of Dampen glyphs took nothing off " + cost);
 
         helper.assertTrue(
-                matrix.pushMatrixPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                matrix.pushMatrixPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "the Matrix refused " + fixture.holder().id());
         helper.succeedWhen(() -> {
             helper.assertTrue(outputHolds(matrix, fixture.result()), "the dampened craft never finished");
@@ -224,7 +212,7 @@ public final class ArcaneEnchantingMatrixGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 100)
     public static void accelerateGlyphsFinishACraftLongBeforeItsBaseTime(GameTestHelper helper) {
-        clearCaches();
+        ArsRecipeResolver.clearCache();
         Apparatus fixture = apparatus(helper);
         ArcaneEnchantingMatrixBlockEntity matrix = placeMatrix(helper);
         ItemStack accelerate = ArcaneEnchantingMatrixUpgrades.accelerateIcon()
@@ -235,7 +223,7 @@ public final class ArcaneEnchantingMatrixGameTest {
         matrix.sourceStorage().add(fixture.holder().value().sourceCost());
 
         helper.assertTrue(
-                matrix.pushMatrixPattern(fixture.details(), ArsFixtures.inputsOf(fixture.details()), Direction.UP),
+                matrix.pushMatrixPattern(fixture.details(), inputsOf(fixture.details()), Direction.UP),
                 "the Matrix refused " + fixture.holder().id());
         helper.succeedWhen(() -> helper.assertTrue(
                 outputHolds(matrix, fixture.result()), "a fully accelerated craft did not finish in 100 ticks"));
@@ -255,13 +243,12 @@ public final class ArcaneEnchantingMatrixGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void aPatternCarryingThePedestalItemsIsRefused(GameTestHelper helper) {
-        clearCaches();
+        ArsRecipeResolver.clearCache();
         Imbuement fixture = imbuement(helper);
         ArcaneEnchantingMatrixBlockEntity matrix = placeMatrix(helper);
 
         helper.assertTrue(
-                !matrix.pushMatrixPattern(
-                        fixture.withPedestals(), ArsFixtures.inputsOf(fixture.withPedestals()), Direction.UP),
+                !matrix.pushMatrixPattern(fixture.withPedestals(), inputsOf(fixture.withPedestals()), Direction.UP),
                 "the Matrix accepted a pattern that carries the imbuement pedestal items");
         helper.assertTrue(
                 matrix.refusal() == ArcaneEnchantingMatrixBlockEntity.Refusal.CATALYSTS_IN_PATTERN,
@@ -271,7 +258,7 @@ public final class ArcaneEnchantingMatrixGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH, timeoutTicks = 800)
     public static void anImbuementBorrowsItsPedestalItemsAndHandsThemBack(GameTestHelper helper) {
-        clearCaches();
+        ArsRecipeResolver.clearCache();
         Imbuement fixture = imbuement(helper);
         ArcaneEnchantingMatrixBlockEntity[] matrix = new ArcaneEnchantingMatrixBlockEntity[1];
         ArsFixtures.poweredNetwork(
@@ -280,7 +267,7 @@ public final class ArcaneEnchantingMatrixGameTest {
                     matrix[0].sourceStorage().add(fixture.holder().value().getSource());
                     helper.assertTrue(
                             matrix[0].pushMatrixPattern(
-                                    fixture.reagentOnly(), ArsFixtures.inputsOf(fixture.reagentOnly()), Direction.UP),
+                                    fixture.reagentOnly(), inputsOf(fixture.reagentOnly()), Direction.UP),
                             "the Matrix refused a reagent-only imbuement pattern for "
                                     + fixture.holder().id());
                 })
@@ -310,7 +297,7 @@ public final class ArcaneEnchantingMatrixGameTest {
 
     @GameTest(template = TEMPLATE, batch = BATCH)
     public static void queuesAnApparatusCraftFromThePlayersInventory(GameTestHelper helper) {
-        clearCaches();
+        ArsRecipeResolver.clearCache();
         Apparatus fixture = apparatus(helper);
         ArcaneEnchantingMatrixBlockEntity matrix = placeMatrix(helper);
         List<ManualRequirement> requirements =

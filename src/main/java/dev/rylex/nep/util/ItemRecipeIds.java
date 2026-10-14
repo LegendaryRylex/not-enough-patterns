@@ -31,7 +31,7 @@ public final class ItemRecipeIds {
         ListTag list = tag.getList(key, Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entryTag = list.getCompound(i);
-            AEItemKey itemKey = ItemCounts.key(entryTag, registries);
+            AEItemKey itemKey = ItemCounts.key(entryTag, ItemCounts.LEGACY_ID_TAG, registries);
             ResourceLocation recipe = ResourceLocation.tryParse(entryTag.getString("Recipe"));
             if (itemKey != null && recipe != null) {
                 map.put(itemKey, recipe);

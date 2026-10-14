@@ -34,7 +34,6 @@ public class PatternDecoderScreen extends MatrixScreen<PatternDecoderMenu> {
     private static final int MISSING_FILL = 0xFF000000;
     private static final int GHOST_FADE = 0xA08B8B8B;
     private static final int CROSS = 0xFFD8302A;
-    private static final int CROSS_LAYER = 300;
     private static final int SLOT_SIZE = 16;
     private static final int LAMP_SIZE = 5;
     private static final int LAMP_Y = 7;
@@ -108,8 +107,8 @@ public class PatternDecoderScreen extends MatrixScreen<PatternDecoderMenu> {
             graphics.fill(x, y, x + 18, y + 18, BACKGROUND);
         }
         for (DecoderModule module : DecoderModule.values()) {
-            int x = leftPos + PatternDecoderMenu.slotX(module.ordinal());
-            int y = topPos + PatternDecoderMenu.slotY(module.ordinal());
+            int x = leftPos + PatternDecoderMenu.slotX(module.slot());
+            int y = topPos + PatternDecoderMenu.slotY(module.slot());
             ModuleState state = state(module);
             if (state == ModuleState.NOT_INSTALLED) {
                 graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, MISSING_FILL);
@@ -138,14 +137,11 @@ public class PatternDecoderScreen extends MatrixScreen<PatternDecoderMenu> {
         graphics.fill(lampX, LAMP_Y, lampX + LAMP_SIZE, LAMP_Y + LAMP_SIZE, lampColour(menu.status()));
 
         graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, CROSS_LAYER);
+        graphics.pose().translate(0.0F, 0.0F, RetainedHighlight.OVERLAY_LAYER);
         for (DecoderModule module : DecoderModule.values()) {
             ModuleState state = state(module);
             if (state == ModuleState.DISABLED || state == ModuleState.NOT_INSTALLED) {
-                drawCross(
-                        graphics,
-                        PatternDecoderMenu.slotX(module.ordinal()),
-                        PatternDecoderMenu.slotY(module.ordinal()));
+                drawCross(graphics, PatternDecoderMenu.slotX(module.slot()), PatternDecoderMenu.slotY(module.slot()));
             }
         }
         graphics.pose().popPose();
@@ -181,7 +177,7 @@ public class PatternDecoderScreen extends MatrixScreen<PatternDecoderMenu> {
         if (hoveredSlot == null || hoveredSlot.index >= PatternDecoderBlockEntity.SLOTS) {
             return null;
         }
-        return DecoderModule.values()[hoveredSlot.index];
+        return DecoderModule.bySlot(hoveredSlot.index);
     }
 
     @Override

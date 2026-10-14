@@ -6,6 +6,7 @@ import dev.rylex.nep.NepIcons;
 import dev.rylex.nep.client.EnergyGauge;
 import dev.rylex.nep.client.MatrixScreen;
 import dev.rylex.nep.client.ReadoutButton;
+import dev.rylex.nep.client.ScreenFormat;
 import dev.rylex.nep.util.MissingStacks;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringMatrixMenu> {
 
+    private static final String OUTPUT_FULL_HINT = "gui.nep.atomic_empowering_matrix.stall.output_full.hint";
     private static final ResourceLocation TEXTURE = Nep.id("textures/gui/atomic_empowering_matrix.png");
 
     private static final int TITLE_ON_PANEL = 0x3A2E1C;
@@ -130,12 +132,12 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
         Component energyLine = making.isEmpty()
                 ? Component.translatable(
                         "gui.nep.atomic_empowering_matrix.buffer_line",
-                        format(matrix.storedEnergy()),
-                        format(matrix.energyCapacity()))
+                        ScreenFormat.format(matrix.storedEnergy()),
+                        ScreenFormat.format(matrix.energyCapacity()))
                 : Component.translatable(
                         "gui.nep.atomic_empowering_matrix.charge_line",
-                        format(matrix.craftPaid()),
-                        format(matrix.craftCost()));
+                        ScreenFormat.format(matrix.craftPaid()),
+                        ScreenFormat.format(matrix.craftCost()));
         graphics.drawString(font, energyLine, READOUT_X, LINE_THREE_Y, READOUT_DIM, false);
         drawTrailing(
                 graphics,
@@ -151,33 +153,54 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
 
     private static Component faultLine(
             AtomicEmpoweringMatrixBlockEntity.Stall stall, AtomicEmpoweringMatrixBlockEntity.Refusal refusal) {
-        String key =
-                switch (stall) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.atomic_empowering_matrix.stall.ingredients";
-                    case OUTPUT_FULL -> "gui.nep.atomic_empowering_matrix.output_blocked";
-                    case NO_RECIPE -> "gui.nep.atomic_empowering_matrix.stall.no_recipe";
-                };
+        String key = stallKey(stall);
         if (key != null) {
             return Component.translatable(key);
         }
-        String refused =
-                switch (refusal) {
-                    case NONE -> null;
-                    case NOT_AN_ACTUALLY_ADDITIONS_PATTERN -> "gui.nep.atomic_empowering_matrix.refused.wrong_pattern";
-                    case NO_ITEM_OUTPUT -> "gui.nep.atomic_empowering_matrix.refused.no_item_output";
-                    case UNKNOWN_RECIPE -> "gui.nep.atomic_empowering_matrix.refused.unknown_recipe";
-                    case MIXED_RECIPES -> "gui.nep.atomic_empowering_matrix.refused.mixed_recipes";
-                    case ITEMS_ONLY -> "gui.nep.atomic_empowering_matrix.refused.items_only";
-                    case TOO_MANY_INPUTS -> "gui.nep.atomic_empowering_matrix.refused.too_many_inputs";
-                    case BUFFER_FULL -> "gui.nep.atomic_empowering_matrix.refused.buffer_full";
-                };
+        String refused = refusalKey(refusal);
         return refused == null
                 ? Component.translatable("gui.nep.atomic_empowering_matrix.idle")
                 : Component.translatable(refused);
     }
 
+    @Nullable
+    private static String stallKey(AtomicEmpoweringMatrixBlockEntity.Stall stall) {
+        return switch (stall) {
+            case NONE -> null;
+            case INGREDIENTS -> "gui.nep.atomic_empowering_matrix.stall.ingredients";
+            case OUTPUT_FULL -> "gui.nep.atomic_empowering_matrix.output_blocked";
+            case NO_RECIPE -> "gui.nep.atomic_empowering_matrix.stall.no_recipe";
+        };
+    }
+
+    @Nullable
+    private static String stallHintKey(AtomicEmpoweringMatrixBlockEntity.Stall stall) {
+        if (stall == AtomicEmpoweringMatrixBlockEntity.Stall.OUTPUT_FULL) {
+            return OUTPUT_FULL_HINT;
+        }
+        String key = stallKey(stall);
+        return key == null ? null : key + ".hint";
+    }
+
+    @Nullable
+    private static String refusalKey(AtomicEmpoweringMatrixBlockEntity.Refusal refusal) {
+        return switch (refusal) {
+            case NONE -> null;
+            case NOT_AN_ACTUALLY_ADDITIONS_PATTERN -> "gui.nep.atomic_empowering_matrix.refused.wrong_pattern";
+            case NO_ITEM_OUTPUT -> "gui.nep.atomic_empowering_matrix.refused.no_item_output";
+            case UNKNOWN_RECIPE -> "gui.nep.atomic_empowering_matrix.refused.unknown_recipe";
+            case MIXED_RECIPES -> "gui.nep.atomic_empowering_matrix.refused.mixed_recipes";
+            case ITEMS_ONLY -> "gui.nep.atomic_empowering_matrix.refused.items_only";
+            case TOO_MANY_INPUTS -> "gui.nep.atomic_empowering_matrix.refused.too_many_inputs";
+            case BUFFER_FULL -> "gui.nep.atomic_empowering_matrix.refused.buffer_full";
+        };
+    }
+
     private static List<Component> statusHint(AtomicEmpoweringMatrixBlockEntity matrix) {
+        if (matrix.hasChannelFault()) {
+            return List.of(Component.translatable("gui.nep.atomic_empowering_matrix.no_network_channels.hint")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         if (matrix.hasPowerFault()) {
             return List.of(Component.translatable("gui.nep.atomic_empowering_matrix.stall.no_me_power.hint")
                     .withStyle(ChatFormatting.GRAY));
@@ -186,18 +209,12 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
             return List.of(Component.translatable("gui.nep.atomic_empowering_matrix.stall.no_energy.hint")
                     .withStyle(ChatFormatting.GRAY));
         }
-        String key =
-                switch (matrix.stall()) {
-                    case NONE -> null;
-                    case INGREDIENTS -> "gui.nep.atomic_empowering_matrix.stall.ingredients.hint";
-                    case OUTPUT_FULL -> "gui.nep.atomic_empowering_matrix.stall.output_full.hint";
-                    case NO_RECIPE -> "gui.nep.atomic_empowering_matrix.stall.no_recipe.hint";
-                };
+        String key = stallHintKey(matrix.stall());
         if (key == null && matrix.refusal() != AtomicEmpoweringMatrixBlockEntity.Refusal.NONE) {
             key = "gui.nep.atomic_empowering_matrix.refused.hint";
         }
         if (key == null && matrix.isOutputBlocked()) {
-            key = "gui.nep.atomic_empowering_matrix.stall.output_full.hint";
+            key = OUTPUT_FULL_HINT;
         }
         return key == null ? List.of() : List.of(Component.translatable(key).withStyle(ChatFormatting.GRAY));
     }
@@ -233,6 +250,7 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
                 || matrix.refusal() != AtomicEmpoweringMatrixBlockEntity.Refusal.NONE
                 || matrix.isOutputBlocked()
                 || matrix.hasPowerFault()
+                || matrix.hasChannelFault()
                 || matrix.hasEnergyFault()
                 || !matrix.missingInputs().isEmpty();
     }
@@ -242,19 +260,6 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
             return READOUT_WARN;
         }
         return matrix.activeResult().isEmpty() ? READOUT_DIM : READOUT_TEXT;
-    }
-
-    private static String format(long value) {
-        if (value >= 1_000_000_000L) {
-            return String.format("%.1fG", value / 1_000_000_000.0);
-        }
-        if (value >= 1_000_000L) {
-            return String.format("%.1fM", value / 1_000_000.0);
-        }
-        if (value >= 1_000L) {
-            return String.format("%.1fK", value / 1_000.0);
-        }
-        return Long.toString(value);
     }
 
     @Override
@@ -270,14 +275,14 @@ public class AtomicEmpoweringMatrixScreen extends MatrixScreen<AtomicEmpoweringM
                             Component.translatable("gui.nep.atomic_empowering_matrix.energy"),
                             Component.translatable(
                                             "gui.nep.atomic_empowering_matrix.charge",
-                                            format(matrix.storedEnergy()),
-                                            format(matrix.energyCapacity()))
+                                            ScreenFormat.format(matrix.storedEnergy()),
+                                            ScreenFormat.format(matrix.energyCapacity()))
                                     .withStyle(ChatFormatting.GRAY)),
                     mouseX,
                     mouseY);
             return;
         }
-        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), 32)) {
+        if (!within(mouseX, mouseY, READOUT_X, LINE_ONE_Y, barWidth(), READOUT_HEIGHT)) {
             return;
         }
         List<Component> lines = new ArrayList<>();

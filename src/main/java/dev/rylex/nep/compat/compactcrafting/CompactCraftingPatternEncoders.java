@@ -6,6 +6,7 @@ import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.decoder.DecoderModule;
 import dev.rylex.nep.pattern.MiniaturizationPattern;
+import dev.rylex.nep.pattern.PatternStacks;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import dev.rylex.nep.pattern.encoding.IngredientMatching;
 import dev.rylex.nep.pattern.encoding.PatternConverters;
@@ -32,38 +33,44 @@ final class CompactCraftingPatternEncoders {
     @Nullable
     private static ItemStack miniaturization(
             IPatternDetails encoded, RecipeHolder<MiniaturizationRecipe> holder, Level level) {
-        if (!NepConfig.compactCraftingMiniaturizationMatrix()
-                && !NepConfig.compactCraftingMiniaturizationController()) {
-            return null;
-        }
-        List<GenericStack> inputs = MiniaturizationRecipeResolver.condensedInputs(encoded);
-        GenericStack result = MiniaturizationRecipeResolver.singleResult(encoded);
-        if (inputs == null || result == null) {
+        Shape shape = shapeOf(encoded);
+        if (shape == null) {
             return null;
         }
         List<GenericStack> chosen =
-                match(MiniaturizationRecipeIngredients.miniaturization(holder, level), inputs, result);
-        return chosen == null ? null : MiniaturizationPattern.encode(holder.id(), chosen, result);
+                match(MiniaturizationRecipeIngredients.miniaturization(holder.value()), shape.inputs, shape.result);
+        return chosen == null ? null : MiniaturizationPattern.encode(holder.id(), chosen, shape.result);
     }
 
     @Nullable
     private static PatternFallback.Result miniaturizationByResult(IPatternDetails encoded, Level level) {
-        if (!NepConfig.compactCraftingMiniaturizationMatrix()
-                && !NepConfig.compactCraftingMiniaturizationController()) {
-            return null;
-        }
-        List<GenericStack> inputs = MiniaturizationRecipeResolver.condensedInputs(encoded);
-        GenericStack result = MiniaturizationRecipeResolver.singleResult(encoded);
-        if (inputs == null || result == null) {
+        Shape shape = shapeOf(encoded);
+        if (shape == null) {
             return null;
         }
 
         ItemStack only = Uniqueness.onlyMatch(MiniaturizationRecipeResolver.candidates(level), candidate -> {
-            List<GenericStack> chosen =
-                    match(MiniaturizationRecipeIngredients.miniaturization(candidate, level), inputs, result);
-            return chosen == null ? null : MiniaturizationPattern.encode(candidate.id(), chosen, result);
+            List<GenericStack> chosen = match(
+                    MiniaturizationRecipeIngredients.miniaturization(candidate.value()), shape.inputs, shape.result);
+            return chosen == null ? null : MiniaturizationPattern.encode(candidate.id(), chosen, shape.result);
         });
         return only == null ? null : PatternFallback.Result.of(only);
+    }
+
+    private record Shape(List<GenericStack> inputs, GenericStack result) {}
+
+    @Nullable
+    private static Shape shapeOf(IPatternDetails encoded) {
+        if (!NepConfig.compactCraftingMiniaturizationMatrix()
+                && !NepConfig.compactCraftingMiniaturizationController()) {
+            return null;
+        }
+        List<GenericStack> inputs = PatternStacks.condensedInputs(encoded);
+        GenericStack result = PatternStacks.singleResult(encoded);
+        if (inputs == null || result == null) {
+            return null;
+        }
+        return new Shape(inputs, result);
     }
 
     @Nullable

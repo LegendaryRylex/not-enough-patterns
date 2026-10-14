@@ -5,6 +5,7 @@ import dev.compactmods.crafting.recipes.MiniaturizationRecipe;
 import dev.rylex.nep.NepConfig;
 import dev.rylex.nep.compat.jei.JeiTransferSource;
 import dev.rylex.nep.compat.jei.ManualTransferHandler;
+import dev.rylex.nep.menu.ManualCraftMenu;
 import dev.rylex.nep.pattern.encoding.EncodedIngredients;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
@@ -13,6 +14,8 @@ import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -24,19 +27,24 @@ public final class CompactCraftingJeiCompat {
 
     public static void addManualTransfers(
             IRecipeTransferRegistration registration, IRecipeTransferHandlerHelper helper) {
+        addManualTransfer(
+                registration, helper, MiniaturizationMatrixMenu.class, NepCompactCraftingContent.MATRIX_MENU.get());
+        addManualTransfer(
+                registration,
+                helper,
+                MiniaturizationControllerMenu.class,
+                NepCompactCraftingContent.CONTROLLER_MENU.get());
+    }
+
+    private static <M extends AbstractContainerMenu & ManualCraftMenu> void addManualTransfer(
+            IRecipeTransferRegistration registration,
+            IRecipeTransferHandlerHelper helper,
+            Class<M> menuClass,
+            MenuType<M> menuType) {
         registration.addRecipeTransferHandler(
                 new ManualTransferHandler<>(
-                        MiniaturizationMatrixMenu.class,
-                        NepCompactCraftingContent.MATRIX_MENU.get(),
-                        JeiMiniaturizationCraftingCategory.RECIPE_TYPE,
-                        helper,
-                        (recipe, level) -> MiniaturizationRecipeIngredients.manualRequirements(recipe),
-                        CompactCraftingJeiCompat::idOf),
-                JeiMiniaturizationCraftingCategory.RECIPE_TYPE);
-        registration.addRecipeTransferHandler(
-                new ManualTransferHandler<>(
-                        MiniaturizationControllerMenu.class,
-                        NepCompactCraftingContent.CONTROLLER_MENU.get(),
+                        menuClass,
+                        menuType,
                         JeiMiniaturizationCraftingCategory.RECIPE_TYPE,
                         helper,
                         (recipe, level) -> MiniaturizationRecipeIngredients.manualRequirements(recipe),
@@ -87,7 +95,7 @@ public final class CompactCraftingJeiCompat {
                 && !NepConfig.compactCraftingMiniaturizationController()) {
             return null;
         }
-        return MiniaturizationRecipeIngredients.miniaturization(recipe, level);
+        return MiniaturizationRecipeIngredients.miniaturization(recipe);
     }
 
     @Nullable

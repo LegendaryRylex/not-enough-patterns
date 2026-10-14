@@ -3,7 +3,9 @@ package dev.rylex.nep.compat.create;
 import appeng.api.stacks.GenericStack;
 import dev.rylex.nep.Nep;
 import dev.rylex.nep.util.MissingStacks;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -61,23 +63,12 @@ public final class NepJadePlugin implements IWailaPlugin {
             nep.putInt("status", state.status());
             nep.putBoolean("halted", state.halted());
             nep.putBoolean("blocked", state.outputBlocked());
-            ListTag making = new ListTag();
+            List<Map.Entry<Item, Long>> makingNow = new ArrayList<>();
             for (SequencedAssemblyState.Making entry : state.making()) {
-                if (making.size() >= ENTRY_LIMIT) {
-                    break;
-                }
-                making.add(makingTag(entry.output().getItem(), entry.count()));
+                makingNow.add(Map.entry(entry.output().getItem(), (long) entry.count()));
             }
-            nep.put("making", making);
-            nep.putInt("makingTotal", state.making().size());
-            ListTag missing = new ListTag();
-            for (GenericStack stack : state.missing()) {
-                if (missing.size() >= ENTRY_LIMIT) {
-                    break;
-                }
-                missing.add(GenericStack.writeTag(accessor.getLevel().registryAccess(), stack));
-            }
-            nep.put("missing", missing);
+            putMaking(nep, makingNow);
+            putMissing(nep, state.missing(), accessor.getLevel().registryAccess());
             data.put(ROOT, nep);
         }
 
@@ -95,9 +86,9 @@ public final class NepJadePlugin implements IWailaPlugin {
                 tooltip.add(line("jade.nep.controller.output_blocked", ChatFormatting.RED));
             } else if (halted) {
                 tooltip.add(line("jade.nep.controller.halted", ChatFormatting.RED));
-            } else if (status == 2) {
+            } else if (status == SequencedAssemblyState.LineStatus.PROBLEM.ordinal()) {
                 tooltip.add(line("jade.nep.controller.problem", ChatFormatting.YELLOW));
-            } else if (status == 0) {
+            } else if (status == SequencedAssemblyState.LineStatus.NONE.ordinal()) {
                 tooltip.add(line("jade.nep.controller.unlinked", ChatFormatting.GRAY));
             } else if (making.isEmpty()) {
                 tooltip.add(line("jade.nep.controller.idle", ChatFormatting.GRAY));
@@ -136,24 +127,12 @@ public final class NepJadePlugin implements IWailaPlugin {
                 nep.putLong("energy", be.energyStored());
                 nep.putLong("energyCapacity", be.energyCapacity());
             }
-            List<ItemStack> makingNow = be.makingNow();
-            ListTag making = new ListTag();
-            for (ItemStack stack : makingNow) {
-                if (making.size() >= ENTRY_LIMIT) {
-                    break;
-                }
-                making.add(makingTag(stack.getItem(), stack.getCount()));
+            List<Map.Entry<Item, Long>> makingNow = new ArrayList<>();
+            for (ItemStack stack : be.makingNow()) {
+                makingNow.add(Map.entry(stack.getItem(), (long) stack.getCount()));
             }
-            nep.put("making", making);
-            nep.putInt("makingTotal", makingNow.size());
-            ListTag missing = new ListTag();
-            for (GenericStack stack : be.missingInputs()) {
-                if (missing.size() >= ENTRY_LIMIT) {
-                    break;
-                }
-                missing.add(GenericStack.writeTag(accessor.getLevel().registryAccess(), stack));
-            }
-            nep.put("missing", missing);
+            putMaking(nep, makingNow);
+            putMissing(nep, be.missingInputs(), accessor.getLevel().registryAccess());
             data.put(ROOT, nep);
         }
 
@@ -218,6 +197,29 @@ public final class NepJadePlugin implements IWailaPlugin {
         public ResourceLocation getUid() {
             return UID;
         }
+    }
+
+    private static void putMaking(CompoundTag nep, List<Map.Entry<Item, Long>> makingNow) {
+        ListTag making = new ListTag();
+        for (Map.Entry<Item, Long> entry : makingNow) {
+            if (making.size() >= ENTRY_LIMIT) {
+                break;
+            }
+            making.add(makingTag(entry.getKey(), entry.getValue()));
+        }
+        nep.put("making", making);
+        nep.putInt("makingTotal", makingNow.size());
+    }
+
+    private static void putMissing(CompoundTag nep, Iterable<GenericStack> stacks, HolderLookup.Provider registries) {
+        ListTag missing = new ListTag();
+        for (GenericStack stack : stacks) {
+            if (missing.size() >= ENTRY_LIMIT) {
+                break;
+            }
+            missing.add(GenericStack.writeTag(registries, stack));
+        }
+        nep.put("missing", missing);
     }
 
     private static void appendMaking(ITooltip tooltip, String label, ListTag making, int total) {

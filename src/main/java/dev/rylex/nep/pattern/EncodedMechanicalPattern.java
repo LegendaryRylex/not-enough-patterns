@@ -7,6 +7,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -27,13 +28,16 @@ public record EncodedMechanicalPattern(int width, int height, List<@Nullable Gen
                     GenericStackCodecs.FAULT_TOLERANT.fieldOf("result").forGetter(EncodedMechanicalPattern::result))
             .apply(builder, EncodedMechanicalPattern::new));
 
+    private static final StreamCodec<RegistryFriendlyByteBuf, @Nullable GenericStack> NULLABLE_CELL =
+            ByteBufCodecs.optional(GenericStack.STREAM_CODEC).map(cell -> cell.orElse(null), Optional::ofNullable);
+
     public static final StreamCodec<RegistryFriendlyByteBuf, EncodedMechanicalPattern> STREAM_CODEC =
             StreamCodec.composite(
                     ByteBufCodecs.VAR_INT,
                     EncodedMechanicalPattern::width,
                     ByteBufCodecs.VAR_INT,
                     EncodedMechanicalPattern::height,
-                    GenericStack.STREAM_CODEC.apply(ByteBufCodecs.list()),
+                    NULLABLE_CELL.apply(ByteBufCodecs.list()),
                     EncodedMechanicalPattern::cells,
                     GenericStack.STREAM_CODEC,
                     EncodedMechanicalPattern::result,
